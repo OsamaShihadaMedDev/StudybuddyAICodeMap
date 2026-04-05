@@ -11,28 +11,13 @@ import {
 } from "@/components/ui/select";
 import { Stethoscope, Loader2, BookOpen } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-
-const PROMPT_TEMPLATE = (level: string, focus: string, length: string, input: string) =>
-  `You are an expert medical educator helping a medical student study efficiently.
-
-Difficulty Level: ${level}
-Study Focus: ${focus}
-Output Length: ${length}
-
-Convert the following notes into:
-1. Summary
-2. Key Points
-3. Flashcards
-
-INPUT:
-${input}`;
+import { supabase } from "@/integrations/supabase/client";
 
 const MedicalNotesAssistant = () => {
   const [notes, setNotes] = useState("");
   const [difficulty, setDifficulty] = useState("Basic");
   const [focus, setFocus] = useState("Quick Revision");
   const [length, setLength] = useState("Concise");
-  const [apiKey, setApiKey] = useState("");
   const [output, setOutput] = useState("");
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
@@ -42,40 +27,68 @@ const MedicalNotesAssistant = () => {
       toast({ title: "Please enter medical notes", variant: "destructive" });
       return;
     }
-    if (!apiKey.trim()) {
-      toast({ title: "Please enter your OpenAI API key", variant: "destructive" });
-      return;
-    }
 
     setLoading(true);
     setOutput("");
 
     try {
-      const response = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey.trim()}`,
-        },
-        body: JSON.stringify({
-          model: "gpt-3.5-turbo",
-          messages: [
-            {
-              role: "user",
-              content: PROMPT_TEMPLATE(difficulty, focus, length, notes),
-            },
-          ],
-          temperature: 0.7,
-        }),
-      });
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/medical-notes`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({ notes, difficulty, focus, length }),
+        }
+      );
 
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));
-        throw new Error(err.error?.message || `API error: ${response.status}`);
+        throw new Error(err.error || `Error: ${response.status}`);
       }
 
-      const data = await response.json();
-      setOutput(data.choices?.[0]?.message?.content || "No response received.");
+      // Stream the response
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error("No response body");
+
+      const decoder = new TextDecoder();
+      let textBuffer = "";
+      let fullText = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        textBuffer += decoder.decode(value, { stream: true });
+
+        let newlineIndex: number;
+        while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
+          let line = textBuffer.slice(0, newlineIndex);
+          textBuffer = textBuffer.slice(newlineIndex + 1);
+
+          if (line.endsWith("\r")) line = line.slice(0, -1);
+          if (line.startsWith(":") || line.trim() === "") continue;
+          if (!line.startsWith("data: ")) continue;
+
+          const jsonStr = line.slice(6).trim();
+          if (jsonStr === "[DONE]") break;
+
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content;
+            if (content) {
+              fullText += content;
+              setOutput(fullText);
+            }
+          } catch {
+            textBuffer = line + "\n" + textBuffer;
+            break;
+          }
+        }
+      }
+
+      if (!fullText) setOutput("No response received.");
     } catch (e: any) {
       toast({
         title: "Error",
@@ -103,25 +116,6 @@ const MedicalNotesAssistant = () => {
             Paste your notes and get AI-generated study materials instantly.
           </p>
         </div>
-
-        {/* API Key */}
-        <Card className="animate-fade-in">
-          <CardContent className="pt-5">
-            <label className="text-sm font-medium text-foreground mb-1.5 block">
-              OpenAI API Key
-            </label>
-            <input
-              type="password"
-              placeholder="sk-..."
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-            />
-            <p className="text-xs text-muted-foreground mt-1.5">
-              Your key is stored locally and never sent to our servers.
-            </p>
-          </CardContent>
-        </Card>
 
         {/* Notes Input */}
         <Card className="animate-fade-in">
