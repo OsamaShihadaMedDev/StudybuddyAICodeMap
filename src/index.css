@@ -1,30 +1,28 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
-
 @layer base {
   :root {
     --background: 210 33% 98%;
-    --foreground: 210 40% 11%;
+    --foreground: 215 25% 15%;
 
     --card: 0 0% 100%;
-    --card-foreground: 210 40% 11%;
+    --card-foreground: 215 25% 15%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 210 40% 11%;
+    --popover-foreground: 215 25% 15%;
 
     --primary: 205 78% 45%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 210 30% 94%;
-    --secondary-foreground: 210 40% 11%;
+    --secondary-foreground: 215 25% 15%;
 
     --muted: 210 25% 93%;
-    --muted-foreground: 210 15% 46%;
+    --muted-foreground: 215 15% 46%;
 
     --accent: 168 55% 44%;
     --accent-foreground: 0 0% 100%;
@@ -32,11 +30,11 @@ All colors MUST be HSL.
     --destructive: 0 72% 55%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 210 22% 88%;
-    --input: 210 22% 88%;
+    --border: 210 22% 90%;
+    --input: 210 22% 90%;
     --ring: 205 78% 45%;
 
-    --radius: 0.75rem;
+    --radius: 0.875rem;
 
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
@@ -46,36 +44,53 @@ All colors MUST be HSL.
     --sidebar-accent-foreground: 240 5.9% 10%;
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 205 78% 45%;
+
+    --gradient-start: 205 78% 45%;
+    --gradient-mid: 190 60% 50%;
+    --gradient-end: 168 55% 44%;
   }
 
   .dark {
-    --background: 210 40% 7%;
-    --foreground: 210 20% 95%;
-    --card: 210 40% 10%;
-    --card-foreground: 210 20% 95%;
-    --popover: 210 40% 10%;
-    --popover-foreground: 210 20% 95%;
-    --primary: 205 78% 50%;
+    --background: 222 47% 6%;
+    --foreground: 210 20% 92%;
+
+    --card: 222 40% 9%;
+    --card-foreground: 210 20% 92%;
+
+    --popover: 222 40% 9%;
+    --popover-foreground: 210 20% 92%;
+
+    --primary: 205 78% 55%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 210 30% 15%;
-    --secondary-foreground: 210 20% 95%;
-    --muted: 210 25% 15%;
-    --muted-foreground: 210 15% 60%;
+
+    --secondary: 222 30% 14%;
+    --secondary-foreground: 210 20% 92%;
+
+    --muted: 222 25% 13%;
+    --muted-foreground: 215 15% 55%;
+
     --accent: 168 55% 44%;
     --accent-foreground: 0 0% 100%;
+
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
-    --border: 210 25% 18%;
-    --input: 210 25% 18%;
-    --ring: 205 78% 50%;
-    --sidebar-background: 240 5.9% 10%;
+
+    --border: 222 20% 16%;
+    --input: 222 20% 16%;
+    --ring: 205 78% 55%;
+
+    --sidebar-background: 222 47% 6%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent: 222 25% 13%;
     --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 205 78% 50%;
+    --sidebar-border: 222 20% 16%;
+    --sidebar-ring: 205 78% 55%;
+
+    --gradient-start: 205 78% 30%;
+    --gradient-mid: 190 60% 25%;
+    --gradient-end: 168 55% 22%;
   }
 }
 
@@ -85,6 +100,38 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Segoe UI', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+@layer utilities {
+  .glass-card {
+    @apply bg-card/80 backdrop-blur-xl border border-border/50 shadow-lg;
+  }
+
+  .gradient-text {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary via-[hsl(190,60%,50%)] to-accent;
+  }
+
+  .dark .gradient-text {
+    @apply from-primary via-[hsl(190,60%,60%)] to-accent;
+  }
+
+  .btn-gradient {
+    @apply bg-gradient-to-r from-primary to-[hsl(190,60%,45%)] text-primary-foreground shadow-md;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .btn-gradient:hover {
+    @apply shadow-xl;
+    transform: translateY(-1px);
+    filter: brightness(1.08);
+  }
+
+  .btn-gradient:active {
+    transform: translateY(0);
   }
 }

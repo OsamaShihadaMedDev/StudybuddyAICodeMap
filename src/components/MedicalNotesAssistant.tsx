@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -9,9 +9,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Stethoscope, Loader2, BookOpen } from "lucide-react";
+import { Stethoscope, Loader2, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { Skeleton } from "@/components/ui/skeleton";
+import ThemeToggle from "@/components/ThemeToggle";
+import GradientBackground from "@/components/GradientBackground";
+import OutputSection from "@/components/OutputSection";
 
 const MedicalNotesAssistant = () => {
   const [notes, setNotes] = useState("");
@@ -49,7 +52,6 @@ const MedicalNotesAssistant = () => {
         throw new Error(err.error || `Error: ${response.status}`);
       }
 
-      // Stream the response
       const reader = response.body?.getReader();
       if (!reader) throw new Error("No response body");
 
@@ -101,106 +103,135 @@ const MedicalNotesAssistant = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background px-4 py-8 md:py-12">
-      <div className="mx-auto max-w-2xl space-y-6">
-        {/* Header */}
-        <div className="text-center space-y-2 animate-fade-in">
-          <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary">
-            <Stethoscope className="h-4 w-4" />
-            AI-Powered
-          </div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground md:text-4xl">
-            Medical Notes Assistant
-          </h1>
-          <p className="text-muted-foreground">
-            Paste your notes and get AI-generated study materials instantly.
-          </p>
-        </div>
+    <div className="relative min-h-screen">
+      <GradientBackground />
 
-        {/* Notes Input */}
-        <Card className="animate-fade-in">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg">Medical Notes</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Textarea
-              placeholder="Paste your medical notes here..."
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              className="min-h-[180px] resize-y"
-            />
-          </CardContent>
-        </Card>
-
-        {/* Options */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 animate-fade-in">
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-foreground">Difficulty Level</label>
-            <Select value={difficulty} onValueChange={setDifficulty}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Basic">Basic</SelectItem>
-                <SelectItem value="Medium">Medium</SelectItem>
-                <SelectItem value="Advanced">Advanced</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-foreground">Study Focus</label>
-            <Select value={focus} onValueChange={setFocus}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Quick Revision">Quick Revision</SelectItem>
-                <SelectItem value="Deep Understanding">Deep Understanding</SelectItem>
-                <SelectItem value="Clinical Reasoning">Clinical Reasoning</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-foreground">Output Length</label>
-            <Select value={length} onValueChange={setLength}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Concise">Concise</SelectItem>
-                <SelectItem value="Moderate">Moderate</SelectItem>
-                <SelectItem value="Detailed">Detailed</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        {/* Generate Button */}
-        <Button
-          className="w-full h-12 text-base font-semibold animate-fade-in"
-          onClick={handleGenerate}
-          disabled={loading}
-        >
-          {loading ? (
-            <>
-              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-              Generating...
-            </>
-          ) : (
-            <>
-              <BookOpen className="mr-2 h-5 w-5" />
-              Generate Study Material
-            </>
-          )}
-        </Button>
-
-        {/* Output */}
-        {output && (
-          <Card className="animate-fade-in">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg">Study Material</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="prose prose-sm max-w-none text-foreground whitespace-pre-wrap">
-                {output}
+      <div className="relative z-10 px-4 py-8 md:py-14">
+        <div className="mx-auto max-w-2xl space-y-8">
+          {/* Header */}
+          <header className="flex items-start justify-between animate-fade-in">
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2.5">
+                <div className="flex items-center justify-center h-10 w-10 rounded-xl bg-primary/10">
+                  <Stethoscope className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <h1 className="text-2xl font-extrabold tracking-tight text-foreground md:text-3xl">
+                    StudyBuddy AI
+                  </h1>
+                  <p className="text-xs font-medium text-muted-foreground tracking-wide">
+                    AI Medical Study Assistant
+                  </p>
+                </div>
               </div>
+            </div>
+            <ThemeToggle />
+          </header>
+
+          {/* Input Card */}
+          <Card className="glass-card animate-fade-in">
+            <CardContent className="p-6 space-y-5">
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-foreground">
+                  Medical Notes
+                </label>
+                <Textarea
+                  placeholder="Paste your medical notes here..."
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  className="min-h-[160px] resize-y bg-background/60 border-border/50 focus:border-primary/40 transition-colors text-sm leading-relaxed"
+                />
+              </div>
+
+              {/* Options */}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    Difficulty
+                  </label>
+                  <Select value={difficulty} onValueChange={setDifficulty}>
+                    <SelectTrigger className="bg-background/60 border-border/50">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Basic">Basic</SelectItem>
+                      <SelectItem value="Medium">Medium</SelectItem>
+                      <SelectItem value="Advanced">Advanced</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    Focus
+                  </label>
+                  <Select value={focus} onValueChange={setFocus}>
+                    <SelectTrigger className="bg-background/60 border-border/50">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Quick Revision">Quick Revision</SelectItem>
+                      <SelectItem value="Deep Understanding">Deep Understanding</SelectItem>
+                      <SelectItem value="Clinical Reasoning">Clinical Reasoning</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    Length
+                  </label>
+                  <Select value={length} onValueChange={setLength}>
+                    <SelectTrigger className="bg-background/60 border-border/50">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Concise">Concise</SelectItem>
+                      <SelectItem value="Moderate">Moderate</SelectItem>
+                      <SelectItem value="Detailed">Detailed</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Generate Button */}
+              <Button
+                className="w-full h-12 text-sm font-bold rounded-xl btn-gradient"
+                onClick={handleGenerate}
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    Generate Study Material
+                  </>
+                )}
+              </Button>
             </CardContent>
           </Card>
-        )}
+
+          {/* Loading Skeleton */}
+          {loading && !output && (
+            <div className="space-y-4 animate-fade-in">
+              {[1, 2, 3].map((i) => (
+                <Card key={i} className="glass-card">
+                  <CardContent className="p-6 space-y-3">
+                    <Skeleton className="h-5 w-32" />
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-4/5" />
+                    <Skeleton className="h-4 w-3/5" />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+
+          {/* Output */}
+          {output && <OutputSection output={output} />}
+        </div>
       </div>
     </div>
   );
