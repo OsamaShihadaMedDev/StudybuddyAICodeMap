@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -136,7 +136,7 @@ const MedicalNotesAssistant = () => {
                   Medical Notes
                 </label>
                 <Textarea
-                  placeholder="Paste your medical notes here..."
+                  placeholder="Paste messy medical notes… I'll turn them into high-yield study material."
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   className="min-h-[160px] resize-y bg-background/60 border-border/50 focus:border-primary/40 transition-colors text-sm leading-relaxed"
@@ -201,7 +201,7 @@ const MedicalNotesAssistant = () => {
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Generating...
+                    Generating…
                   </>
                 ) : (
                   <>
