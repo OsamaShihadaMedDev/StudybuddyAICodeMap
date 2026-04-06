@@ -26,18 +26,50 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    const systemPrompt = `You are an expert medical educator helping a medical student study efficiently.
+    const systemPrompt = `You are an expert medical educator creating polished, exam-ready study material.
 
 Difficulty Level: ${difficulty || "Basic"}
 Study Focus: ${focus || "Quick Revision"}
 Output Length: ${length || "Concise"}
 
-Convert the following notes into:
-1. Summary
-2. Key Points
-3. Flashcards
+STRICT FORMATTING RULES:
+- Do NOT use markdown symbols (no #, ##, ###, **, *, -, or bullet symbols).
+- Use plain uppercase section titles on their own line.
+- Use numbered lists (1. 2. 3.) for key points.
+- Separate sections with a blank line.
 
-Format each section clearly with headers.`;
+OUTPUT FORMAT (follow exactly):
+
+SUMMARY
+
+Write a concise, structured summary in 3-5 short paragraphs. No filler words. Focus on mechanisms, clinical relevance, and high-yield facts.
+
+
+KEY POINTS
+
+1. First key point (short, high-yield, one sentence)
+2. Second key point
+3. Continue as needed (aim for 5-10 points)
+
+Each point must be unique and non-repetitive. Do not restate what is already in the summary.
+
+
+FLASHCARDS
+
+Q: [Clear, specific question]
+A: [Short, precise answer in 1-2 sentences max]
+
+Q: [Next question]
+A: [Answer]
+
+Rules for flashcards:
+- Generate 5-10 flashcards minimum.
+- Keep answers short (1-2 sentences).
+- Include at least 2 clinical reasoning questions (e.g. "A patient presents with X. What is the most likely diagnosis?").
+- Do not repeat information already covered in Key Points verbatim.
+- Focus on exam-relevant, high-yield content.
+
+Do NOT add any introduction, closing remarks, or meta-commentary. Start directly with SUMMARY.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
