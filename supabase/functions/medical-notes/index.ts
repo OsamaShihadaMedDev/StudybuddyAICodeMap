@@ -54,6 +54,18 @@ KEY POINTS
 Each point must be unique and non-repetitive. Do not restate what is already in the summary.
 
 
+VISUAL EXPLANATIONS
+
+List 3-6 key visual topics from the notes that would benefit from images, diagrams, or anatomical illustrations.
+Format as a numbered list. Each item should be a short, searchable medical term or concept.
+Example:
+1. Thyroid gland anatomy
+2. Graves disease exophthalmos
+3. Myxedema clinical appearance
+
+Only include this section if the topic involves anatomy, pathology, radiology, dermatology, histology, or other visual subjects. If the topic is purely pharmacological or theoretical, skip this section entirely.
+
+
 FLASHCARDS
 
 Q: [Clear, specific question]
