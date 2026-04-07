@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { notes, difficulty, focus, length } = await req.json();
+    const { notes, difficulty, focus, length, examMode } = await req.json();
 
     if (!notes || typeof notes !== "string" || !notes.trim()) {
       return new Response(
@@ -26,11 +26,29 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
+    const mode = examMode || "General";
+    const referenceNote = mode.startsWith("USMLE")
+      ? "Exam-aligned with high-yield USMLE resources (e.g., First Aid, guidelines)."
+      : "Based on standard medical references and clinical guidelines.";
+
     const systemPrompt = `You are an expert medical educator creating polished, exam-ready study material.
 
+Mode: ${mode}
 Difficulty Level: ${difficulty || "Basic"}
 Study Focus: ${focus || "Quick Revision"}
 Output Length: ${length || "Concise"}
+
+MODE RULES:
+- USMLE Step 1: Focus on mechanisms, pathophysiology, biochemical pathways, and classic associations.
+- USMLE Step 2: Focus on diagnosis, clinical management, next best steps, and patient scenarios.
+- General: Provide a balanced clinical overview.
+
+FOCUS RULES:
+- Quick Revision: Concise high-yield facts only.
+- Deep Understanding: Brief but clear explanations of mechanisms.
+- Clinical Reasoning: Application-based scenarios and clinical decision-making.
+
+DIFFICULTY controls depth of detail. LENGTH controls amount of detail.
 
 STRICT FORMATTING RULES:
 - Do NOT use markdown symbols (no #, ##, ###, **, *, -, or bullet symbols).
@@ -80,6 +98,11 @@ Rules for flashcards:
 - Include at least 2 clinical reasoning questions (e.g. "A patient presents with X. What is the most likely diagnosis?").
 - Do not repeat information already covered in Key Points verbatim.
 - Focus on exam-relevant, high-yield content.
+
+
+REFERENCE NOTE
+
+${referenceNote}
 
 Do NOT add any introduction, closing remarks, or meta-commentary. Start directly with SUMMARY.`;
 
