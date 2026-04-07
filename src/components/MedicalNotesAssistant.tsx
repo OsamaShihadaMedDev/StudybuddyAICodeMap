@@ -21,6 +21,7 @@ const MedicalNotesAssistant = () => {
   const [difficulty, setDifficulty] = useState("Basic");
   const [focus, setFocus] = useState("Quick Revision");
   const [length, setLength] = useState("Concise");
+  const [examMode, setExamMode] = useState("General");
   const [output, setOutput] = useState("");
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
