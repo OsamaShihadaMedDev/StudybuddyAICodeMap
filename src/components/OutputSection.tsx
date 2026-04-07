@@ -1,16 +1,23 @@
 import { useRef, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { BookOpen, List, HelpCircle, Image, FileText } from "lucide-react";
+import { BookOpen, List, HelpCircle, Image, FileText, Stethoscope, Settings2 } from "lucide-react";
 import CopyButton from "@/components/CopyButton";
 import FlashcardsSection from "@/components/FlashcardsSection";
 import VisualExplanations from "@/components/VisualExplanations";
 
 interface OutputSectionProps {
   output: string;
+  modeInfo?: {
+    examMode: string;
+    difficulty: string;
+    focus: string;
+    length: string;
+  };
 }
 
 const sectionConfig = {
   SUMMARY: { icon: BookOpen, label: "Summary", className: "section-summary" },
+  "CLINICAL APPROACH": { icon: Stethoscope, label: "Clinical Approach", className: "section-clinical" },
   "KEY POINTS": { icon: List, label: "Key Points", className: "section-keypoints" },
   "VISUAL EXPLANATIONS": { icon: Image, label: "Visual Explanations", className: "section-visuals" },
   FLASHCARDS: { icon: HelpCircle, label: "Flashcards", className: "section-flashcards" },
@@ -22,7 +29,6 @@ type SectionKey = keyof typeof sectionConfig;
 function parseSections(text: string) {
   const sections: { title: SectionKey; content: string }[] = [];
   const keys = Object.keys(sectionConfig) as SectionKey[];
-  // Sort by length descending so "VISUAL EXPLANATIONS" matches before "VISUAL"
   const sortedKeys = [...keys].sort((a, b) => b.length - a.length);
   const regex = new RegExp(`(${sortedKeys.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join("|")})\\s*\\n`, "g");
 
@@ -45,7 +51,18 @@ function parseSections(text: string) {
   return sections;
 }
 
-const OutputSection = ({ output }: OutputSectionProps) => {
+function renderFormattedContent(content: string) {
+  // Support **bold** in content
+  const parts = content.split(/(\*\*[^*]+\*\*)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return <strong key={i} className="font-semibold text-foreground">{part.slice(2, -2)}</strong>;
+    }
+    return part;
+  });
+}
+
+const OutputSection = ({ output, modeInfo }: OutputSectionProps) => {
   const ref = useRef<HTMLDivElement>(null);
   const sections = parseSections(output);
 
@@ -69,6 +86,22 @@ const OutputSection = ({ output }: OutputSectionProps) => {
 
   return (
     <div ref={ref} className="space-y-5">
+      {/* Mode Header */}
+      {modeInfo && (
+        <div className="animate-fade-in flex items-center gap-2 text-xs font-medium text-muted-foreground bg-secondary/40 border border-border/40 rounded-lg px-4 py-2.5">
+          <Settings2 className="h-3.5 w-3.5 text-primary" />
+          <span>
+            <span className="text-foreground">{modeInfo.examMode}</span>
+            <span className="mx-1.5 opacity-40">|</span>
+            <span>{modeInfo.difficulty}</span>
+            <span className="mx-1.5 opacity-40">|</span>
+            <span>{modeInfo.focus}</span>
+            <span className="mx-1.5 opacity-40">|</span>
+            <span>{modeInfo.length}</span>
+          </span>
+        </div>
+      )}
+
       {sections.map(({ title, content }, idx) => {
         const config = sectionConfig[title];
         const Icon = config.icon;
@@ -99,7 +132,7 @@ const OutputSection = ({ output }: OutputSectionProps) => {
                 <FlashcardsSection content={content} />
               ) : (
                 <div className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
-                  {content}
+                  {renderFormattedContent(content)}
                 </div>
               )}
             </CardContent>
