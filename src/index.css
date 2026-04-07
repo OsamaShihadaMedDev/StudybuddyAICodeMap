@@ -54,6 +54,7 @@
     --section-keypoints: 215 25% 50%;
     --section-visuals: 168 55% 44%;
     --section-flashcards: 260 50% 55%;
+    --section-examtraps: 35 85% 50%;
   }
 
   .dark {
@@ -103,6 +104,7 @@
     --section-keypoints: 215 20% 55%;
     --section-visuals: 168 55% 48%;
     --section-flashcards: 260 50% 60%;
+    --section-examtraps: 35 85% 55%;
   }
 }
 

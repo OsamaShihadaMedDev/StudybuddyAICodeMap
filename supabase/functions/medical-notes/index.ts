@@ -55,7 +55,7 @@ FOCUS RULES:
 DIFFICULTY controls depth of detail. LENGTH controls amount of detail.
 
 STRICT FORMATTING RULES:
-- Do NOT use markdown symbols (no #, ##, ###, **, *, -, or bullet symbols).
+- Do NOT use markdown symbols (no #, ##, ###, *, -, or bullet symbols).
 - Use plain uppercase section titles on their own line.
 - Use numbered lists (1. 2. 3.) for all list items.
 - Separate sections with a blank line.
@@ -65,26 +65,73 @@ OUTPUT FORMAT (follow exactly):
 
 SUMMARY
 
-Write a concise, structured summary in 120-160 words max. Use short paragraphs. Bold key terms only (diseases, mechanisms, buzzwords) using **term**. Avoid dense textbook-style writing. Focus on high-yield, testable concepts.
+Write a micro-structured summary in 120-160 words max. Use labeled segments:
+
+Definition: One-line definition of the condition/topic. Bold the disease name.
+Mechanism: Core pathophysiology in 1-2 sentences. Bold key mechanisms.
+Key Associations: 3-5 short bullet-style associations or etiologies. Bold buzzwords only.
+
+Rules:
+1. Keep total length the SAME or shorter than 160 words
+2. Use bullet-style phrasing, NOT long paragraphs
+3. Bold ONLY the highest-yield terms (diseases, mechanisms, buzzwords) using **term**
+4. Do NOT repeat anything that appears in later sections
 
 
 CLINICAL APPROACH
 
-4-6 concise numbered bullets MAX. Focus on:
-1. Diagnostic approach
-2. Next best step in management
-3. First-line treatment
-4. What to do if patient is unstable (if relevant)
-Keep content actionable and exam-focused. Do NOT repeat summary content.
+Group into clinical reasoning flow using arrows and grouping:
+
+Diagnosis:
+1. Classic presentation → key finding
+2. Confirmatory test → expected result
+
+Workup:
+1. First-line investigation → what it shows
+2. Additional tests if needed
+
+Management:
+1. First-line treatment → drug/dose if relevant
+2. If unstable → immediate action
+3. If refractory → next step
+
+Complications:
+1. Most common complication
+2. Most dangerous complication
+
+Rules:
+1. Use arrows (→) to show logical flow
+2. Keep each step to ONE line
+3. No explanations unless essential
+4. 4-6 total steps MAX across all groups
+5. Preserve Step 2-style reasoning
 
 
 KEY POINTS
 
-1. First key point (short, high-yield, one sentence)
+1. First key point (exam trigger format: "If X → think Y" or classic association)
 2. Second key point
 3. Continue (aim for 6-8 points MAX)
 
-Each point must be unique. Do NOT restate summary or clinical approach content. Prioritize high-yield associations and exam facts. Keep bullets short and scannable.
+Rules:
+1. Each point = 1-line high-yield association ONLY
+2. No explanations
+3. Focus on classic presentations, buzzwords, associations, "If X → think Y" patterns
+4. Do NOT restate summary or clinical approach content
+5. Keep bullets short and scannable
+
+
+EXAM TRAPS
+
+1. First trap (common confusion or pitfall)
+2. Second trap
+3. Continue (3-6 points MAX)
+
+Rules:
+1. Each bullet highlights a common exam confusion or diagnostic pitfall
+2. Focus on: similar conditions often confused, diagnostic traps, Step 2 trick patterns
+3. Keep each line short, no long explanations
+4. High-yield only
 
 
 VISUAL EXPLANATIONS
@@ -107,11 +154,17 @@ Generate exactly 4-5 flashcards. MUST include:
 - At least 1 diagnosis-style question
 Prefer clinical vignette format when possible.
 
-Q: [Clear, specific question]
-A: [Short, precise answer in 1-2 sentences max]
+Each question MUST start with a tag in brackets indicating the cognitive task:
+[Diagnosis] / [Mechanism] / [Next Step] / [Complication] / [Association]
 
-Q: [Next question]
-A: [Answer]
+Q: [Next Step] A patient presents with...
+A: Short, precise answer in 1-2 sentences max
+
+Q: [Mechanism] What is the underlying...
+A: Answer
+
+Q: [Diagnosis] A 45-year-old presents with...
+A: Answer
 
 Keep Q/A concise. Do not repeat Key Points verbatim.
 
@@ -125,7 +178,8 @@ GLOBAL CONSTRAINTS:
 - Start directly with SUMMARY.
 - Do NOT increase verbosity unnecessarily.
 - Avoid redundancy across sections.
-- Maintain concise, high-yield output throughout.`;
+- Maintain concise, high-yield output throughout.
+- Do NOT add sections beyond those specified above.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
