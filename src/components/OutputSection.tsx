@@ -1,6 +1,6 @@
 import { useRef, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { BookOpen, List, HelpCircle, Image, FileText, Stethoscope, Settings2 } from "lucide-react";
+import { BookOpen, List, HelpCircle, Image, FileText, Stethoscope, Settings2, AlertTriangle } from "lucide-react";
 import CopyButton from "@/components/CopyButton";
 import FlashcardsSection from "@/components/FlashcardsSection";
 import VisualExplanations from "@/components/VisualExplanations";
@@ -19,6 +19,7 @@ const sectionConfig = {
   SUMMARY: { icon: BookOpen, label: "Summary", className: "section-summary" },
   "CLINICAL APPROACH": { icon: Stethoscope, label: "Clinical Approach", className: "section-clinical" },
   "KEY POINTS": { icon: List, label: "Key Points", className: "section-keypoints" },
+  "EXAM TRAPS": { icon: AlertTriangle, label: "⚠️ Exam Traps", className: "section-examtraps" },
   "VISUAL EXPLANATIONS": { icon: Image, label: "Visual Explanations", className: "section-visuals" },
   FLASHCARDS: { icon: HelpCircle, label: "Flashcards", className: "section-flashcards" },
   "REFERENCE NOTE": { icon: FileText, label: "Reference Note", className: "section-reference" },

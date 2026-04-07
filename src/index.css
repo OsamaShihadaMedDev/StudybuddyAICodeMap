@@ -54,6 +54,7 @@
     --section-keypoints: 215 25% 50%;
     --section-visuals: 168 55% 44%;
     --section-flashcards: 260 50% 55%;
+    --section-examtraps: 35 85% 50%;
   }
 
   .dark {
@@ -103,6 +104,7 @@
     --section-keypoints: 215 20% 55%;
     --section-visuals: 168 55% 48%;
     --section-flashcards: 260 50% 60%;
+    --section-examtraps: 35 85% 55%;
   }
 }
 
@@ -174,6 +176,10 @@
 
   .section-visuals {
     box-shadow: inset 0 1px 0 0 hsl(var(--section-visuals) / 0.15), 0 0 20px -8px hsl(var(--section-visuals) / 0.1);
+  }
+
+  .section-examtraps {
+    box-shadow: inset 0 1px 0 0 hsl(var(--section-examtraps) / 0.18), 0 0 20px -8px hsl(var(--section-examtraps) / 0.12);
   }
 
   .section-flashcards {
