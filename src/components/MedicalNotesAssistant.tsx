@@ -44,7 +44,7 @@ const MedicalNotesAssistant = () => {
             "Content-Type": "application/json",
             Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
           },
-          body: JSON.stringify({ notes, difficulty, focus, length }),
+          body: JSON.stringify({ notes, difficulty, focus, length, examMode }),
         }
       );
 
@@ -145,7 +145,22 @@ const MedicalNotesAssistant = () => {
               </div>
 
               {/* Options */}
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    Exam Mode
+                  </label>
+                  <Select value={examMode} onValueChange={setExamMode}>
+                    <SelectTrigger className="bg-background/60 border-border/50">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="General">General</SelectItem>
+                      <SelectItem value="USMLE Step 1">USMLE Step 1</SelectItem>
+                      <SelectItem value="USMLE Step 2">USMLE Step 2</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                     Difficulty
