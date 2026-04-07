@@ -50,6 +50,7 @@
     --gradient-end: 168 55% 44%;
 
     --section-summary: 205 78% 45%;
+    --section-clinical: 190 60% 42%;
     --section-keypoints: 215 25% 50%;
     --section-visuals: 168 55% 44%;
     --section-flashcards: 260 50% 55%;
@@ -98,6 +99,7 @@
     --gradient-end: 168 55% 22%;
 
     --section-summary: 205 78% 55%;
+    --section-clinical: 190 60% 50%;
     --section-keypoints: 215 20% 55%;
     --section-visuals: 168 55% 48%;
     --section-flashcards: 260 50% 60%;
@@ -160,6 +162,10 @@
   /* Section accent glows */
   .section-summary {
     box-shadow: inset 0 1px 0 0 hsl(var(--section-summary) / 0.15), 0 0 20px -8px hsl(var(--section-summary) / 0.1);
+  }
+
+  .section-clinical {
+    box-shadow: inset 0 1px 0 0 hsl(var(--section-clinical) / 0.15), 0 0 20px -8px hsl(var(--section-clinical) / 0.1);
   }
 
   .section-keypoints {
