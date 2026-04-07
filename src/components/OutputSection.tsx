@@ -1,6 +1,6 @@
 import { useRef, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { BookOpen, List, HelpCircle, Image } from "lucide-react";
+import { BookOpen, List, HelpCircle, Image, FileText } from "lucide-react";
 import CopyButton from "@/components/CopyButton";
 import FlashcardsSection from "@/components/FlashcardsSection";
 import VisualExplanations from "@/components/VisualExplanations";
@@ -14,6 +14,7 @@ const sectionConfig = {
   "KEY POINTS": { icon: List, label: "Key Points", className: "section-keypoints" },
   "VISUAL EXPLANATIONS": { icon: Image, label: "Visual Explanations", className: "section-visuals" },
   FLASHCARDS: { icon: HelpCircle, label: "Flashcards", className: "section-flashcards" },
+  "REFERENCE NOTE": { icon: FileText, label: "Reference Note", className: "section-reference" },
 };
 
 type SectionKey = keyof typeof sectionConfig;
