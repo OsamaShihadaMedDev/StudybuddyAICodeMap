@@ -246,7 +246,7 @@ const MedicalNotesAssistant = () => {
           )}
 
           {/* Output */}
-          {output && <OutputSection output={output} />}
+          {output && <OutputSection output={output} modeInfo={{ examMode, difficulty, focus, length }} />}
         </div>
       </div>
     </div>

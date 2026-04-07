@@ -27,6 +27,10 @@ serve(async (req) => {
     }
 
     const mode = examMode || "General";
+    const diff = difficulty || "Basic";
+    const foc = focus || "Quick Revision";
+    const len = length || "Concise";
+
     const referenceNote = mode.startsWith("USMLE")
       ? "Exam-aligned with high-yield USMLE resources (e.g., First Aid, guidelines)."
       : "Based on standard medical references and clinical guidelines.";
@@ -34,9 +38,9 @@ serve(async (req) => {
     const systemPrompt = `You are an expert medical educator creating polished, exam-ready study material.
 
 Mode: ${mode}
-Difficulty Level: ${difficulty || "Basic"}
-Study Focus: ${focus || "Quick Revision"}
-Output Length: ${length || "Concise"}
+Difficulty Level: ${diff}
+Study Focus: ${foc}
+Output Length: ${len}
 
 MODE RULES:
 - USMLE Step 1: Focus on mechanisms, pathophysiology, biochemical pathways, and classic associations.
@@ -53,23 +57,34 @@ DIFFICULTY controls depth of detail. LENGTH controls amount of detail.
 STRICT FORMATTING RULES:
 - Do NOT use markdown symbols (no #, ##, ###, **, *, -, or bullet symbols).
 - Use plain uppercase section titles on their own line.
-- Use numbered lists (1. 2. 3.) for key points.
+- Use numbered lists (1. 2. 3.) for all list items.
 - Separate sections with a blank line.
+- For the SUMMARY section, bold key terms by wrapping them in double asterisks like **term** (this is the ONLY exception to the no-markdown rule).
 
 OUTPUT FORMAT (follow exactly):
 
 SUMMARY
 
-Write a concise, structured summary in 3-5 short paragraphs. No filler words. Focus on mechanisms, clinical relevance, and high-yield facts.
+Write a concise, structured summary in 120-160 words max. Use short paragraphs. Bold key terms only (diseases, mechanisms, buzzwords) using **term**. Avoid dense textbook-style writing. Focus on high-yield, testable concepts.
+
+
+CLINICAL APPROACH
+
+4-6 concise numbered bullets MAX. Focus on:
+1. Diagnostic approach
+2. Next best step in management
+3. First-line treatment
+4. What to do if patient is unstable (if relevant)
+Keep content actionable and exam-focused. Do NOT repeat summary content.
 
 
 KEY POINTS
 
 1. First key point (short, high-yield, one sentence)
 2. Second key point
-3. Continue as needed (aim for 5-10 points)
+3. Continue (aim for 6-8 points MAX)
 
-Each point must be unique and non-repetitive. Do not restate what is already in the summary.
+Each point must be unique. Do NOT restate summary or clinical approach content. Prioritize high-yield associations and exam facts. Keep bullets short and scannable.
 
 
 VISUAL EXPLANATIONS
@@ -86,25 +101,31 @@ Only include this section if the topic involves anatomy, pathology, radiology, d
 
 FLASHCARDS
 
+Generate exactly 4-5 flashcards. MUST include:
+- At least 1 "next best step" question
+- At least 1 mechanism-based question  
+- At least 1 diagnosis-style question
+Prefer clinical vignette format when possible.
+
 Q: [Clear, specific question]
 A: [Short, precise answer in 1-2 sentences max]
 
 Q: [Next question]
 A: [Answer]
 
-Rules for flashcards:
-- Generate 5-10 flashcards minimum.
-- Keep answers short (1-2 sentences).
-- Include at least 2 clinical reasoning questions (e.g. "A patient presents with X. What is the most likely diagnosis?").
-- Do not repeat information already covered in Key Points verbatim.
-- Focus on exam-relevant, high-yield content.
+Keep Q/A concise. Do not repeat Key Points verbatim.
 
 
 REFERENCE NOTE
 
 ${referenceNote}
 
-Do NOT add any introduction, closing remarks, or meta-commentary. Start directly with SUMMARY.`;
+GLOBAL CONSTRAINTS:
+- Do NOT add any introduction, closing remarks, or meta-commentary.
+- Start directly with SUMMARY.
+- Do NOT increase verbosity unnecessarily.
+- Avoid redundancy across sections.
+- Maintain concise, high-yield output throughout.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
