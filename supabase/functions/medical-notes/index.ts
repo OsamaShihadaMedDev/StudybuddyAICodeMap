@@ -134,16 +134,25 @@ Rules:
 4. High-yield only
 
 
-VISUAL EXPLANATIONS
+VISUAL AIDS
 
-List 3-6 key visual topics from the notes that would benefit from images, diagrams, or anatomical illustrations.
-Format as a numbered list. Each item should be a short, searchable medical term or concept.
+Only include this section if the topic clearly benefits from visual understanding (radiology, histology, ECG, clinical signs, anatomy, classic exam images). If no meaningful visual exists, skip this section entirely.
+
+List 1-3 high-yield visuals. For each:
+1. Title (what the image shows)
+2. Why it matters (1 short exam-focused line)
+3. Suggested search phrase (for image lookup)
+
 Example:
-1. Thyroid gland anatomy
-2. Graves disease exophthalmos
-3. Myxedema clinical appearance
+1. "Spike and dome" (membranous nephropathy EM)
+   Classic subepithelial deposits seen on electron microscopy
+   Search: "membranous nephropathy spike and dome EM"
 
-Only include this section if the topic involves anatomy, pathology, radiology, dermatology, histology, or other visual subjects. If the topic is purely pharmacological or theoretical, skip this section entirely.
+Rules:
+1. Do NOT generate or fabricate image URLs
+2. Do NOT claim specific sources
+3. Keep total section very concise (max 3 items)
+4. Prioritize high-yield visuals only
 
 
 FLASHCARDS
