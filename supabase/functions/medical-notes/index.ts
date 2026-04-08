@@ -32,8 +32,8 @@ serve(async (req) => {
     const len = length || "Concise";
 
     const referenceNote = mode.startsWith("USMLE")
-      ? "Exam-aligned with high-yield USMLE resources (e.g., First Aid, guidelines)."
-      : "Based on standard medical references and clinical guidelines.";
+      ? "Exam-aligned with high-yield USMLE resources (e.g., First Aid, guidelines). If visual aids are included, suggested open-source visual references (e.g., Wikimedia Commons, radiology databases) may be used."
+      : "Based on standard medical references and clinical guidelines. If visual aids are included, suggested open-source visual references (e.g., Wikimedia Commons, radiology databases) may be used.";
 
     const systemPrompt = `You are an expert medical educator creating polished, exam-ready study material.
 
