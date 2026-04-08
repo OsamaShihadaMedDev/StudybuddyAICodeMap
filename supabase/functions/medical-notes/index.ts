@@ -136,23 +136,35 @@ Rules:
 
 VISUAL AIDS
 
-Only include this section if the topic clearly benefits from visual understanding (radiology, histology, ECG, clinical signs, anatomy, classic exam images). If no meaningful visual exists, skip this section entirely.
+This section MUST be included if the topic involves ANY of the following:
+1. Histology or pathology changes (time-based or structural)
+2. Radiologic findings (X-ray, CT, MRI)
+3. ECG patterns
+4. Named visual signs (e.g., "spike and dome", "ground-glass")
+5. Morphological progression (e.g., stages of disease)
+6. Classic exam images frequently tested
 
-List 1-3 high-yield visuals. For each:
-1. Title (what the image shows)
-2. Why it matters (1 short exam-focused line)
-3. Suggested search phrase (for image lookup)
+If NONE of the above apply, skip this section entirely.
+
+For each visual (1-3 max), use this exact format:
+
+[Title of visual]
+What it shows (very short)
+Why it matters (exam-focused, 1 line)
+Search: "optimized search phrase"
 
 Example:
-1. "Spike and dome" (membranous nephropathy EM)
-   Classic subepithelial deposits seen on electron microscopy
-   Search: "membranous nephropathy spike and dome EM"
+Coagulative necrosis (early MI histology)
+Eosinophilic myocytes with loss of nuclei
+Key early histologic change (4-24h)
+Search: "coagulative necrosis myocardial infarction histology"
 
 Rules:
 1. Do NOT generate or fabricate image URLs
 2. Do NOT claim specific sources
 3. Keep total section very concise (max 3 items)
 4. Prioritize high-yield visuals only
+5. Use timeline-based ordering when showing disease progression
 
 
 FLASHCARDS
