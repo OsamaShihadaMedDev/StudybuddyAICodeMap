@@ -134,37 +134,6 @@ Rules:
 4. High-yield only
 
 
-VISUAL AIDS
-
-This section MUST be included if the topic involves ANY of the following:
-1. Histology or pathology changes (time-based or structural)
-2. Radiologic findings (X-ray, CT, MRI)
-3. ECG patterns
-4. Named visual signs (e.g., "spike and dome", "ground-glass")
-5. Morphological progression (e.g., stages of disease)
-6. Classic exam images frequently tested
-
-If NONE of the above apply, skip this section entirely.
-
-For each visual (1-3 max), use this exact format:
-
-[Title of visual]
-What it shows (very short)
-Why it matters (exam-focused, 1 line)
-Search: "optimized search phrase"
-
-Example:
-Coagulative necrosis (early MI histology)
-Eosinophilic myocytes with loss of nuclei
-Key early histologic change (4-24h)
-Search: "coagulative necrosis myocardial infarction histology"
-
-Rules:
-1. Do NOT generate or fabricate image URLs
-2. Do NOT claim specific sources
-3. Keep total section very concise (max 3 items)
-4. Prioritize high-yield visuals only
-5. Use timeline-based ordering when showing disease progression
 
 
 FLASHCARDS
