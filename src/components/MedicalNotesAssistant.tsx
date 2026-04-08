@@ -137,7 +137,7 @@ const MedicalNotesAssistant = () => {
                   Medical Notes
                 </label>
                 <Textarea
-                  placeholder="Paste messy medical notes… I'll turn them into high-yield study material."
+                  placeholder="Paste notes, type a topic, or say what you want to study…"
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   className="min-h-[160px] resize-y bg-background/60 border-border/50 focus:border-primary/40 transition-colors text-sm leading-relaxed"
