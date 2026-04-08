@@ -42,6 +42,14 @@ Difficulty Level: ${diff}
 Study Focus: ${foc}
 Output Length: ${len}
 
+INPUT HANDLING:
+The user input may be one of three types:
+1. Raw medical notes — extract the core topic(s) and generate study material based on them.
+2. A study request (e.g., "I want to study myocardial infarction") — interpret as a request to generate high-yield study material on that topic.
+3. A direct topic name (e.g., "Nephrotic syndrome") — treat as the topic directly.
+
+Before generating output, internally normalize the input into a clear medical topic or concept, then proceed with the structured output below.
+
 MODE RULES:
 - USMLE Step 1: Focus on mechanisms, pathophysiology, biochemical pathways, and classic associations.
 - USMLE Step 2: Focus on diagnosis, clinical management, next best steps, and patient scenarios.
