@@ -20,7 +20,7 @@ const sectionConfig = {
   "CLINICAL APPROACH": { icon: Stethoscope, label: "Clinical Approach", className: "section-clinical" },
   "KEY POINTS": { icon: List, label: "Key Points", className: "section-keypoints" },
   "EXAM TRAPS": { icon: AlertTriangle, label: "⚠️ Exam Traps", className: "section-examtraps" },
-  "VISUAL EXPLANATIONS": { icon: Image, label: "Visual Explanations", className: "section-visuals" },
+  "VISUAL AIDS": { icon: Image, label: "Visual Aids", className: "section-visuals" },
   FLASHCARDS: { icon: HelpCircle, label: "Flashcards", className: "section-flashcards" },
   "REFERENCE NOTE": { icon: FileText, label: "Reference Note", className: "section-reference" },
 };
@@ -107,7 +107,7 @@ const OutputSection = ({ output, modeInfo }: OutputSectionProps) => {
         const config = sectionConfig[title];
         const Icon = config.icon;
 
-        if (title === "VISUAL EXPLANATIONS") {
+        if (title === "VISUAL AIDS") {
           return <VisualExplanations key={title} content={content} style={{ animationDelay: `${idx * 100}ms` }} />;
         }
 

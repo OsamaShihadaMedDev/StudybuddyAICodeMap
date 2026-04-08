@@ -87,7 +87,7 @@ const VisualExplanations = ({ content, style }: VisualExplanationsProps) => {
             <Image className="h-4 w-4 text-accent" />
           </div>
           <h3 className="text-base font-bold tracking-wide text-foreground uppercase">
-            Visual Explanations
+            Visual Aids
           </h3>
         </div>
         <CopyButton text={content} />
