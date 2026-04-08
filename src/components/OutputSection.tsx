@@ -1,9 +1,8 @@
 import { useRef, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { BookOpen, List, HelpCircle, Image, FileText, Stethoscope, Settings2, AlertTriangle } from "lucide-react";
+import { BookOpen, List, HelpCircle, FileText, Stethoscope, Settings2, AlertTriangle } from "lucide-react";
 import CopyButton from "@/components/CopyButton";
 import FlashcardsSection from "@/components/FlashcardsSection";
-import VisualExplanations from "@/components/VisualExplanations";
 
 interface OutputSectionProps {
   output: string;
@@ -20,7 +19,6 @@ const sectionConfig = {
   "CLINICAL APPROACH": { icon: Stethoscope, label: "Clinical Approach", className: "section-clinical" },
   "KEY POINTS": { icon: List, label: "Key Points", className: "section-keypoints" },
   "EXAM TRAPS": { icon: AlertTriangle, label: "⚠️ Exam Traps", className: "section-examtraps" },
-  "VISUAL AIDS": { icon: Image, label: "Visual Aids", className: "section-visuals" },
   FLASHCARDS: { icon: HelpCircle, label: "Flashcards", className: "section-flashcards" },
   "REFERENCE NOTE": { icon: FileText, label: "Reference Note", className: "section-reference" },
 };
@@ -107,9 +105,6 @@ const OutputSection = ({ output, modeInfo }: OutputSectionProps) => {
         const config = sectionConfig[title];
         const Icon = config.icon;
 
-        if (title === "VISUAL AIDS") {
-          return <VisualExplanations key={title} content={content} style={{ animationDelay: `${idx * 100}ms` }} />;
-        }
 
         return (
           <Card
