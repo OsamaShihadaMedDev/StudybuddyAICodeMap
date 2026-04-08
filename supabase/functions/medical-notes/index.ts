@@ -73,17 +73,29 @@ OUTPUT FORMAT (follow exactly):
 
 SUMMARY
 
-Write a micro-structured summary in 120-160 words max. Use labeled segments:
+Adaptive-length micro-structured summary. Scale detail to topic complexity, but ALWAYS stay concise and scannable.
 
+Length logic:
+- Small/narrow topic → very concise (few bullets or short blocks)
+- Medium topic → moderate detail with clear structure
+- Large/complex topic → still concise, prioritize ONLY high-yield concepts, compress aggressively
+
+Mandatory labeled segments:
 Definition: One-line definition of the condition/topic. Bold the disease name.
-Mechanism: Core pathophysiology in 1-2 sentences. Bold key mechanisms.
-Key Associations: 3-5 short bullet-style associations or etiologies. Bold buzzwords only.
+Mechanism / Pathophysiology: Core mechanism in 1-2 sentences. Bold key mechanisms.
+Key Associations / Features: Short bullet-style associations or etiologies. Bold buzzwords only.
+
+Optional segments (include ONLY if directly relevant):
+Diagnosis: Key diagnostic finding or test.
+Management: First-line treatment or critical intervention.
 
 Rules:
-1. Keep total length the SAME or shorter than 160 words
-2. Use bullet-style phrasing, NOT long paragraphs
-3. Bold ONLY the highest-yield terms (diseases, mechanisms, buzzwords) using **term**
-4. Do NOT repeat anything that appears in later sections
+1. Each line = one idea. Use bullet-style phrasing, NOT long paragraphs.
+2. Bold ONLY the highest-yield terms (diseases, mechanisms, buzzwords) using **term**
+3. Do NOT repeat anything that appears in later sections
+4. Do NOT increase verbosity for large topics — compress and prioritize instead
+5. For large topics: INCLUDE only most tested concepts, classic associations, exam-relevant mechanisms. EXCLUDE rare details and excessive explanations.
+6. The summary must always feel concise, scannable, and non-redundant
 
 
 CLINICAL APPROACH
