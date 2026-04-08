@@ -105,9 +105,6 @@ const OutputSection = ({ output, modeInfo }: OutputSectionProps) => {
         const config = sectionConfig[title];
         const Icon = config.icon;
 
-        if (title === "VISUAL AIDS") {
-          return <VisualExplanations key={title} content={content} style={{ animationDelay: `${idx * 100}ms` }} />;
-        }
 
         return (
           <Card
