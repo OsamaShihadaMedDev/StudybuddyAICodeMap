@@ -216,6 +216,17 @@ const MedicalNotesAssistant = () => {
                 </div>
               </div>
 
+              {/* Usage Indicator */}
+              <div className="text-center text-xs text-muted-foreground">
+                {usageCount >= MAX_DAILY_USES ? (
+                  <span className="text-amber-500 dark:text-amber-400 font-medium">
+                    Daily limit reached — Lite mode active
+                  </span>
+                ) : (
+                  <span>{usageCount} / {MAX_DAILY_USES} uses today</span>
+                )}
+              </div>
+
               {/* Generate Button */}
               <Button
                 className="w-full h-12 text-sm font-bold rounded-xl btn-gradient"
