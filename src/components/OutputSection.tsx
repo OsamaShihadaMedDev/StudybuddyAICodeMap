@@ -1,11 +1,13 @@
 import { useRef, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { BookOpen, List, HelpCircle, FileText, Stethoscope, Settings2, AlertTriangle } from "lucide-react";
+import { BookOpen, List, HelpCircle, FileText, Stethoscope, Settings2, AlertTriangle, Lightbulb } from "lucide-react";
 import CopyButton from "@/components/CopyButton";
 import FlashcardsSection from "@/components/FlashcardsSection";
+import SaveButton from "@/components/SaveButton";
 
 interface OutputSectionProps {
   output: string;
+  inputText?: string;
   modeInfo?: {
     examMode: string;
     difficulty: string;
@@ -16,6 +18,7 @@ interface OutputSectionProps {
 
 const sectionConfig = {
   SUMMARY: { icon: BookOpen, label: "Summary", className: "section-summary" },
+  "MEMORY HOOKS": { icon: Lightbulb, label: "Memory Hooks", className: "section-memoryhooks" },
   "CLINICAL APPROACH": { icon: Stethoscope, label: "Clinical Approach", className: "section-clinical" },
   "KEY POINTS": { icon: List, label: "Key Points", className: "section-keypoints" },
   "EXAM TRAPS": { icon: AlertTriangle, label: "⚠️ Exam Traps", className: "section-examtraps" },
@@ -61,7 +64,7 @@ function renderFormattedContent(content: string) {
   });
 }
 
-const OutputSection = ({ output, modeInfo }: OutputSectionProps) => {
+const OutputSection = ({ output, inputText, modeInfo }: OutputSectionProps) => {
   const ref = useRef<HTMLDivElement>(null);
   const sections = parseSections(output);
 
@@ -85,10 +88,11 @@ const OutputSection = ({ output, modeInfo }: OutputSectionProps) => {
 
   return (
     <div ref={ref} className="space-y-5">
-      {/* Mode Header */}
-      {modeInfo && (
-        <div className="animate-fade-in flex items-center gap-2 text-xs font-medium text-muted-foreground bg-secondary/40 border border-border/40 rounded-lg px-4 py-2.5">
-          <Settings2 className="h-3.5 w-3.5 text-primary" />
+      {/* Save + Mode Header */}
+      <div className="animate-fade-in flex items-center justify-between">
+        {modeInfo && (
+          <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground bg-secondary/40 border border-border/40 rounded-lg px-4 py-2.5">
+            <Settings2 className="h-3.5 w-3.5 text-primary" />
           <span>
             <span className="text-foreground">{modeInfo.examMode}</span>
             <span className="mx-1.5 opacity-40">|</span>
@@ -98,8 +102,10 @@ const OutputSection = ({ output, modeInfo }: OutputSectionProps) => {
             <span className="mx-1.5 opacity-40">|</span>
             <span>{modeInfo.length}</span>
           </span>
-        </div>
-      )}
+          </div>
+        )}
+        <SaveButton input={inputText || ""} output={output} modeInfo={modeInfo} />
+      </div>
 
       {sections.map(({ title, content }, idx) => {
         const config = sectionConfig[title];
