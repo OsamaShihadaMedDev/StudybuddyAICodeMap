@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { notes, difficulty, focus, length, examMode } = await req.json();
+    const { notes, difficulty, focus, length, examMode, lite } = await req.json();
 
     if (!notes || typeof notes !== "string" || !notes.trim()) {
       return new Response(
@@ -189,7 +189,7 @@ GLOBAL CONSTRAINTS:
 - Do NOT increase verbosity unnecessarily.
 - Avoid redundancy across sections.
 - Maintain concise, high-yield output throughout.
-- Do NOT add sections beyond those specified above.`;
+- Do NOT add sections beyond those specified above.${lite ? `\n\nLITE MODE ACTIVE:\n- Keep output concise and reduced in length (lite mode).\n- Summary: reduce to ~50% length.\n- Clinical Approach: max 3 steps total.\n- Key Points: max 5 bullets.\n- Flashcards: max 3.\n- Keep Reference Note as-is.` : ""}`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",

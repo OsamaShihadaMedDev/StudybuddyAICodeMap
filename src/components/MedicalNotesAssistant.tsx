@@ -15,6 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import ThemeToggle from "@/components/ThemeToggle";
 import GradientBackground from "@/components/GradientBackground";
 import OutputSection from "@/components/OutputSection";
+import { checkUsage, incrementUsage, MAX_DAILY_USES } from "@/hooks/use-usage-limit";
 
 const MedicalNotesAssistant = () => {
   const [notes, setNotes] = useState("");
@@ -26,16 +27,23 @@ const MedicalNotesAssistant = () => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
+  const [usageCount, setUsageCount] = useState(() => checkUsage().count);
+
   const handleGenerate = async () => {
     if (!notes.trim()) {
       toast({ title: "Please enter medical notes", variant: "destructive" });
       return;
     }
 
+    const { isLite } = checkUsage();
+
     setLoading(true);
     setOutput("");
 
     try {
+      incrementUsage();
+      setUsageCount(checkUsage().count);
+
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/medical-notes`,
         {
@@ -44,7 +52,7 @@ const MedicalNotesAssistant = () => {
             "Content-Type": "application/json",
             Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
           },
-          body: JSON.stringify({ notes, difficulty, focus, length, examMode }),
+          body: JSON.stringify({ notes, difficulty, focus, length, examMode, lite: isLite }),
         }
       );
 
@@ -206,6 +214,17 @@ const MedicalNotesAssistant = () => {
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+
+              {/* Usage Indicator */}
+              <div className="text-center text-xs text-muted-foreground">
+                {usageCount >= MAX_DAILY_USES ? (
+                  <span className="text-amber-500 dark:text-amber-400 font-medium">
+                    Daily limit reached — Lite mode active
+                  </span>
+                ) : (
+                  <span>{usageCount} / {MAX_DAILY_USES} uses today</span>
+                )}
               </div>
 
               {/* Generate Button */}
