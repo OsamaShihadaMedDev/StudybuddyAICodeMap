@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { notes, difficulty, focus, length, examMode, lite } = await req.json();
+    const { notes, difficulty, focus, length, examMode, lite, quizMode } = await req.json();
 
     if (!notes || typeof notes !== "string" || !notes.trim()) {
       return new Response(
@@ -35,7 +35,50 @@ serve(async (req) => {
       ? "Exam-aligned with high-yield USMLE resources (e.g., First Aid, guidelines)."
       : "Based on standard medical references and clinical guidelines.";
 
-    const systemPrompt = `You are an expert medical educator creating polished, exam-ready study material.
+    let systemPrompt: string;
+
+    if (quizMode) {
+      systemPrompt = `You are an expert medical educator generating USMLE-style active recall questions.
+
+Mode: ${mode}
+Difficulty Level: ${diff}
+
+INPUT HANDLING:
+The user input may be raw notes, a study request, or a direct topic name.
+Normalize the input into a clear medical topic, then generate questions.
+
+Generate exactly 5-7 questions. Mix of:
+- Clinical vignette questions (patient scenario → diagnosis or next step)
+- Concept recall questions (mechanism, association, or complication)
+
+STRICT FORMATTING RULES:
+- Do NOT use markdown symbols (no #, ##, ###, *, -).
+- Use plain text only.
+
+OUTPUT FORMAT (follow exactly):
+
+FLASHCARDS
+
+Q: [Diagnosis] A clinical vignette question...
+A: Short, precise answer in 1-2 sentences max
+
+Q: [Next Step] Another question...
+A: Answer
+
+Q: [Mechanism] What is the underlying...
+A: Answer
+
+(Continue for 5-7 total questions)
+
+Each question MUST start with a tag: [Diagnosis] / [Mechanism] / [Next Step] / [Complication] / [Association]
+
+GLOBAL CONSTRAINTS:
+- Generate only questions for active recall. Do not include explanations unless necessary.
+- Do NOT add any introduction, closing remarks, or meta-commentary.
+- Start directly with FLASHCARDS.
+- Keep Q/A concise.${lite ? `\n\nLITE MODE: Generate only 3 questions.` : ""}`;
+    } else {
+      systemPrompt = `You are an expert medical educator creating polished, exam-ready study material.
 
 Mode: ${mode}
 Difficulty Level: ${diff}
@@ -96,6 +139,22 @@ Rules:
 4. Do NOT increase verbosity for large topics — compress and prioritize instead
 5. For large topics: INCLUDE only most tested concepts, classic associations, exam-relevant mechanisms. EXCLUDE rare details and excessive explanations.
 6. The summary must always feel concise, scannable, and non-redundant
+
+
+MEMORY HOOKS
+
+2-4 ultra-concise, sticky learning bullets. These are First Aid-style one-liner associations and "if you remember one thing" insights.
+
+Rules:
+1. Each bullet = one association or mechanism shortcut
+2. Use arrow format: "X → Y → Z"
+3. Focus on classic board-style mnemonics, associations, and mechanisms
+4. Do NOT repeat content from Key Points or Summary
+5. Keep extremely concise — each line should be instantly memorable
+
+Example style:
+"Nephrotic syndrome → protein loss → hypercoagulability"
+"MCD = kids + steroid responsive"
 
 
 CLINICAL APPROACH
@@ -189,8 +248,8 @@ GLOBAL CONSTRAINTS:
 - Do NOT increase verbosity unnecessarily.
 - Avoid redundancy across sections.
 - Maintain concise, high-yield output throughout.
-- Do NOT add sections beyond those specified above.${lite ? `\n\nLITE MODE ACTIVE:\n- Keep output concise and reduced in length (lite mode).\n- Summary: reduce to ~50% length.\n- Clinical Approach: max 3 steps total.\n- Key Points: max 5 bullets.\n- Flashcards: max 3.\n- Keep Reference Note as-is.` : ""}`;
-
+- Do NOT add sections beyond those specified above.${lite ? `\n\nLITE MODE ACTIVE:\n- Keep output concise and reduced in length (lite mode).\n- Summary: reduce to ~50% length.\n- Memory Hooks: max 2 bullets.\n- Clinical Approach: max 3 steps total.\n- Key Points: max 5 bullets.\n- Flashcards: max 3.\n- Keep Reference Note as-is.` : ""}`;
+    }
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {

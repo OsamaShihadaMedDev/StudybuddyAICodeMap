@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,13 +9,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Stethoscope, Loader2, Sparkles } from "lucide-react";
+import { Stethoscope, Loader2, Sparkles, BrainCircuit } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import ThemeToggle from "@/components/ThemeToggle";
 import GradientBackground from "@/components/GradientBackground";
 import OutputSection from "@/components/OutputSection";
+import StudyHistoryModal from "@/components/StudyHistoryModal";
 import { checkUsage, incrementUsage, MAX_DAILY_USES } from "@/hooks/use-usage-limit";
+import type { StudyHistoryItem } from "@/hooks/use-study-history";
 
 const MedicalNotesAssistant = () => {
   const [notes, setNotes] = useState("");
@@ -29,7 +31,7 @@ const MedicalNotesAssistant = () => {
 
   const [usageCount, setUsageCount] = useState(() => checkUsage().count);
 
-  const handleGenerate = async () => {
+  const generate = async (quizMode: boolean) => {
     if (!notes.trim()) {
       toast({ title: "Please enter medical notes", variant: "destructive" });
       return;
@@ -52,7 +54,7 @@ const MedicalNotesAssistant = () => {
             "Content-Type": "application/json",
             Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
           },
-          body: JSON.stringify({ notes, difficulty, focus, length, examMode, lite: isLite }),
+          body: JSON.stringify({ notes, difficulty, focus, length, examMode, lite: isLite, quizMode }),
         }
       );
 
@@ -111,6 +113,20 @@ const MedicalNotesAssistant = () => {
     }
   };
 
+  const handleGenerate = () => generate(false);
+  const handleQuizMode = () => generate(true);
+
+  const handleHistorySelect = (item: StudyHistoryItem) => {
+    setNotes(item.input);
+    setOutput(item.output);
+    if (item.modeInfo) {
+      setExamMode(item.modeInfo.examMode);
+      setDifficulty(item.modeInfo.difficulty);
+      setFocus(item.modeInfo.focus);
+      setLength(item.modeInfo.length);
+    }
+  };
+
   return (
     <div className="relative min-h-screen">
       <GradientBackground />
@@ -134,7 +150,10 @@ const MedicalNotesAssistant = () => {
                 </div>
               </div>
             </div>
-            <ThemeToggle />
+            <div className="flex items-center gap-2">
+              <StudyHistoryModal onSelect={handleHistorySelect} />
+              <ThemeToggle />
+            </div>
           </header>
 
           {/* Input Card */}
@@ -227,24 +246,35 @@ const MedicalNotesAssistant = () => {
                 )}
               </div>
 
-              {/* Generate Button */}
-              <Button
-                className="w-full h-12 text-sm font-bold rounded-xl btn-gradient"
-                onClick={handleGenerate}
-                disabled={loading}
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Generating…
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="mr-2 h-4 w-4" />
-                    Generate Study Material
-                  </>
-                )}
-              </Button>
+              {/* Action Buttons */}
+              <div className="flex gap-3">
+                <Button
+                  className="flex-1 h-12 text-sm font-bold rounded-xl btn-gradient"
+                  onClick={handleGenerate}
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Generating…
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="mr-2 h-4 w-4" />
+                      Generate Study Material
+                    </>
+                  )}
+                </Button>
+                <Button
+                  variant="outline"
+                  className="h-12 px-5 text-sm font-bold rounded-xl border-primary/30 hover:bg-primary/10"
+                  onClick={handleQuizMode}
+                  disabled={loading}
+                >
+                  <BrainCircuit className="mr-2 h-4 w-4" />
+                  Test Me
+                </Button>
+              </div>
             </CardContent>
           </Card>
 
@@ -265,7 +295,13 @@ const MedicalNotesAssistant = () => {
           )}
 
           {/* Output */}
-          {output && <OutputSection output={output} modeInfo={{ examMode, difficulty, focus, length }} />}
+          {output && (
+            <OutputSection
+              output={output}
+              inputText={notes}
+              modeInfo={{ examMode, difficulty, focus, length }}
+            />
+          )}
         </div>
       </div>
     </div>
