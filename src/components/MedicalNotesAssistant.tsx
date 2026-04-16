@@ -239,8 +239,14 @@ const MedicalNotesAssistant = () => {
                 </div>
               </div>
 
-              {/* Access Code */}
-              {!pro && (
+              {/* Access Code / Pro Status */}
+              {pro ? (
+                <div className="rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 text-center">
+                  <p className="text-sm font-semibold text-primary">
+                    ✅ Unlimited Access Activated
+                  </p>
+                </div>
+              ) : (
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                     Enter Access Code (optional)
@@ -275,24 +281,21 @@ const MedicalNotesAssistant = () => {
               )}
 
               {/* Usage Indicator */}
-              <div className="text-center text-xs text-muted-foreground space-y-2">
-                {pro ? (
-                  <span className="inline-flex items-center gap-1.5 text-primary font-medium">
-                    <ShieldCheck className="h-3.5 w-3.5" />
-                    Unlimited Access Enabled
-                  </span>
-                ) : usageCount >= MAX_DAILY_USES ? (
-                  <span className="text-amber-500 dark:text-amber-400 font-medium block">
-                    Daily limit reached — Lite mode active
-                  </span>
-                ) : (
-                  <span>{usageCount} / {MAX_DAILY_USES} uses today</span>
-                )}
-              </div>
+              {!pro && (
+                <div className="text-center text-xs text-muted-foreground space-y-2">
+                  {usageCount >= MAX_DAILY_USES ? (
+                    <span className="text-amber-500 dark:text-amber-400 font-medium block">
+                      Daily limit reached — Lite mode active
+                    </span>
+                  ) : (
+                    <span>{usageCount} / {MAX_DAILY_USES} uses today</span>
+                  )}
+                </div>
+              )}
 
               {/* Always-visible Contact Section */}
-              {!pro && (
-                <div className="flex items-center justify-center gap-3 text-xs text-muted-foreground">
+              <div className="flex flex-col items-center gap-1 text-xs text-muted-foreground">
+                <div className="flex items-center justify-center gap-3">
                   <span>Need full access?</span>
                   <a
                     href="https://wa.me/972592823030"
@@ -311,7 +314,8 @@ const MedicalNotesAssistant = () => {
                     Email
                   </a>
                 </div>
-              )}
+                <span className="text-[11px] opacity-70">Access is granted manually</span>
+              </div>
 
               {/* Action Buttons */}
               <div className="flex gap-3">
