@@ -239,12 +239,74 @@ const MedicalNotesAssistant = () => {
                 </div>
               </div>
 
+              {/* Access Code */}
+              {!pro && (
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    Enter Access Code (optional)
+                  </label>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="e.g. X7A9K2QZ"
+                      value={accessCode}
+                      onChange={(e) => { setAccessCode(e.target.value); setCodeError(false); }}
+                      className="bg-background/60 border-border/50 text-sm font-mono uppercase"
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="shrink-0 h-10 border-primary/30"
+                      onClick={() => {
+                        if (activateProCode(accessCode)) {
+                          setPro(true);
+                          setCodeError(false);
+                          toast({ title: "Pro access activated!" });
+                        } else {
+                          setCodeError(true);
+                        }
+                      }}
+                    >
+                      Activate
+                    </Button>
+                  </div>
+                  {codeError && (
+                    <p className="text-xs text-destructive">Invalid code</p>
+                  )}
+                </div>
+              )}
+
               {/* Usage Indicator */}
-              <div className="text-center text-xs text-muted-foreground">
-                {usageCount >= MAX_DAILY_USES ? (
-                  <span className="text-amber-500 dark:text-amber-400 font-medium">
-                    Daily limit reached — Lite mode active
+              <div className="text-center text-xs text-muted-foreground space-y-2">
+                {pro ? (
+                  <span className="inline-flex items-center gap-1.5 text-primary font-medium">
+                    <ShieldCheck className="h-3.5 w-3.5" />
+                    Unlimited Access Enabled
                   </span>
+                ) : usageCount >= MAX_DAILY_USES ? (
+                  <>
+                    <span className="text-amber-500 dark:text-amber-400 font-medium block">
+                      Daily limit reached — Lite mode active
+                    </span>
+                    <div className="flex items-center justify-center gap-3 pt-1">
+                      <span className="text-muted-foreground">Need full access?</span>
+                      <a
+                        href="https://wa.me/972592823030"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-primary hover:underline"
+                      >
+                        <MessageCircle className="h-3.5 w-3.5" />
+                        WhatsApp
+                      </a>
+                      <a
+                        href="mailto:Osama200az@gmail.com"
+                        className="inline-flex items-center gap-1 text-primary hover:underline"
+                      >
+                        <Mail className="h-3.5 w-3.5" />
+                        Email
+                      </a>
+                    </div>
+                  </>
                 ) : (
                   <span>{usageCount} / {MAX_DAILY_USES} uses today</span>
                 )}
