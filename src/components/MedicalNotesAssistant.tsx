@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -9,14 +10,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Stethoscope, Loader2, Sparkles, BrainCircuit } from "lucide-react";
+import { Stethoscope, Loader2, Sparkles, BrainCircuit, MessageCircle, Mail, ShieldCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import ThemeToggle from "@/components/ThemeToggle";
 import GradientBackground from "@/components/GradientBackground";
 import OutputSection from "@/components/OutputSection";
 import StudyHistoryModal from "@/components/StudyHistoryModal";
-import { checkUsage, incrementUsage, MAX_DAILY_USES } from "@/hooks/use-usage-limit";
+import { checkUsage, incrementUsage, MAX_DAILY_USES, isProUser, activateProCode } from "@/hooks/use-usage-limit";
 import type { StudyHistoryItem } from "@/hooks/use-study-history";
 
 const MedicalNotesAssistant = () => {
@@ -30,6 +31,9 @@ const MedicalNotesAssistant = () => {
   const { toast } = useToast();
 
   const [usageCount, setUsageCount] = useState(() => checkUsage().count);
+  const [pro, setPro] = useState(() => isProUser());
+  const [accessCode, setAccessCode] = useState("");
+  const [codeError, setCodeError] = useState(false);
 
   const generate = async (quizMode: boolean) => {
     if (!notes.trim()) {
