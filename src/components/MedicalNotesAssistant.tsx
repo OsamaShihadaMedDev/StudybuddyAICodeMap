@@ -282,34 +282,36 @@ const MedicalNotesAssistant = () => {
                     Unlimited Access Enabled
                   </span>
                 ) : usageCount >= MAX_DAILY_USES ? (
-                  <>
-                    <span className="text-amber-500 dark:text-amber-400 font-medium block">
-                      Daily limit reached — Lite mode active
-                    </span>
-                    <div className="flex items-center justify-center gap-3 pt-1">
-                      <span className="text-muted-foreground">Need full access?</span>
-                      <a
-                        href="https://wa.me/972592823030"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-primary hover:underline"
-                      >
-                        <MessageCircle className="h-3.5 w-3.5" />
-                        WhatsApp
-                      </a>
-                      <a
-                        href="mailto:Osama200az@gmail.com"
-                        className="inline-flex items-center gap-1 text-primary hover:underline"
-                      >
-                        <Mail className="h-3.5 w-3.5" />
-                        Email
-                      </a>
-                    </div>
-                  </>
+                  <span className="text-amber-500 dark:text-amber-400 font-medium block">
+                    Daily limit reached — Lite mode active
+                  </span>
                 ) : (
                   <span>{usageCount} / {MAX_DAILY_USES} uses today</span>
                 )}
               </div>
+
+              {/* Always-visible Contact Section */}
+              {!pro && (
+                <div className="flex items-center justify-center gap-3 text-xs text-muted-foreground">
+                  <span>Need full access?</span>
+                  <a
+                    href="https://wa.me/972592823030"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-primary hover:underline"
+                  >
+                    <MessageCircle className="h-3.5 w-3.5" />
+                    WhatsApp
+                  </a>
+                  <a
+                    href="mailto:Osama200az@gmail.com"
+                    className="inline-flex items-center gap-1 text-primary hover:underline"
+                  >
+                    <Mail className="h-3.5 w-3.5" />
+                    Email
+                  </a>
+                </div>
+              )}
 
               {/* Action Buttons */}
               <div className="flex gap-3">
