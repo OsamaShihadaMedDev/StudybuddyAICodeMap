@@ -247,7 +247,6 @@ const MedicalNotesAssistant = () => {
                   </label>
                   <div className="flex gap-2">
                     <Input
-                      placeholder="e.g. X7A9K2QZ"
                       value={accessCode}
                       onChange={(e) => { setAccessCode(e.target.value); setCodeError(false); }}
                       className="bg-background/60 border-border/50 text-sm font-mono uppercase"
