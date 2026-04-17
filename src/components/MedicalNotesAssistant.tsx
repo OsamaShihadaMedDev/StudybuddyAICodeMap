@@ -32,6 +32,7 @@ const MedicalNotesAssistant = () => {
 
   const [usageCount, setUsageCount] = useState(() => checkUsage().count);
   const [pro, setPro] = useState(() => isProUser());
+  const [expired, setExpired] = useState(() => isProExpired());
   const [accessCode, setAccessCode] = useState("");
   const [codeError, setCodeError] = useState(false);
 
