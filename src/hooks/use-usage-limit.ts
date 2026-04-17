@@ -1,7 +1,9 @@
 const STORAGE_KEY = "studybuddy_usage";
 const PRO_KEY = "studybuddy_pro";
+const PRO_ACTIVATED_AT_KEY = "proActivatedAt";
 const MAX_USES = 5;
 const RESET_INTERVAL_MS = 24 * 60 * 60 * 1000;
+const PRO_DURATION_MS = 30 * 24 * 60 * 60 * 1000;
 
 const validCodes = new Set([
   "X7A9K2QZ","M4P8L1DX","Q9Z2W6TR","B7N3X8FV","K2R5T9LP",
