@@ -42,6 +42,12 @@ const MedicalNotesAssistant = () => {
       return;
     }
 
+    // Re-check pro status (handles 30-day expiration)
+    const currentlyPro = isProUser();
+    if (currentlyPro !== pro) {
+      setPro(currentlyPro);
+      setExpired(isProExpired());
+    }
     const { isLite } = checkUsage();
 
     setLoading(true);
