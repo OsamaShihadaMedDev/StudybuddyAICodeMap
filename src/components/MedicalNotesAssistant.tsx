@@ -271,7 +271,9 @@ const MedicalNotesAssistant = () => {
                       onClick={() => {
                         if (activateProCode(accessCode)) {
                           setPro(true);
+                          setExpired(false);
                           setCodeError(false);
+                          clearProExpired();
                           toast({ title: "Pro access activated!" });
                         } else {
                           setCodeError(true);
@@ -283,6 +285,11 @@ const MedicalNotesAssistant = () => {
                   </div>
                   {codeError && (
                     <p className="text-xs text-destructive">Invalid code</p>
+                  )}
+                  {expired && !codeError && (
+                    <p className="text-xs text-amber-500 dark:text-amber-400">
+                      Access expired — please enter a new code
+                    </p>
                   )}
                 </div>
               )}
