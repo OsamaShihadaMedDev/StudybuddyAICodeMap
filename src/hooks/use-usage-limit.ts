@@ -1,7 +1,9 @@
 const STORAGE_KEY = "studybuddy_usage";
 const PRO_KEY = "studybuddy_pro";
+const PRO_ACTIVATED_AT_KEY = "proActivatedAt";
 const MAX_USES = 5;
 const RESET_INTERVAL_MS = 24 * 60 * 60 * 1000;
+const PRO_DURATION_MS = 30 * 24 * 60 * 60 * 1000;
 
 const validCodes = new Set([
   "X7A9K2QZ","M4P8L1DX","Q9Z2W6TR","B7N3X8FV","K2R5T9LP",
@@ -39,16 +41,46 @@ function getUsage(): UsageData {
 
 export function isProUser(): boolean {
   try {
-    return localStorage.getItem(PRO_KEY) === "true";
+    if (localStorage.getItem(PRO_KEY) !== "true") return false;
+    const activatedAtRaw = localStorage.getItem(PRO_ACTIVATED_AT_KEY);
+    if (!activatedAtRaw) {
+      // Legacy pro without timestamp — treat as just activated
+      localStorage.setItem(PRO_ACTIVATED_AT_KEY, String(Date.now()));
+      return true;
+    }
+    const activatedAt = parseInt(activatedAtRaw, 10);
+    if (isNaN(activatedAt) || Date.now() - activatedAt > PRO_DURATION_MS) {
+      localStorage.removeItem(PRO_KEY);
+      localStorage.removeItem(PRO_ACTIVATED_AT_KEY);
+      localStorage.setItem("proExpired", "true");
+      return false;
+    }
+    return true;
   } catch {
     return false;
   }
+}
+
+export function isProExpired(): boolean {
+  try {
+    return localStorage.getItem("proExpired") === "true";
+  } catch {
+    return false;
+  }
+}
+
+export function clearProExpired(): void {
+  try {
+    localStorage.removeItem("proExpired");
+  } catch {}
 }
 
 export function activateProCode(code: string): boolean {
   const normalized = code.trim().toUpperCase();
   if (validCodes.has(normalized)) {
     localStorage.setItem(PRO_KEY, "true");
+    localStorage.setItem(PRO_ACTIVATED_AT_KEY, String(Date.now()));
+    localStorage.removeItem("proExpired");
     return true;
   }
   return false;

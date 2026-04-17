@@ -17,7 +17,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 import GradientBackground from "@/components/GradientBackground";
 import OutputSection from "@/components/OutputSection";
 import StudyHistoryModal from "@/components/StudyHistoryModal";
-import { checkUsage, incrementUsage, MAX_DAILY_USES, isProUser, activateProCode } from "@/hooks/use-usage-limit";
+import { checkUsage, incrementUsage, MAX_DAILY_USES, isProUser, activateProCode, isProExpired, clearProExpired } from "@/hooks/use-usage-limit";
 import type { StudyHistoryItem } from "@/hooks/use-study-history";
 
 const MedicalNotesAssistant = () => {
@@ -32,6 +32,7 @@ const MedicalNotesAssistant = () => {
 
   const [usageCount, setUsageCount] = useState(() => checkUsage().count);
   const [pro, setPro] = useState(() => isProUser());
+  const [expired, setExpired] = useState(() => isProExpired());
   const [accessCode, setAccessCode] = useState("");
   const [codeError, setCodeError] = useState(false);
 
@@ -41,6 +42,12 @@ const MedicalNotesAssistant = () => {
       return;
     }
 
+    // Re-check pro status (handles 30-day expiration)
+    const currentlyPro = isProUser();
+    if (currentlyPro !== pro) {
+      setPro(currentlyPro);
+      setExpired(isProExpired());
+    }
     const { isLite } = checkUsage();
 
     setLoading(true);
@@ -264,7 +271,9 @@ const MedicalNotesAssistant = () => {
                       onClick={() => {
                         if (activateProCode(accessCode)) {
                           setPro(true);
+                          setExpired(false);
                           setCodeError(false);
+                          clearProExpired();
                           toast({ title: "Pro access activated!" });
                         } else {
                           setCodeError(true);
@@ -276,6 +285,11 @@ const MedicalNotesAssistant = () => {
                   </div>
                   {codeError && (
                     <p className="text-xs text-destructive">Invalid code</p>
+                  )}
+                  {expired && !codeError && (
+                    <p className="text-xs text-amber-500 dark:text-amber-400">
+                      Access expired — please enter a new code
+                    </p>
                   )}
                 </div>
               )}
