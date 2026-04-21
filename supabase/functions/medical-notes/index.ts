@@ -103,7 +103,15 @@ FOCUS RULES:
 - Deep Understanding: Brief but clear explanations of mechanisms.
 - Clinical Reasoning: Application-based scenarios and clinical decision-making.
 
-DIFFICULTY controls depth of detail. LENGTH controls amount of detail.
+DIFFICULTY RULES:
+- Basic: simple language, minimal jargon, define key terms, suitable for early med students.
+- Intermediate: assume Year 3-4 medical student level, standard terminology.
+- Advanced: clinician-level depth, full technical terminology, include nuanced distinctions.
+
+LENGTH RULES:
+- Concise: minimum viable information, ultra-scannable, shortest possible output.
+- Moderate: balanced detail, cover all sections adequately.
+- Detailed: expand every section fully, include edge cases and nuances.
 
 STRICT FORMATTING RULES:
 - Do NOT use markdown symbols (no #, ##, ###, *, -, or bullet symbols).
