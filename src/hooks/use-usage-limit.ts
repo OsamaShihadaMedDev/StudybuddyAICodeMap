@@ -1,7 +1,11 @@
 const STORAGE_KEY = "studybuddy_usage";
+const SHEET_KEY = "studybuddy_usage_sheet_v1";
+const CARDS_KEY = "studybuddy_usage_cards_v1";
 const PRO_KEY = "studybuddy_pro";
 const PRO_ACTIVATED_AT_KEY = "proActivatedAt";
 const MAX_USES = 5;
+const MAX_SHEETS = 5;
+const MAX_CARDS = 10;
 const RESET_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const PRO_DURATION_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -21,22 +25,26 @@ interface UsageData {
   lastReset: number;
 }
 
-function getUsage(): UsageData {
+function getUsageFor(key: string): UsageData {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(key);
     if (raw) {
       const data: UsageData = JSON.parse(raw);
       if (Date.now() - data.lastReset >= RESET_INTERVAL_MS) {
         const reset = { count: 0, lastReset: Date.now() };
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(reset));
+        localStorage.setItem(key, JSON.stringify(reset));
         return reset;
       }
       return data;
     }
   } catch {}
   const initial = { count: 0, lastReset: Date.now() };
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(initial));
+  localStorage.setItem(key, JSON.stringify(initial));
   return initial;
+}
+
+function getUsage(): UsageData {
+  return getUsageFor(SHEET_KEY);
 }
 
 export function isProUser(): boolean {
@@ -86,18 +94,38 @@ export function activateProCode(code: string): boolean {
   return false;
 }
 
-export function checkUsage(): { count: number; isLite: boolean } {
+export function checkSheetUsage(): { count: number; isLite: boolean } {
   if (isProUser()) {
-    return { count: getUsage().count, isLite: false };
+    return { count: getUsageFor(SHEET_KEY).count, isLite: false };
   }
-  const usage = getUsage();
-  return { count: usage.count, isLite: usage.count >= MAX_USES };
+  const usage = getUsageFor(SHEET_KEY);
+  return { count: usage.count, isLite: usage.count >= MAX_SHEETS };
 }
 
-export function incrementUsage(): void {
-  const usage = getUsage();
+export function incrementSheetUsage(): void {
+  const usage = getUsageFor(SHEET_KEY);
   usage.count += 1;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(usage));
+  localStorage.setItem(SHEET_KEY, JSON.stringify(usage));
 }
 
-export const MAX_DAILY_USES = MAX_USES;
+export function checkCardsUsage(): { count: number; isLite: boolean } {
+  if (isProUser()) {
+    return { count: getUsageFor(CARDS_KEY).count, isLite: false };
+  }
+  const usage = getUsageFor(CARDS_KEY);
+  return { count: usage.count, isLite: usage.count >= MAX_CARDS };
+}
+
+export function incrementCardsUsage(): void {
+  const usage = getUsageFor(CARDS_KEY);
+  usage.count += 1;
+  localStorage.setItem(CARDS_KEY, JSON.stringify(usage));
+}
+
+export const MAX_DAILY_SHEETS = MAX_SHEETS;
+export const MAX_DAILY_CARDS = MAX_CARDS;
+
+// Backward-compat aliases (point to sheet counter)
+export const checkUsage = checkSheetUsage;
+export const incrementUsage = incrementSheetUsage;
+export const MAX_DAILY_USES = MAX_SHEETS;
