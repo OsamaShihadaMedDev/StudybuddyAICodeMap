@@ -1,8 +1,42 @@
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { X } from "lucide-react";
+import { X, BookOpen, Layers, ArrowLeft } from "lucide-react";
 import { getTagColors } from "@/lib/tag-colors";
 import type { Card } from "@/hooks/use-flashcard-deck";
+import { useFlashcardDeck } from "@/hooks/use-flashcard-deck";
+import { useToast } from "@/hooks/use-toast";
+import { Card as UICard, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import OutputSection from "@/components/OutputSection";
+import {
+  checkSheetUsage,
+  incrementSheetUsage,
+} from "@/hooks/use-usage-limit";
+
+function parseFlashcardsFromOutput(output: string, topic: string) {
+  const idx = output.search(/FLASHCARDS/i);
+  if (idx === -1) return [];
+  let section = output.slice(idx).replace(/^FLASHCARDS[^\n]*\n?/i, "");
+  const stop = section.search(/\n\s*REFERENCE NOTE\b/i);
+  if (stop !== -1) section = section.slice(0, stop);
+  const cards: { question: string; answer: string; tag: string; topic: string }[] = [];
+  const regex = /Q\s*:\s*([\s\S]*?)\n\s*A\s*:\s*([\s\S]*?)(?=\n\s*Q\s*:|$)/gi;
+  const truncatedTopic = topic.trim().slice(0, 60);
+  let m: RegExpExecArray | null;
+  while ((m = regex.exec(section)) !== null) {
+    let question = m[1].trim();
+    const answer = m[2].trim();
+    if (!question || !answer) continue;
+    let tag = "";
+    const tagMatch = question.match(/^\s*\[([^\]]+)\]\s*/);
+    if (tagMatch) {
+      tag = tagMatch[1].trim();
+      question = question.slice(tagMatch[0].length).trim();
+    }
+    cards.push({ question, answer, tag, topic: truncatedTopic });
+  }
+  return cards;
+}
 
 interface StudyModeProps {
   dueCards: Card[];
@@ -28,6 +62,8 @@ const StudyMode = ({ dueCards, onReview, onClose }: StudyModeProps) => {
   const [flipped, setFlipped] = useState(false);
   const [reviewedCount, setReviewedCount] = useState(0);
   const [done, setDone] = useState(sessionCards.length === 0);
+  const [explainOpen, setExplainOpen] = useState(false);
+  const [explainScope, setExplainScope] = useState<"card" | "topic">("card");
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
