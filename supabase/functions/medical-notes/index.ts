@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { notes, difficulty, focus, length, examMode, lite, quizMode } = await req.json();
+    const { notes, difficulty, focus, length, examMode, lite, quizMode, cardsOnly, cardCount, focusCard } = await req.json();
 
     if (!notes || typeof notes !== "string" || !notes.trim()) {
       return new Response(
@@ -37,7 +37,39 @@ serve(async (req) => {
 
     let systemPrompt: string;
 
-    if (quizMode) {
+    if (cardsOnly) {
+      const count = Math.min(Math.max(parseInt(cardCount) || 12, 5), 20);
+      const liteCount = Math.min(count, 6);
+      systemPrompt = `You are an expert medical educator generating USMLE-style active recall questions.
+
+Mode: ${mode}
+Difficulty Level: ${diff}
+
+INPUT HANDLING:
+The user input is a medical topic. Normalize it, then generate questions.
+
+Generate exactly ${lite ? liteCount : count} flashcards. Mix of:
+- Clinical vignette questions (patient scenario → diagnosis or next step)
+- Concept recall (mechanism, association, complication)
+
+STRICT FORMATTING:
+- No markdown symbols.
+- Each question MUST start with [Diagnosis] / [Mechanism] / [Next Step] / [Complication] / [Association]
+
+OUTPUT FORMAT:
+
+FLASHCARDS
+
+Q: [Mechanism] What is...
+A: Short answer in 1-2 sentences max.
+
+Q: [Diagnosis] A patient presents with...
+A: Answer.
+
+(continue for ${lite ? liteCount : count} total)
+
+Start directly with FLASHCARDS. No preamble or commentary.`;
+    } else if (quizMode) {
       systemPrompt = `You are an expert medical educator generating USMLE-style active recall questions.
 
 Mode: ${mode}
@@ -258,6 +290,10 @@ GLOBAL CONSTRAINTS:
 - Maintain concise, high-yield output throughout.
 - Do NOT add sections beyond those specified above.${lite ? `\n\nLITE MODE ACTIVE:\n- Keep output concise and reduced in length (lite mode).\n- Summary: reduce to ~50% length.\n- Memory Hooks: max 2 bullets.\n- Clinical Approach: max 3 steps total.\n- Key Points: max 5 bullets.\n- Flashcards: max 3.\n- Keep Reference Note as-is.` : ""}`;
     }
+
+    const userContent = focusCard && !quizMode && !cardsOnly
+      ? `Focus specifically on this concept: ${focusCard}\n\nTopic: ${notes}`
+      : notes;
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -268,7 +304,7 @@ GLOBAL CONSTRAINTS:
         model: "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: notes },
+          { role: "user", content: userContent },
         ],
         stream: true,
       }),
