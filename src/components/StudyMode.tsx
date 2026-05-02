@@ -241,3 +241,186 @@ const CardFace = ({ card, text }: { card: Card; text: string }) => {
 };
 
 export default StudyMode;
+
+interface ExplainPanelProps {
+  open: boolean;
+  scope: "card" | "topic";
+  card: Card;
+  onClose: () => void;
+}
+
+const ExplainPanel = ({ open, scope, card, onClose }: ExplainPanelProps) => {
+  const { toast } = useToast();
+  const { saveCards } = useFlashcardDeck();
+  const [output, setOutput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [started, setStarted] = useState(false);
+  const [blocked, setBlocked] = useState(false);
+
+  useEffect(() => {
+    if (!open || started) return;
+    const sheet = checkSheetUsage();
+    if (sheet.isLite) {
+      // At limit — show toast and block
+      toast({ title: "Daily study sheet limit reached", variant: "destructive" });
+      setBlocked(true);
+      onClose();
+      return;
+    }
+    setStarted(true);
+    setLoading(true);
+    setOutput("");
+
+    const run = async () => {
+      try {
+        incrementSheetUsage();
+        const isCard = scope === "card";
+        const body = isCard
+          ? {
+              notes: card.question + " — " + card.answer,
+              focusCard: card.question,
+              difficulty: "Basic",
+              focus: "Deep Understanding",
+              length: "Concise",
+              examMode: "General",
+              lite: false,
+              quizMode: false,
+            }
+          : {
+              notes: card.topic,
+              difficulty: "Basic",
+              focus: "Quick Revision",
+              length: "Concise",
+              examMode: "General",
+              lite: false,
+              quizMode: false,
+            };
+        const response = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/medical-notes`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            },
+            body: JSON.stringify(body),
+          }
+        );
+        if (!response.ok) {
+          const err = await response.json().catch(() => ({}));
+          throw new Error(err.error || `Error: ${response.status}`);
+        }
+        const reader = response.body?.getReader();
+        if (!reader) throw new Error("No response body");
+        const decoder = new TextDecoder();
+        let textBuffer = "";
+        let fullText = "";
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          textBuffer += decoder.decode(value, { stream: true });
+          let newlineIndex: number;
+          while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
+            let line = textBuffer.slice(0, newlineIndex);
+            textBuffer = textBuffer.slice(newlineIndex + 1);
+            if (line.endsWith("\r")) line = line.slice(0, -1);
+            if (line.startsWith(":") || line.trim() === "") continue;
+            if (!line.startsWith("data: ")) continue;
+            const jsonStr = line.slice(6).trim();
+            if (jsonStr === "[DONE]") break;
+            try {
+              const parsed = JSON.parse(jsonStr);
+              const content = parsed.choices?.[0]?.delta?.content;
+              if (content) {
+                fullText += content;
+                setOutput(fullText);
+              }
+            } catch {
+              textBuffer = line + "\n" + textBuffer;
+              break;
+            }
+          }
+        }
+        // Auto-save flashcards from explain
+        try {
+          const parsed = parseFlashcardsFromOutput(fullText, card.topic || card.question);
+          if (parsed.length) saveCards(parsed);
+        } catch {
+          // silent
+        }
+      } catch (e: any) {
+        toast({
+          title: "Error",
+          description: e.message || "Failed to load explanation",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    run();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  // Reset when panel closes
+  useEffect(() => {
+    if (!open) {
+      setStarted(false);
+      setOutput("");
+      setLoading(false);
+      setBlocked(false);
+    }
+  }, [open]);
+
+  if (blocked) return null;
+
+  return (
+    <div
+      className="fixed inset-x-0 bottom-0 top-[15vh] z-50 bg-background rounded-t-2xl shadow-2xl flex flex-col"
+      style={{
+        transform: open ? "translateY(0)" : "translateY(100%)",
+        transition: "transform 350ms cubic-bezier(0.4, 0, 0.2, 1)",
+      }}
+    >
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border/40">
+        <Button variant="ghost" size="sm" onClick={onClose} className="text-sm">
+          <ArrowLeft className="h-4 w-4 mr-1.5" />
+          Back to review
+        </Button>
+        <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close">
+          <X className="h-5 w-5" />
+        </Button>
+      </div>
+      <div className="flex-1 overflow-y-auto px-4 py-6">
+        <div className="mx-auto max-w-2xl">
+          {loading && !output && (
+            <div className="space-y-4 animate-fade-in">
+              {[1, 2, 3].map((i) => (
+                <UICard key={i} className="glass-card">
+                  <CardContent className="p-6 space-y-3">
+                    <Skeleton className="h-5 w-32" />
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-4/5" />
+                    <Skeleton className="h-4 w-3/5" />
+                  </CardContent>
+                </UICard>
+              ))}
+            </div>
+          )}
+          {output && (
+            <OutputSection
+              output={output}
+              inputText={scope === "card" ? card.question : card.topic}
+              modeInfo={{
+                examMode: "General",
+                difficulty: "Basic",
+                focus: scope === "card" ? "Deep Understanding" : "Quick Revision",
+                length: "Concise",
+              }}
+            />
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
