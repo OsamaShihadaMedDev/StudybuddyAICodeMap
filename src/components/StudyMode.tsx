@@ -160,7 +160,24 @@ const StudyMode = ({ dueCards, onReview, onClose }: StudyModeProps) => {
                 Show Answer
               </Button>
             ) : (
-              <div className="grid grid-cols-3 gap-2 sm:gap-3">
+              <div className="space-y-3">
+                <div className="flex items-center justify-center gap-4">
+                  <button
+                    onClick={() => { setExplainScope("card"); setExplainOpen(true); }}
+                    className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    <BookOpen className="h-3.5 w-3.5" />
+                    Explain this card
+                  </button>
+                  <button
+                    onClick={() => { setExplainScope("topic"); setExplainOpen(true); }}
+                    className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    <Layers className="h-3.5 w-3.5" />
+                    Explain this topic
+                  </button>
+                </div>
+                <div className="grid grid-cols-3 gap-2 sm:gap-3">
                 <Button
                   variant="outline"
                   onClick={() => handleRate("again")}
@@ -182,6 +199,7 @@ const StudyMode = ({ dueCards, onReview, onClose }: StudyModeProps) => {
                 >
                   Easy
                 </Button>
+                </div>
               </div>
             )}
 
@@ -191,6 +209,15 @@ const StudyMode = ({ dueCards, onReview, onClose }: StudyModeProps) => {
           </div>
         ) : null}
       </div>
+
+      {current && (
+        <ExplainPanel
+          open={explainOpen}
+          scope={explainScope}
+          card={current}
+          onClose={() => setExplainOpen(false)}
+        />
+      )}
     </div>
   );
 };
