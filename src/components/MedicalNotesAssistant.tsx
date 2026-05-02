@@ -22,6 +22,7 @@ import type { StudyHistoryItem } from "@/hooks/use-study-history";
 import { useFlashcardDeck } from "@/hooks/use-flashcard-deck";
 import DueTodaySection from "@/components/DueTodaySection";
 import StudyMode from "@/components/StudyMode";
+import FlashcardsGenerator from "@/components/FlashcardsGenerator";
 
 function parseFlashcardsFromOutput(output: string, topic: string) {
   const idx = output.search(/FLASHCARDS/i);
@@ -226,8 +227,26 @@ const MedicalNotesAssistant = () => {
             onStart={() => setStudyOpen(true)}
           />
 
+          {/* Flashcards Generator (primary) */}
+          <div className="space-y-2">
+            <p className="text-[11px] font-bold tracking-[0.15em] text-primary uppercase pl-1">
+              Flashcards
+            </p>
+            <FlashcardsGenerator examMode={examMode} />
+          </div>
+
+          {/* Section divider */}
+          <div className="space-y-2">
+            <p className="text-[11px] font-bold tracking-[0.15em] text-muted-foreground uppercase pl-1">
+              Full Study Sheet
+            </p>
+            <p className="text-xs text-muted-foreground pl-1 -mt-1">
+              Or generate full study material
+            </p>
+          </div>
+
           {/* Input Card */}
-          <Card className="glass-card animate-fade-in">
+          <Card className="glass-card animate-fade-in -mt-4">
             <CardContent className="p-6 space-y-5">
               <div className="space-y-2">
                 <label className="text-sm font-semibold text-foreground">
