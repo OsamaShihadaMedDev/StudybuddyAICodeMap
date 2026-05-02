@@ -19,6 +19,37 @@ import OutputSection from "@/components/OutputSection";
 import StudyHistoryModal from "@/components/StudyHistoryModal";
 import { checkUsage, incrementUsage, MAX_DAILY_USES, isProUser, activateProCode, isProExpired, clearProExpired } from "@/hooks/use-usage-limit";
 import type { StudyHistoryItem } from "@/hooks/use-study-history";
+import { useFlashcardDeck } from "@/hooks/use-flashcard-deck";
+import DueTodaySection from "@/components/DueTodaySection";
+import StudyMode from "@/components/StudyMode";
+
+function parseFlashcardsFromOutput(output: string, topic: string) {
+  const idx = output.search(/FLASHCARDS/i);
+  if (idx === -1) return [];
+  let section = output.slice(idx).replace(/^FLASHCARDS[^\n]*\n?/i, "");
+  // Stop at next major section header (REFERENCE NOTE)
+  const stop = section.search(/\n\s*REFERENCE NOTE\b/i);
+  if (stop !== -1) section = section.slice(0, stop);
+
+  const cards: { question: string; answer: string; tag: string; topic: string }[] = [];
+  // Match Q: ... A: ... pairs (until next Q: or end)
+  const regex = /Q\s*:\s*([\s\S]*?)\n\s*A\s*:\s*([\s\S]*?)(?=\n\s*Q\s*:|$)/gi;
+  const truncatedTopic = topic.trim().slice(0, 60);
+  let m: RegExpExecArray | null;
+  while ((m = regex.exec(section)) !== null) {
+    let question = m[1].trim();
+    const answer = m[2].trim();
+    if (!question || !answer) continue;
+    let tag = "";
+    const tagMatch = question.match(/^\s*\[([^\]]+)\]\s*/);
+    if (tagMatch) {
+      tag = tagMatch[1].trim();
+      question = question.slice(tagMatch[0].length).trim();
+    }
+    cards.push({ question, answer, tag, topic: truncatedTopic });
+  }
+  return cards;
+}
 
 const MedicalNotesAssistant = () => {
   const [notes, setNotes] = useState("");
@@ -35,6 +66,9 @@ const MedicalNotesAssistant = () => {
   const [expired, setExpired] = useState(() => isProExpired());
   const [accessCode, setAccessCode] = useState("");
   const [codeError, setCodeError] = useState(false);
+
+  const { dueCards, saveCards, reviewCard, stats } = useFlashcardDeck();
+  const [studyOpen, setStudyOpen] = useState(false);
 
   const generate = async (quizMode: boolean) => {
     if (!notes.trim()) {
@@ -113,6 +147,16 @@ const MedicalNotesAssistant = () => {
       }
 
       if (!fullText) setOutput("No response received.");
+
+      // Auto-save flashcards (additive; never break flow)
+      if (fullText && !quizMode) {
+        try {
+          const parsed = parseFlashcardsFromOutput(fullText, notes);
+          if (parsed.length) saveCards(parsed);
+        } catch {
+          // silent
+        }
+      }
     } catch (e: any) {
       toast({
         title: "Error",
@@ -142,6 +186,14 @@ const MedicalNotesAssistant = () => {
     <div className="relative min-h-screen">
       <GradientBackground />
 
+      {studyOpen && (
+        <StudyMode
+          dueCards={dueCards}
+          onReview={reviewCard}
+          onClose={() => setStudyOpen(false)}
+        />
+      )}
+
       <div className="relative z-10 px-4 py-8 md:py-14">
         <div className="mx-auto max-w-2xl space-y-8">
           {/* Header */}
@@ -166,6 +218,13 @@ const MedicalNotesAssistant = () => {
               <ThemeToggle />
             </div>
           </header>
+
+          <DueTodaySection
+            total={stats.total}
+            due={stats.due}
+            mastered={stats.mastered}
+            onStart={() => setStudyOpen(true)}
+          />
 
           {/* Input Card */}
           <Card className="glass-card animate-fade-in">
