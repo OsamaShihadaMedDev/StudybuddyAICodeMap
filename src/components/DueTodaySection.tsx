@@ -6,9 +6,10 @@ interface DueTodaySectionProps {
   due: number;
   mastered: number;
   onStart: () => void;
+  onReviewAny: () => void;
 }
 
-const DueTodaySection = ({ total, due, mastered, onStart }: DueTodaySectionProps) => {
+const DueTodaySection = ({ total, due, mastered, onStart, onReviewAny }: DueTodaySectionProps) => {
   if (total === 0) return null;
   const hasDue = due > 0;
 
@@ -34,13 +35,29 @@ const DueTodaySection = ({ total, due, mastered, onStart }: DueTodaySectionProps
               {due === 1 ? "card" : "cards"}
             </span>
           </div>
-          <Button
-            onClick={onStart}
-            disabled={!hasDue}
-            className="btn-gradient h-11 px-6 rounded-xl font-semibold"
-          >
-            {hasDue ? "Start Review" : "All caught up"}
-          </Button>
+          {hasDue ? (
+            <div className="flex flex-col items-end gap-1">
+              <Button
+                onClick={onStart}
+                className="btn-gradient h-11 px-6 rounded-xl font-semibold"
+              >
+                Start Review
+              </Button>
+              <button
+                onClick={onReviewAny}
+                className="text-xs text-muted-foreground hover:text-primary transition-colors"
+              >
+                Or review any deck
+              </button>
+            </div>
+          ) : (
+            <Button
+              onClick={onReviewAny}
+              className="btn-gradient h-11 px-6 rounded-xl font-semibold"
+            >
+              Review Any Deck
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>
