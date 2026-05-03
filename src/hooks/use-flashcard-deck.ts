@@ -14,6 +14,7 @@ export type Card = {
 };
 
 const STORAGE_KEY = "studybuddy_decks_v1";
+const DECK_CHANGE_EVENT = "studybuddy:deck-changed";
 const PROGRESSION = [1, 3, 7, 21, 60];
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -55,16 +56,27 @@ export function useFlashcardDeck() {
   const [allCards, setAllCards] = useState<Card[]>(() => loadCards());
 
   useEffect(() => {
+    const refresh = () => setAllCards(loadCards());
     const onStorage = (e: StorageEvent) => {
-      if (e.key === STORAGE_KEY) setAllCards(loadCards());
+      if (e.key === STORAGE_KEY) refresh();
     };
+    const onDeckChange = () => refresh();
     window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
+    window.addEventListener(DECK_CHANGE_EVENT, onDeckChange);
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener(DECK_CHANGE_EVENT, onDeckChange);
+    };
   }, []);
 
   const persist = useCallback((next: Card[]) => {
     setAllCards(next);
     saveToStorage(next);
+    try {
+      window.dispatchEvent(new CustomEvent(DECK_CHANGE_EVENT));
+    } catch {
+      // ignore
+    }
   }, []);
 
   const saveCards = useCallback(

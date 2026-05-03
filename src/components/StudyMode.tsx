@@ -86,7 +86,7 @@ const StudyMode = ({ dueCards, onReview, onClose }: StudyModeProps) => {
         </Button>
       </div>
 
-      <div className="flex-1 flex items-center justify-center px-4 pb-10">
+      <div className="flex-1 flex items-center justify-center px-4 pb-10 overflow-y-auto">
         {done ? (
           <div className="text-center space-y-4 animate-fade-in">
             {sessionCards.length === 0 ? (
@@ -113,7 +113,7 @@ const StudyMode = ({ dueCards, onReview, onClose }: StudyModeProps) => {
             {/* Card with flip */}
             <div className="perspective" style={{ perspective: "1000px" }}>
               <div
-                className={`flip-card-y-inner relative min-h-[280px] ${flipped ? "flipped" : ""}`}
+                className={`flip-card-y-inner relative min-h-[280px] max-h-[60vh] ${flipped ? "flipped" : ""}`}
               >
                 {/* Front */}
                 <div className="flip-face absolute inset-0 w-full">
@@ -203,17 +203,19 @@ const StudyMode = ({ dueCards, onReview, onClose }: StudyModeProps) => {
 const CardFace = ({ card, text }: { card: Card; text: string }) => {
   const tagColors = getTagColors(card.tag);
   return (
-    <div className="glass-card rounded-2xl p-6 md:p-8 min-h-[280px] flex flex-col gap-5">
-      <div>
+    <div className="glass-card rounded-2xl p-6 md:p-8 min-h-[280px] max-h-[60vh] flex flex-col gap-5 overflow-hidden">
+      <div className="shrink-0">
         <span
           className={`inline-block px-2.5 py-1 rounded-md text-[11px] font-semibold uppercase tracking-wider border ${tagColors.bg} ${tagColors.text} ${tagColors.border}`}
         >
           {card.tag || "Card"}
         </span>
       </div>
-      <p className="text-xl md:text-2xl font-medium leading-relaxed text-foreground flex-1">
-        {text}
-      </p>
+      <div className="flex-1 overflow-y-auto pr-1">
+        <p className="text-xl md:text-2xl font-medium leading-relaxed text-foreground">
+          {text}
+        </p>
+      </div>
     </div>
   );
 };
