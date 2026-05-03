@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -23,6 +23,7 @@ import { useFlashcardDeck } from "@/hooks/use-flashcard-deck";
 import DueTodaySection from "@/components/DueTodaySection";
 import StudyMode from "@/components/StudyMode";
 import FlashcardsGenerator from "@/components/FlashcardsGenerator";
+import DeckList from "@/components/DeckList";
 
 function parseFlashcardsFromOutput(output: string, topic: string) {
   const idx = output.search(/FLASHCARDS/i);
@@ -68,8 +69,36 @@ const MedicalNotesAssistant = () => {
   const [accessCode, setAccessCode] = useState("");
   const [codeError, setCodeError] = useState(false);
 
-  const { dueCards, saveCards, reviewCard, stats } = useFlashcardDeck();
+  const { allCards, dueCards, saveCards, reviewCard, deleteCard, stats } = useFlashcardDeck();
   const [studyOpen, setStudyOpen] = useState(false);
+  const [studyFilter, setStudyFilter] = useState<{ topic?: string; mode: "due" | "all-due" | "deck" | "all-cards" }>({ mode: "due" });
+
+  const handleStartDue = () => {
+    setStudyFilter({ mode: "due" });
+    setStudyOpen(true);
+  };
+  const handleReviewAny = () => {
+    setStudyFilter({ mode: "all-cards" });
+    setStudyOpen(true);
+  };
+  const handleStudyDeck = (topic: string) => {
+    setStudyFilter({ mode: "deck", topic });
+    setStudyOpen(true);
+  };
+  const handleDeleteDeck = (topic: string) => {
+    const toDelete = allCards.filter((c) => c.topic === topic);
+    toDelete.forEach((c) => deleteCard(c.id));
+    toast({ title: `Deleted ${toDelete.length} cards from "${topic}"` });
+  };
+
+  const studySessionCards = useMemo(() => {
+    if (studyFilter.mode === "due") return dueCards;
+    if (studyFilter.mode === "all-cards") return allCards;
+    if (studyFilter.mode === "deck" && studyFilter.topic) {
+      return allCards.filter((c) => c.topic === studyFilter.topic);
+    }
+    return dueCards;
+  }, [studyFilter, dueCards, allCards]);
 
   const generate = async (quizMode: boolean) => {
     if (!notes.trim()) {
@@ -189,7 +218,7 @@ const MedicalNotesAssistant = () => {
 
       {studyOpen && (
         <StudyMode
-          dueCards={dueCards}
+          dueCards={studySessionCards}
           onReview={reviewCard}
           onClose={() => setStudyOpen(false)}
         />
@@ -224,7 +253,15 @@ const MedicalNotesAssistant = () => {
             total={stats.total}
             due={stats.due}
             mastered={stats.mastered}
-            onStart={() => setStudyOpen(true)}
+            onStart={handleStartDue}
+            onReviewAny={handleReviewAny}
+          />
+
+          <DeckList
+            cards={allCards}
+            onStudyDeck={handleStudyDeck}
+            onDeleteDeck={handleDeleteDeck}
+            onReviewAll={handleReviewAny}
           />
 
           {/* Flashcards Generator (primary) */}
