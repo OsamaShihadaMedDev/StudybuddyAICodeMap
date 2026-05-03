@@ -127,28 +127,32 @@ const StudyMode = ({ dueCards, onReview, onClose }: StudyModeProps) => {
             </div>
 
             {!flipped ? (
-              <Button
-                onClick={handleFlip}
-                className="w-full h-12 btn-gradient rounded-xl font-semibold"
-              >
-                Show Answer
-              </Button>
-            ) : (
               <div className="space-y-3">
-                <div className="flex items-center justify-center gap-4">
-                  <button
-                    onClick={() => { setExplainScope("card"); setExplainOpen(true); }}
-                    className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
-                  >
-                    <BookOpen className="h-3.5 w-3.5" />
-                    Explain this card
-                  </button>
+                <Button
+                  onClick={handleFlip}
+                  className="w-full h-12 btn-gradient rounded-xl font-semibold"
+                >
+                  Show Answer
+                </Button>
+                <div className="flex items-center justify-center">
                   <button
                     onClick={() => { setExplainScope("topic"); setExplainOpen(true); }}
                     className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
                   >
                     <Layers className="h-3.5 w-3.5" />
                     Explain this topic
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex items-center justify-center">
+                  <button
+                    onClick={() => { setExplainScope("card"); setExplainOpen(true); }}
+                    className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    <BookOpen className="h-3.5 w-3.5" />
+                    Explain this card
                   </button>
                 </div>
                 <div className="grid grid-cols-3 gap-2 sm:gap-3">
@@ -225,7 +229,6 @@ interface ExplainPanelProps {
 
 const ExplainPanel = ({ open, scope, card, onClose }: ExplainPanelProps) => {
   const { toast } = useToast();
-  const { saveCards } = useFlashcardDeck();
   const [output, setOutput] = useState("");
   const [loading, setLoading] = useState(false);
   const [started, setStarted] = useState(false);
@@ -314,13 +317,6 @@ const ExplainPanel = ({ open, scope, card, onClose }: ExplainPanelProps) => {
               break;
             }
           }
-        }
-        // Auto-save flashcards from explain
-        try {
-          const parsed = parseFlashcardsFromOutput(fullText, card.topic || card.question);
-          if (parsed.length) saveCards(parsed);
-        } catch {
-          // silent
         }
       } catch (e: any) {
         toast({
