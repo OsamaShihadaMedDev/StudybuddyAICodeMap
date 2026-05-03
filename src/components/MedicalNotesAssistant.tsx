@@ -24,34 +24,7 @@ import DueTodaySection from "@/components/DueTodaySection";
 import StudyMode from "@/components/StudyMode";
 import FlashcardsGenerator from "@/components/FlashcardsGenerator";
 import DeckList from "@/components/DeckList";
-
-function parseFlashcardsFromOutput(output: string, topic: string) {
-  const idx = output.search(/FLASHCARDS/i);
-  if (idx === -1) return [];
-  let section = output.slice(idx).replace(/^FLASHCARDS[^\n]*\n?/i, "");
-  // Stop at next major section header (REFERENCE NOTE)
-  const stop = section.search(/\n\s*REFERENCE NOTE\b/i);
-  if (stop !== -1) section = section.slice(0, stop);
-
-  const cards: { question: string; answer: string; tag: string; topic: string }[] = [];
-  // Match Q: ... A: ... pairs (until next Q: or end)
-  const regex = /Q\s*:\s*([\s\S]*?)\n\s*A\s*:\s*([\s\S]*?)(?=\n\s*Q\s*:|$)/gi;
-  const truncatedTopic = topic.trim().slice(0, 60);
-  let m: RegExpExecArray | null;
-  while ((m = regex.exec(section)) !== null) {
-    let question = m[1].trim();
-    const answer = m[2].trim();
-    if (!question || !answer) continue;
-    let tag = "";
-    const tagMatch = question.match(/^\s*\[([^\]]+)\]\s*/);
-    if (tagMatch) {
-      tag = tagMatch[1].trim();
-      question = question.slice(tagMatch[0].length).trim();
-    }
-    cards.push({ question, answer, tag, topic: truncatedTopic });
-  }
-  return cards;
-}
+import { parseFlashcardsFromOutput } from "@/lib/parse-flashcards";
 
 const MedicalNotesAssistant = () => {
   const [notes, setNotes] = useState("");
