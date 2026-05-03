@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { X, BookOpen, Layers, ArrowLeft } from "lucide-react";
 import { getTagColors } from "@/lib/tag-colors";
 import type { Card } from "@/hooks/use-flashcard-deck";
-import { useFlashcardDeck } from "@/hooks/use-flashcard-deck";
 import { useToast } from "@/hooks/use-toast";
 import { Card as UICard, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -12,31 +11,6 @@ import {
   checkSheetUsage,
   incrementSheetUsage,
 } from "@/hooks/use-usage-limit";
-
-function parseFlashcardsFromOutput(output: string, topic: string) {
-  const idx = output.search(/FLASHCARDS/i);
-  if (idx === -1) return [];
-  let section = output.slice(idx).replace(/^FLASHCARDS[^\n]*\n?/i, "");
-  const stop = section.search(/\n\s*REFERENCE NOTE\b/i);
-  if (stop !== -1) section = section.slice(0, stop);
-  const cards: { question: string; answer: string; tag: string; topic: string }[] = [];
-  const regex = /Q\s*:\s*([\s\S]*?)\n\s*A\s*:\s*([\s\S]*?)(?=\n\s*Q\s*:|$)/gi;
-  const truncatedTopic = topic.trim().slice(0, 60);
-  let m: RegExpExecArray | null;
-  while ((m = regex.exec(section)) !== null) {
-    let question = m[1].trim();
-    const answer = m[2].trim();
-    if (!question || !answer) continue;
-    let tag = "";
-    const tagMatch = question.match(/^\s*\[([^\]]+)\]\s*/);
-    if (tagMatch) {
-      tag = tagMatch[1].trim();
-      question = question.slice(tagMatch[0].length).trim();
-    }
-    cards.push({ question, answer, tag, topic: truncatedTopic });
-  }
-  return cards;
-}
 
 interface StudyModeProps {
   dueCards: Card[];
@@ -153,28 +127,32 @@ const StudyMode = ({ dueCards, onReview, onClose }: StudyModeProps) => {
             </div>
 
             {!flipped ? (
-              <Button
-                onClick={handleFlip}
-                className="w-full h-12 btn-gradient rounded-xl font-semibold"
-              >
-                Show Answer
-              </Button>
-            ) : (
               <div className="space-y-3">
-                <div className="flex items-center justify-center gap-4">
-                  <button
-                    onClick={() => { setExplainScope("card"); setExplainOpen(true); }}
-                    className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
-                  >
-                    <BookOpen className="h-3.5 w-3.5" />
-                    Explain this card
-                  </button>
+                <Button
+                  onClick={handleFlip}
+                  className="w-full h-12 btn-gradient rounded-xl font-semibold"
+                >
+                  Show Answer
+                </Button>
+                <div className="flex items-center justify-center">
                   <button
                     onClick={() => { setExplainScope("topic"); setExplainOpen(true); }}
                     className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
                   >
                     <Layers className="h-3.5 w-3.5" />
                     Explain this topic
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex items-center justify-center">
+                  <button
+                    onClick={() => { setExplainScope("card"); setExplainOpen(true); }}
+                    className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    <BookOpen className="h-3.5 w-3.5" />
+                    Explain this card
                   </button>
                 </div>
                 <div className="grid grid-cols-3 gap-2 sm:gap-3">
@@ -251,7 +229,6 @@ interface ExplainPanelProps {
 
 const ExplainPanel = ({ open, scope, card, onClose }: ExplainPanelProps) => {
   const { toast } = useToast();
-  const { saveCards } = useFlashcardDeck();
   const [output, setOutput] = useState("");
   const [loading, setLoading] = useState(false);
   const [started, setStarted] = useState(false);
@@ -340,13 +317,6 @@ const ExplainPanel = ({ open, scope, card, onClose }: ExplainPanelProps) => {
               break;
             }
           }
-        }
-        // Auto-save flashcards from explain
-        try {
-          const parsed = parseFlashcardsFromOutput(fullText, card.topic || card.question);
-          if (parsed.length) saveCards(parsed);
-        } catch {
-          // silent
         }
       } catch (e: any) {
         toast({
