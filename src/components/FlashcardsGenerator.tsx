@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -54,9 +54,22 @@ const FlashcardsGenerator = ({ examMode }: FlashcardsGeneratorProps) => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const { saveCards } = useFlashcardDeck();
-  const pro = isProUser();
-  const usage = checkCardsUsage();
+  const [pro, setPro] = useState(() => isProUser());
+  const [usage, setUsage] = useState(() => checkCardsUsage());
   const remaining = Math.max(0, MAX_DAILY_CARDS - usage.count);
+
+  useEffect(() => {
+    const refresh = () => {
+      setPro(isProUser());
+      setUsage(checkCardsUsage());
+    };
+    refresh();
+    const onStorage = (e: StorageEvent) => {
+      if (e.key && (e.key.includes("studybuddy_usage") || e.key.includes("pro"))) refresh();
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
 
   const handleGenerate = async () => {
     if (!topic.trim()) {
@@ -67,6 +80,7 @@ const FlashcardsGenerator = ({ examMode }: FlashcardsGeneratorProps) => {
     setLoading(true);
     try {
       incrementCardsUsage();
+      setUsage(checkCardsUsage());
 
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/medical-notes`,
