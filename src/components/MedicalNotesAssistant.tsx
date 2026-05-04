@@ -242,7 +242,7 @@ const MedicalNotesAssistant = () => {
             <p className="text-[11px] font-bold tracking-[0.15em] text-primary uppercase pl-1">
               Flashcards
             </p>
-            <FlashcardsGenerator examMode={examMode} />
+            <FlashcardsGenerator />
           </div>
 
           {/* Section divider */}
