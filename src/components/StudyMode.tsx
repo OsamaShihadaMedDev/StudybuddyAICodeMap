@@ -4,9 +4,7 @@ import { X, BookOpen, Layers, ArrowLeft } from "lucide-react";
 import { getTagColors } from "@/lib/tag-colors";
 import type { Card } from "@/hooks/use-flashcard-deck";
 import { useToast } from "@/hooks/use-toast";
-import { Card as UICard, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import OutputSection from "@/components/OutputSection";
 import {
   checkSheetUsage,
   incrementSheetUsage,
@@ -182,7 +180,7 @@ const StudyMode = ({ dueCards, onReview, onClose }: StudyModeProps) => {
             )}
 
             <p className="text-center text-xs text-muted-foreground">
-              {index + 1} / {sessionCards.length}
+              Card {index + 1} of {sessionCards.length}
             </p>
           </div>
         ) : null}
@@ -257,22 +255,13 @@ const ExplainPanel = ({ open, scope, card, onClose }: ExplainPanelProps) => {
         const body = isCard
           ? {
               notes: card.question + " — " + card.answer,
-              focusCard: card.question,
-              difficulty: "Basic",
-              focus: "Deep Understanding",
-              length: "Concise",
               examMode: "General",
-              lite: false,
-              quizMode: false,
+              explainMode: true,
             }
           : {
               notes: card.topic,
-              difficulty: "Basic",
-              focus: "Quick Revision",
-              length: "Concise",
               examMode: "General",
-              lite: false,
-              quizMode: false,
+              explainMode: true,
             };
         const response = await fetch(
           `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/medical-notes`,
@@ -367,29 +356,18 @@ const ExplainPanel = ({ open, scope, card, onClose }: ExplainPanelProps) => {
         <div className="mx-auto max-w-2xl">
           {loading && !output && (
             <div className="space-y-4 animate-fade-in">
-              {[1, 2, 3].map((i) => (
-                <UICard key={i} className="glass-card">
-                  <CardContent className="p-6 space-y-3">
-                    <Skeleton className="h-5 w-32" />
-                    <Skeleton className="h-4 w-full" />
-                    <Skeleton className="h-4 w-4/5" />
-                    <Skeleton className="h-4 w-3/5" />
-                  </CardContent>
-                </UICard>
-              ))}
+              <div className="space-y-3">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-11/12" />
+                <Skeleton className="h-4 w-4/5" />
+              </div>
             </div>
           )}
           {output && (
-            <OutputSection
-              output={output}
-              inputText={scope === "card" ? card.question : card.topic}
-              modeInfo={{
-                examMode: "General",
-                difficulty: "Basic",
-                focus: scope === "card" ? "Deep Understanding" : "Quick Revision",
-                length: "Concise",
-              }}
-            />
+            <div className="space-y-5 animate-fade-in">
+              <ExplainContent output={output} />
+            </div>
           )}
         </div>
       </div>
