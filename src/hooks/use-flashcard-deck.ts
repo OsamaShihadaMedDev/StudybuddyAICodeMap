@@ -6,6 +6,7 @@ export type Card = {
   answer: string;
   tag: string;
   topic: string;
+  topicEmoji?: string;
   createdAt: number;
   interval: number;
   dueAt: number;
@@ -50,7 +51,7 @@ function saveToStorage(cards: Card[]) {
   }
 }
 
-type NewCardInput = Pick<Card, "question" | "answer" | "tag" | "topic">;
+type NewCardInput = Pick<Card, "question" | "answer" | "tag" | "topic" | "topicEmoji">;
 
 export function useFlashcardDeck() {
   const [allCards, setAllCards] = useState<Card[]>(() => loadCards());
@@ -96,6 +97,7 @@ export function useFlashcardDeck() {
           answer: c.answer,
           tag: c.tag,
           topic: c.topic,
+          topicEmoji: c.topicEmoji,
           createdAt: now,
           interval: 0,
           dueAt: now,
