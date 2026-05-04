@@ -220,6 +220,35 @@ const CardFace = ({ card, text }: { card: Card; text: string }) => {
 
 export default StudyMode;
 
+const ExplainContent = ({ output }: { output: string }) => {
+  const explanationMatch = output.match(/EXPLANATION\s*\n([\s\S]*?)(?=\n\s*KEY\s+INSIGHT|$)/i);
+  const insightMatch = output.match(/KEY\s+INSIGHT\s*\n([\s\S]*)$/i);
+
+  const explanation = explanationMatch?.[1]?.trim() || output.trim();
+  const insight = insightMatch?.[1]?.trim() || "";
+
+  return (
+    <div className="space-y-5">
+      <div className="space-y-2.5">
+        <h3 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
+          Explanation
+        </h3>
+        <p className="text-base leading-relaxed text-foreground whitespace-pre-wrap">
+          {explanation}
+        </p>
+      </div>
+      {insight && (
+        <div className="space-y-2.5 rounded-xl border border-primary/30 bg-primary/5 p-4">
+          <h3 className="text-xs uppercase tracking-wider text-primary font-semibold">
+            Key Insight
+          </h3>
+          <p className="text-sm leading-relaxed text-foreground">{insight}</p>
+        </div>
+      )}
+    </div>
+  );
+};
+
 interface ExplainPanelProps {
   open: boolean;
   scope: "card" | "topic";
