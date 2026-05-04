@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { notes, difficulty, focus, length, examMode, lite, quizMode, cardsOnly, cardCount, focusCard } = await req.json();
+    const { notes, difficulty, focus, length, examMode, lite, quizMode, cardsOnly, cardCount, focusCard, explainMode } = await req.json();
 
     if (!notes || typeof notes !== "string" || !notes.trim()) {
       return new Response(
@@ -37,7 +37,28 @@ serve(async (req) => {
 
     let systemPrompt: string;
 
-    if (cardsOnly) {
+    if (explainMode) {
+      systemPrompt = `You are a senior medical educator giving a brief mid-study clarification.
+
+The student is reviewing flashcards and hit a concept they don't fully understand. Give them a short, focused refresher — NOT a full study sheet.
+
+OUTPUT FORMAT (follow exactly, no other sections):
+
+EXPLANATION
+
+A 3-5 sentence plain-language explanation of the concept. Lead with the core mechanism or idea. Avoid jargon unless necessary. No bullet points, no headers within the paragraph.
+
+KEY INSIGHT
+
+One single sentence — the one thing the student must remember to never miss this concept again.
+
+STRICT RULES:
+- Total output must be under 150 words.
+- No flashcards, no clinical approach, no memory hooks, no exam traps, no reference note.
+- No markdown symbols (no #, *, -, **).
+- Use plain uppercase section headers exactly as shown above.
+- Start directly with EXPLANATION. No preamble.`;
+    } else if (cardsOnly) {
       const count = Math.min(Math.max(parseInt(cardCount) || 12, 5), 20);
       const liteCount = Math.min(count, 6);
       systemPrompt = `You are an expert medical educator generating USMLE-style active recall questions.
@@ -52,21 +73,28 @@ Generate exactly ${lite ? liteCount : count} flashcards. Mix of:
 - Clinical vignette questions (patient scenario → diagnosis or next step)
 - Concept recall (mechanism, association, complication)
 
-STRICT FORMATTING:
-- No markdown symbols.
-- Each question MUST start with [Diagnosis] / [Mechanism] / [Next Step] / [Complication] / [Association]
+STRICT FORMATTING (CRITICAL — violations break the parser):
+- No markdown symbols (no #, *, -, **, _).
+- Each question MUST start with a tag in brackets: [Diagnosis] / [Mechanism] / [Next Step] / [Complication] / [Association]
+- Every question MUST end with a question mark.
+- Every answer MUST be 1-2 sentences. NEVER more than 2 sentences.
+- NEVER write "Q:" or "A:" inside a question or answer body — those characters mark new card boundaries only.
+- Each card MUST be separated by exactly one blank line.
+- Do NOT number the cards.
+- Do NOT include explanations, headers, or commentary between cards.
 
 OUTPUT FORMAT:
 
 FLASHCARDS
 
+🩸
+
 Q: [Mechanism] What is...
 A: Short answer in 1-2 sentences max.
 
-Q: [Diagnosis] A patient presents with...
-A: Answer.
-
 (continue for ${lite ? liteCount : count} total)
+
+EMOJI RULE: After "FLASHCARDS" and before the first Q:, output exactly ONE emoji on its own line representing the topic visually (e.g., 🫀 for cardiac topics, 🩸 for hematology, 🧠 for neuro, 🫁 for pulmonary, 🦴 for ortho, 🩺 for general clinical, 💊 for pharmacology, 🧬 for genetics, 👁️ for ophthalmology, 🦷 for dental, 🤰 for OB/GYN, 👶 for pediatrics, 🧫 for micro, ⚗️ for biochem, 🩹 for trauma/surgery, 🛡️ for immunology). Use only one emoji. Do not surround it with text.
 
 Start directly with FLASHCARDS. No preamble or commentary.`;
     } else if (quizMode) {
@@ -83,13 +111,21 @@ Generate exactly 5-7 questions. Mix of:
 - Clinical vignette questions (patient scenario → diagnosis or next step)
 - Concept recall questions (mechanism, association, or complication)
 
-STRICT FORMATTING RULES:
-- Do NOT use markdown symbols (no #, ##, ###, *, -).
-- Use plain text only.
+STRICT FORMATTING (CRITICAL — violations break the parser):
+- No markdown symbols (no #, *, -, **, _).
+- Each question MUST start with a tag in brackets: [Diagnosis] / [Mechanism] / [Next Step] / [Complication] / [Association]
+- Every question MUST end with a question mark.
+- Every answer MUST be 1-2 sentences. NEVER more than 2 sentences.
+- NEVER write "Q:" or "A:" inside a question or answer body — those characters mark new card boundaries only.
+- Each card MUST be separated by exactly one blank line.
+- Do NOT number the cards.
+- Do NOT include explanations, headers, or commentary between cards.
 
 OUTPUT FORMAT (follow exactly):
 
 FLASHCARDS
+
+🩸
 
 Q: [Diagnosis] A clinical vignette question...
 A: Short, precise answer in 1-2 sentences max
@@ -102,7 +138,7 @@ A: Answer
 
 (Continue for 5-7 total questions)
 
-Each question MUST start with a tag: [Diagnosis] / [Mechanism] / [Next Step] / [Complication] / [Association]
+EMOJI RULE: After "FLASHCARDS" and before the first Q:, output exactly ONE emoji on its own line representing the topic visually (e.g., 🫀 for cardiac topics, 🩸 for hematology, 🧠 for neuro, 🫁 for pulmonary, 🦴 for ortho, 🩺 for general clinical, 💊 for pharmacology, 🧬 for genetics, 👁️ for ophthalmology, 🦷 for dental, 🤰 for OB/GYN, 👶 for pediatrics, 🧫 for micro, ⚗️ for biochem, 🩹 for trauma/surgery, 🛡️ for immunology). Use only one emoji. Do not surround it with text.
 
 GLOBAL CONSTRAINTS:
 - Generate only questions for active recall. Do not include explanations unless necessary.
@@ -256,6 +292,8 @@ Rules:
 
 
 FLASHCARDS
+
+The FLASHCARDS section MUST begin with one emoji on its own line representing the topic (same rule as above), then a blank line, then the cards.
 
 Generate exactly 4-5 flashcards. MUST include:
 - At least 1 "next best step" question

@@ -50,6 +50,7 @@ interface DeckSummary {
   mastered: number;
   due: number;
   latest: number;
+  emoji?: string;
 }
 
 const DeckList = ({ cards, onStudyDeck, onDeleteDeck, onReviewAll }: DeckListProps) => {
@@ -60,11 +61,12 @@ const DeckList = ({ cards, onStudyDeck, onDeleteDeck, onReviewAll }: DeckListPro
     const map = new Map<string, DeckSummary>();
     for (const c of cards) {
       const key = c.topic || "Untitled";
-      const cur = map.get(key) ?? { topic: key, total: 0, mastered: 0, due: 0, latest: 0 };
+      const cur = map.get(key) ?? { topic: key, total: 0, mastered: 0, due: 0, latest: 0, emoji: undefined as string | undefined };
       cur.total += 1;
       if (c.interval >= 21) cur.mastered += 1;
       if (c.dueAt <= now) cur.due += 1;
       if (c.createdAt > cur.latest) cur.latest = c.createdAt;
+      if (!cur.emoji && c.topicEmoji) cur.emoji = c.topicEmoji;
       map.set(key, cur);
     }
     return Array.from(map.values()).sort((a, b) => b.latest - a.latest);
@@ -104,9 +106,9 @@ const DeckList = ({ cards, onStudyDeck, onDeleteDeck, onReviewAll }: DeckListPro
                     className="flex-1 flex items-center gap-3 text-left cursor-pointer min-w-0"
                   >
                     <div
-                      className={`h-8 w-8 shrink-0 rounded-full flex items-center justify-center font-bold text-sm ${color.bg} ${color.text}`}
+                      className={`h-9 w-9 shrink-0 rounded-full flex items-center justify-center font-bold text-base ${color.bg} ${color.text}`}
                     >
-                      {initial}
+                      {deck.emoji || initial}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-foreground truncate">{deck.topic}</p>

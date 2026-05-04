@@ -3,6 +3,7 @@ export type ParsedCard = {
   answer: string;
   tag: string;
   topic: string;
+  topicEmoji?: string;
 };
 
 /**
@@ -19,6 +20,12 @@ export function parseFlashcardsFromOutput(output: string, topic: string): Parsed
   if (stop !== -1) section = section.slice(0, stop);
 
   const truncatedTopic = topic.trim().slice(0, 60);
+  let topicEmoji: string | undefined;
+  const emojiMatch = section.match(/^\s*([\p{Extended_Pictographic}\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}])\s*\n/u);
+  if (emojiMatch) {
+    topicEmoji = emojiMatch[1];
+    section = section.slice(emojiMatch[0].length);
+  }
   const cards: ParsedCard[] = [];
 
   // Hardened regex: require Q: and A: to be at the start of a line (after optional whitespace).
@@ -50,7 +57,7 @@ export function parseFlashcardsFromOutput(output: string, topic: string): Parsed
 
     if (!question) continue;
 
-    cards.push({ question, answer, tag, topic: truncatedTopic });
+    cards.push({ question, answer, tag, topic: truncatedTopic, topicEmoji });
   }
 
   return cards;
