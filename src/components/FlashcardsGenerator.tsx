@@ -20,16 +20,13 @@ import {
 } from "@/hooks/use-usage-limit";
 import { parseFlashcardsFromOutput } from "@/lib/parse-flashcards";
 
-interface FlashcardsGeneratorProps {
-  examMode: string;
-}
-
-const FlashcardsGenerator = ({ examMode }: FlashcardsGeneratorProps) => {
+const FlashcardsGenerator = () => {
   const [topic, setTopic] = useState("");
   const [cardCount, setCardCount] = useState("12");
+  const [examMode, setExamMode] = useState("General");
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
-  const { saveCards } = useFlashcardDeck();
+  const { saveCards, stats } = useFlashcardDeck();
   const [pro, setPro] = useState(() => isProUser());
   const [usage, setUsage] = useState(() => checkCardsUsage());
   const remaining = Math.max(0, MAX_DAILY_CARDS - usage.count);
@@ -134,11 +131,44 @@ const FlashcardsGenerator = ({ examMode }: FlashcardsGeneratorProps) => {
   return (
     <Card className="glass-card animate-fade-in border-primary/20">
       <CardContent className="p-6 space-y-5">
+        {stats.total === 0 && (
+          <div className="rounded-lg bg-primary/5 border border-primary/20 px-4 py-3 text-sm text-foreground/80">
+            👋 Type a topic below (e.g., "DKA" or "Heart failure") to generate your first deck. Cards are saved automatically and you can review them anytime.
+          </div>
+        )}
         <div className="flex items-center gap-2.5">
           <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-primary/10">
             <Layers className="h-4 w-4 text-primary" />
           </div>
           <h2 className="text-base font-bold text-foreground">Generate Flashcards</h2>
+        </div>
+        <div className="space-y-1.5">
+          <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            Exam Mode
+          </label>
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { value: "General", label: "General" },
+              { value: "USMLE Step 1", label: "Step 1" },
+              { value: "USMLE Step 2", label: "Step 2" },
+            ].map((opt) => {
+              const active = examMode === opt.value;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setExamMode(opt.value)}
+                  className={`h-10 rounded-lg text-sm font-semibold transition-all border ${
+                    active
+                      ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                      : "bg-background/60 text-foreground/70 border-border/50 hover:border-primary/40 hover:text-foreground"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
         <Textarea
           placeholder="Enter a topic to drill (e.g., 'DKA', 'Heart failure pharmacology')"
