@@ -84,7 +84,7 @@ const StudyMode = ({ dueCards, onReview, onClose }: StudyModeProps) => {
         </Button>
       </div>
 
-      <div className="flex-1 flex items-center justify-center px-4 pb-10 overflow-y-auto">
+      <div className="flex-1 flex items-center justify-center px-4 pb-4 md:pb-10 overflow-y-auto">
         {done ? (
           <div className="text-center space-y-4 animate-fade-in">
             {sessionCards.length === 0 ? (
@@ -107,7 +107,7 @@ const StudyMode = ({ dueCards, onReview, onClose }: StudyModeProps) => {
             </Button>
           </div>
         ) : current ? (
-          <div className="w-full max-w-xl space-y-6">
+          <div className="w-full max-w-xl space-y-4 md:space-y-6">
             {/* Card with flip — tap to flip */}
             <div
               className="perspective cursor-pointer select-none"
@@ -117,7 +117,7 @@ const StudyMode = ({ dueCards, onReview, onClose }: StudyModeProps) => {
               aria-label={flipped ? "Tap to show question" : "Tap to show answer"}
             >
               <div
-                className={`flip-card-y-inner relative min-h-[280px] max-h-[60vh] ${flipped ? "flipped" : ""}`}
+                className={`flip-card-y-inner relative min-h-[240px] max-h-[45vh] sm:max-h-[55vh] md:max-h-[60vh] ${flipped ? "flipped" : ""}`}
               >
                 {/* Front */}
                 <div className="flip-face absolute inset-0 w-full">
@@ -214,7 +214,7 @@ const StudyMode = ({ dueCards, onReview, onClose }: StudyModeProps) => {
 const CardFace = ({ card, text }: { card: Card; text: string }) => {
   const tagColors = getTagColors(card.tag);
   return (
-    <div className="glass-card rounded-2xl p-6 md:p-8 min-h-[280px] max-h-[60vh] flex flex-col gap-5 overflow-hidden">
+    <div className="glass-card rounded-2xl p-5 md:p-8 min-h-[240px] max-h-[45vh] sm:max-h-[55vh] md:max-h-[60vh] flex flex-col gap-4 md:gap-5 overflow-hidden">
       <div className="shrink-0 flex items-center gap-2.5">
         {card.topicEmoji && (
           <span className="text-xl leading-none" aria-hidden>
