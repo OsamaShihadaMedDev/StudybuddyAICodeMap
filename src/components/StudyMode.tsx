@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { X, BookOpen, Layers, ArrowLeft } from "lucide-react";
+import { X, BookOpen, Layers, ArrowLeft, RotateCcw } from "lucide-react";
 import { getTagColors } from "@/lib/tag-colors";
 import type { Card } from "@/hooks/use-flashcard-deck";
 import { useToast } from "@/hooks/use-toast";
@@ -50,7 +50,7 @@ const StudyMode = ({ dueCards, onReview, onClose }: StudyModeProps) => {
 
   const handleFlip = () => {
     vibrate("flip");
-    setFlipped(true);
+    setFlipped((f) => !f);
   };
 
   const handleRate = (rating: "again" | "good" | "easy") => {
@@ -108,8 +108,14 @@ const StudyMode = ({ dueCards, onReview, onClose }: StudyModeProps) => {
           </div>
         ) : current ? (
           <div className="w-full max-w-xl space-y-6">
-            {/* Card with flip */}
-            <div className="perspective" style={{ perspective: "1000px" }}>
+            {/* Card with flip — tap to flip */}
+            <div
+              className="perspective cursor-pointer select-none"
+              style={{ perspective: "1000px" }}
+              onClick={handleFlip}
+              role="button"
+              aria-label={flipped ? "Tap to show question" : "Tap to show answer"}
+            >
               <div
                 className={`flip-card-y-inner relative min-h-[280px] max-h-[60vh] ${flipped ? "flipped" : ""}`}
               >
@@ -144,7 +150,14 @@ const StudyMode = ({ dueCards, onReview, onClose }: StudyModeProps) => {
               </div>
             ) : (
               <div className="space-y-3">
-                <div className="flex items-center justify-center">
+                <div className="flex items-center justify-center gap-5">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setFlipped(false); }}
+                    className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    <RotateCcw className="h-3.5 w-3.5" />
+                    Show question
+                  </button>
                   <button
                     onClick={() => { setExplainScope("card"); setExplainOpen(true); }}
                     className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
@@ -202,7 +215,12 @@ const CardFace = ({ card, text }: { card: Card; text: string }) => {
   const tagColors = getTagColors(card.tag);
   return (
     <div className="glass-card rounded-2xl p-6 md:p-8 min-h-[280px] max-h-[60vh] flex flex-col gap-5 overflow-hidden">
-      <div className="shrink-0">
+      <div className="shrink-0 flex items-center gap-2.5">
+        {card.topicEmoji && (
+          <span className="text-xl leading-none" aria-hidden>
+            {card.topicEmoji}
+          </span>
+        )}
         <span
           className={`inline-block px-2.5 py-1 rounded-md text-[11px] font-semibold uppercase tracking-wider border ${tagColors.bg} ${tagColors.text} ${tagColors.border}`}
         >
