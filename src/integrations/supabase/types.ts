@@ -14,13 +14,170 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      cards: {
+        Row: {
+          answer: string
+          client_id: string
+          created_at: string
+          deck_id: string
+          due_at: string
+          id: string
+          interval_days: number
+          last_reviewed_at: string | null
+          question: string
+          review_count: number
+          tag: string | null
+          topic: string
+          topic_emoji: string | null
+          user_id: string
+        }
+        Insert: {
+          answer: string
+          client_id: string
+          created_at?: string
+          deck_id: string
+          due_at?: string
+          id?: string
+          interval_days?: number
+          last_reviewed_at?: string | null
+          question: string
+          review_count?: number
+          tag?: string | null
+          topic: string
+          topic_emoji?: string | null
+          user_id: string
+        }
+        Update: {
+          answer?: string
+          client_id?: string
+          created_at?: string
+          deck_id?: string
+          due_at?: string
+          id?: string
+          interval_days?: number
+          last_reviewed_at?: string | null
+          question?: string
+          review_count?: number
+          tag?: string | null
+          topic?: string
+          topic_emoji?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cards_deck_id_fkey"
+            columns: ["deck_id"]
+            isOneToOne: false
+            referencedRelation: "decks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      decks: {
+        Row: {
+          created_at: string
+          id: string
+          topic: string
+          topic_emoji: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          topic: string
+          topic_emoji?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          topic?: string
+          topic_emoji?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      pro_codes: {
+        Row: {
+          code: string
+          created_at: string
+          duration_days: number
+          redeemed_at: string | null
+          redeemed_by: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          duration_days?: number
+          redeemed_at?: string | null
+          redeemed_by?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          duration_days?: number
+          redeemed_at?: string | null
+          redeemed_by?: string | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          is_pro: boolean
+          pro_expires_at: string | null
+          pro_source: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id: string
+          is_pro?: boolean
+          pro_expires_at?: string | null
+          pro_source?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          is_pro?: boolean
+          pro_expires_at?: string | null
+          pro_source?: string | null
+        }
+        Relationships: []
+      }
+      usage_records: {
+        Row: {
+          count: number
+          id: string
+          kind: string
+          usage_date: string
+          user_id: string
+        }
+        Insert: {
+          count?: number
+          id?: string
+          kind: string
+          usage_date: string
+          user_id: string
+        }
+        Update: {
+          count?: number
+          id?: string
+          kind?: string
+          usage_date?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      redeem_pro_code: { Args: { code_input: string }; Returns: Json }
     }
     Enums: {
       [_ in never]: never
