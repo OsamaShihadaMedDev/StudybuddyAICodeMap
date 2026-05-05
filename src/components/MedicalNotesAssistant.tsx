@@ -17,7 +17,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 import GradientBackground from "@/components/GradientBackground";
 import OutputSection from "@/components/OutputSection";
 import StudyHistoryModal from "@/components/StudyHistoryModal";
-import GoogleSignInButton from "@/components/GoogleSignInButton";
+
 import { checkUsage, incrementUsage, MAX_DAILY_USES, isProUser, activateProCode, isProExpired, clearProExpired } from "@/hooks/use-usage-limit";
 import type { StudyHistoryItem } from "@/hooks/use-study-history";
 import { useFlashcardDeck } from "@/hooks/use-flashcard-deck";
@@ -219,7 +219,6 @@ const MedicalNotesAssistant = () => {
             </div>
             <div className="flex items-center gap-2">
               <StudyHistoryModal onSelect={handleHistorySelect} />
-              <GoogleSignInButton />
               <ThemeToggle />
             </div>
           </header>
