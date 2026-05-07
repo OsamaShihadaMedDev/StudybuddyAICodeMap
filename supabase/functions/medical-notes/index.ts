@@ -21,9 +21,9 @@ serve(async (req) => {
       );
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    if (!GEMINI_API_KEY) {
+      throw new Error("GEMINI_API_KEY is not configured");
     }
 
     const mode = examMode || "General";
@@ -332,21 +332,25 @@ GLOBAL CONSTRAINTS:
     const userContent = focusCard && !quizMode && !cardsOnly
       ? `Focus specifically on this concept: ${focusCard}\n\nTopic: ${notes}`
       : notes;
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userContent },
-        ],
-        stream: true,
-      }),
-    });
+
+    const combinedPrompt = `System: ${systemPrompt}\n\nUser: ${userContent}`;
+
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key=${GEMINI_API_KEY}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          contents: [{ role: "user", parts: [{ text: combinedPrompt }] }],
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 8192,
+          },
+        }),
+      }
+    );
 
     if (!response.ok) {
       if (response.status === 429) {
@@ -355,21 +359,80 @@ GLOBAL CONSTRAINTS:
           { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      if (response.status === 402) {
+      if (response.status === 400) {
+        const t = await response.text();
+        console.error("Gemini 400 error:", t);
         return new Response(
-          JSON.stringify({ error: "AI credits exhausted. Please add funds in Settings > Workspace > Usage." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          JSON.stringify({ error: "Bad request to AI service" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      if (response.status === 403) {
+        return new Response(
+          JSON.stringify({ error: "Invalid API key" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
       const t = await response.text();
-      console.error("AI gateway error:", response.status, t);
+      console.error("Gemini error:", response.status, t);
       return new Response(
         JSON.stringify({ error: "AI service error" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    return new Response(response.body, {
+    const decoder = new TextDecoder();
+    const encoder = new TextEncoder();
+    let buffer = "";
+
+    const transform = new TransformStream<Uint8Array, Uint8Array>({
+      transform(chunk, controller) {
+        buffer += decoder.decode(chunk, { stream: true });
+        console.log("[RAW_BYTES]:", chunk.length, "bytes");
+        console.log("[BUFFER_SO_FAR]:", buffer.slice(0, 500));
+        const events = buffer.split(/\r?\n\r?\n/);
+        console.log("[EVENTS_FOUND]:", events.length);
+        buffer = events.pop() ?? "";
+
+        for (const event of events) {
+          const trimmed = event.trim();
+          if (!trimmed) continue;
+          console.log("[EVENT]:", trimmed.slice(0, 300));
+
+          const dataLine = trimmed
+            .split("\n")
+            .find((line) => line.startsWith("data:"));
+          if (!dataLine) {
+            console.log("[NO_DATA_LINE]:", trimmed.slice(0, 200));
+            continue;
+          }
+
+          const payload = dataLine.slice(5).trim();
+          if (!payload || payload === "[DONE]") continue;
+
+          try {
+            const parsed = JSON.parse(payload);
+            const text = parsed?.candidates?.[0]?.content?.parts?.[0]?.text;
+            console.log("[PARSED_TEXT]:", typeof text, text ? text.slice(0, 100) : "MISSING");
+            if (typeof text !== "string" || text.length === 0) continue;
+
+            const openAiChunk = {
+              choices: [{ delta: { content: text } }],
+            };
+            controller.enqueue(
+              encoder.encode(`data: ${JSON.stringify(openAiChunk)}\n\n`)
+            );
+          } catch {
+            console.log("[PARSE_ERROR]:", payload.slice(0, 200));
+          }
+        }
+      },
+      flush(controller) {
+        controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+      },
+    });
+
+    return new Response(response.body!.pipeThrough(transform), {
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
     });
   } catch (e) {
