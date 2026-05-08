@@ -5,10 +5,7 @@ import { getTagColors } from "@/lib/tag-colors";
 import type { Card } from "@/hooks/use-flashcard-deck";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  checkSheetUsage,
-  incrementSheetUsage,
-} from "@/hooks/use-usage-limit";
+import { useUsageLimit } from "@/hooks/use-usage-limit";
 
 interface StudyModeProps {
   dueCards: Card[];
@@ -276,6 +273,7 @@ interface ExplainPanelProps {
 
 const ExplainPanel = ({ open, scope, card, onClose }: ExplainPanelProps) => {
   const { toast } = useToast();
+  const { isSheetLite, incrementSheet } = useUsageLimit();
   const [output, setOutput] = useState("");
   const [loading, setLoading] = useState(false);
   const [started, setStarted] = useState(false);
@@ -283,8 +281,7 @@ const ExplainPanel = ({ open, scope, card, onClose }: ExplainPanelProps) => {
 
   useEffect(() => {
     if (!open || started) return;
-    const sheet = checkSheetUsage();
-    if (sheet.isLite) {
+    if (isSheetLite) {
       // At limit — show toast and block
       toast({ title: "Daily study sheet limit reached", variant: "destructive" });
       setBlocked(true);
@@ -297,7 +294,7 @@ const ExplainPanel = ({ open, scope, card, onClose }: ExplainPanelProps) => {
 
     const run = async () => {
       try {
-        incrementSheetUsage();
+        await incrementSheet();
         const isCard = scope === "card";
         const body = isCard
           ? {

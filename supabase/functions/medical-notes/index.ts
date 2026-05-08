@@ -347,6 +347,9 @@ GLOBAL CONSTRAINTS:
           generationConfig: {
             temperature: 0.7,
             maxOutputTokens: 8192,
+            thinkingConfig: {
+              thinkingBudget: 0
+            }
           },
         }),
       }

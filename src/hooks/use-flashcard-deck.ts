@@ -1,4 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/use-auth";
 
 export type Card = {
   id: string;
@@ -53,11 +56,51 @@ function saveToStorage(cards: Card[]) {
 
 type NewCardInput = Pick<Card, "question" | "answer" | "tag" | "topic" | "topicEmoji">;
 
+type CardRow = {
+  id: string;
+  client_id: string;
+  question: string;
+  answer: string;
+  tag: string | null;
+  topic: string;
+  topic_emoji: string | null;
+  interval_days: number;
+  due_at: string;
+  last_reviewed_at: string | null;
+  review_count: number;
+  created_at: string;
+};
+
+function rowToCard(row: CardRow): Card {
+  return {
+    id: row.client_id,
+    question: row.question,
+    answer: row.answer,
+    tag: row.tag ?? "",
+    topic: row.topic,
+    topicEmoji: row.topic_emoji ?? undefined,
+    createdAt: new Date(row.created_at).getTime(),
+    interval: row.interval_days,
+    dueAt: new Date(row.due_at).getTime(),
+    lastReviewed: row.last_reviewed_at
+      ? new Date(row.last_reviewed_at).getTime()
+      : null,
+    reviewCount: row.review_count,
+  };
+}
+
 export function useFlashcardDeck() {
-  const [allCards, setAllCards] = useState<Card[]>(() => loadCards());
+  const { user, isAnonymous } = useAuth();
+  const userId = user?.id ?? null;
+  const useServer = !!userId && !isAnonymous;
+  const queryClient = useQueryClient();
+
+  // localStorage state for anonymous users
+  const [localCards, setLocalCards] = useState<Card[]>(() => loadCards());
 
   useEffect(() => {
-    const refresh = () => setAllCards(loadCards());
+    if (useServer) return;
+    const refresh = () => setLocalCards(loadCards());
     const onStorage = (e: StorageEvent) => {
       if (e.key === STORAGE_KEY) refresh();
     };
@@ -68,10 +111,28 @@ export function useFlashcardDeck() {
       window.removeEventListener("storage", onStorage);
       window.removeEventListener(DECK_CHANGE_EVENT, onDeckChange);
     };
-  }, []);
+  }, [useServer]);
 
-  const persist = useCallback((next: Card[]) => {
-    setAllCards(next);
+  // Server cards via React Query
+  const cardsQuery = useQuery({
+    queryKey: ["flashcards", userId],
+    enabled: useServer,
+    queryFn: async (): Promise<Card[]> => {
+      const { data, error } = await supabase
+        .from("cards")
+        .select(
+          "id, client_id, question, answer, tag, topic, topic_emoji, interval_days, due_at, last_reviewed_at, review_count, created_at"
+        )
+        .eq("user_id", userId!);
+      if (error) throw error;
+      return (data ?? []).map((row) => rowToCard(row as CardRow));
+    },
+  });
+
+  const allCards = useServer ? cardsQuery.data ?? [] : localCards;
+
+  const persistLocal = useCallback((next: Card[]) => {
+    setLocalCards(next);
     saveToStorage(next);
     try {
       window.dispatchEvent(new CustomEvent(DECK_CHANGE_EVENT));
@@ -81,7 +142,73 @@ export function useFlashcardDeck() {
   }, []);
 
   const saveCards = useCallback(
-    (incoming: NewCardInput[]): number => {
+    async (incoming: NewCardInput[]): Promise<number> => {
+      if (!incoming.length) return 0;
+
+      if (useServer) {
+        const now = new Date().toISOString();
+        // Group by topic so we upsert decks once per topic
+        const topics = new Map<string, { topic: string; emoji?: string }>();
+        for (const c of incoming) {
+          if (!topics.has(c.topic)) {
+            topics.set(c.topic, { topic: c.topic, emoji: c.topicEmoji });
+          }
+        }
+
+        // Upsert decks
+        const deckRows = Array.from(topics.values()).map((t) => ({
+          user_id: userId!,
+          topic: t.topic,
+          topic_emoji: t.emoji ?? null,
+        }));
+        const { error: deckError } = await supabase
+          .from("decks")
+          .upsert(deckRows, { onConflict: "user_id,topic" });
+        if (deckError) throw deckError;
+
+        // Fetch deck ids for the affected topics
+        const { data: decks, error: fetchError } = await supabase
+          .from("decks")
+          .select("id, topic")
+          .eq("user_id", userId!)
+          .in("topic", Array.from(topics.keys()));
+        if (fetchError) throw fetchError;
+        const deckIdByTopic = new Map<string, string>();
+        for (const d of decks ?? []) deckIdByTopic.set(d.topic, d.id);
+
+        const cardRows = incoming
+          .map((c) => {
+            const deckId = deckIdByTopic.get(c.topic);
+            if (!deckId) return null;
+            return {
+              user_id: userId!,
+              deck_id: deckId,
+              client_id: makeCardId(c.question, c.answer),
+              question: c.question,
+              answer: c.answer,
+              tag: c.tag,
+              topic: c.topic,
+              topic_emoji: c.topicEmoji ?? null,
+              interval_days: 0,
+              due_at: now,
+              review_count: 0,
+            };
+          })
+          .filter((r): r is NonNullable<typeof r> => r !== null);
+
+        const { error: cardError } = await supabase
+          .from("cards")
+          .upsert(cardRows, {
+            onConflict: "user_id,client_id",
+            ignoreDuplicates: true,
+          });
+        if (cardError) throw cardError;
+
+        await queryClient.invalidateQueries({ queryKey: ["flashcards", userId] });
+        return cardRows.length;
+      }
+
+      // localStorage path
       const current = loadCards();
       const existingIds = new Set(current.map((c) => c.id));
       const now = Date.now();
@@ -106,25 +233,22 @@ export function useFlashcardDeck() {
         });
         added++;
       }
-      if (additions.length) persist([...current, ...additions]);
+      if (additions.length) persistLocal([...current, ...additions]);
       return added;
     },
-    [persist]
+    [useServer, userId, queryClient, persistLocal]
   );
 
   const reviewCard = useCallback(
-    (id: string, rating: "again" | "good" | "easy") => {
-      const current = loadCards();
-      const now = Date.now();
-      const next = current.map((c) => {
-        if (c.id !== id) return c;
-        let interval = c.interval;
-        let dueAt = c.dueAt;
+    async (id: string, rating: "again" | "good" | "easy") => {
+      const computeNext = (card: Card) => {
+        const now = Date.now();
+        let interval = card.interval;
+        let dueAt = card.dueAt;
         if (rating === "again") {
           interval = 0;
           dueAt = now + 10 * 60 * 1000;
         } else {
-          // find current step index
           const idx = PROGRESSION.indexOf(interval);
           let nextIdx: number;
           if (interval === 0) {
@@ -132,29 +256,68 @@ export function useFlashcardDeck() {
           } else if (idx === -1) {
             nextIdx = 0;
           } else {
-            nextIdx = rating === "easy" ? Math.min(idx + 2, PROGRESSION.length - 1) : Math.min(idx + 1, PROGRESSION.length - 1);
+            nextIdx =
+              rating === "easy"
+                ? Math.min(idx + 2, PROGRESSION.length - 1)
+                : Math.min(idx + 1, PROGRESSION.length - 1);
           }
           interval = PROGRESSION[nextIdx];
           dueAt = now + interval * DAY;
         }
+        return { interval, dueAt, lastReviewed: now };
+      };
+
+      if (useServer) {
+        const card = allCards.find((c) => c.id === id);
+        if (!card) return;
+        const next = computeNext(card);
+        const { error } = await supabase
+          .from("cards")
+          .update({
+            interval_days: next.interval,
+            due_at: new Date(next.dueAt).toISOString(),
+            last_reviewed_at: new Date(next.lastReviewed).toISOString(),
+            review_count: card.reviewCount + 1,
+          })
+          .eq("user_id", userId!)
+          .eq("client_id", id);
+        if (error) throw error;
+        await queryClient.invalidateQueries({ queryKey: ["flashcards", userId] });
+        return;
+      }
+
+      const current = loadCards();
+      const updated = current.map((c) => {
+        if (c.id !== id) return c;
+        const next = computeNext(c);
         return {
           ...c,
-          interval,
-          dueAt,
-          lastReviewed: now,
+          interval: next.interval,
+          dueAt: next.dueAt,
+          lastReviewed: next.lastReviewed,
           reviewCount: c.reviewCount + 1,
         };
       });
-      persist(next);
+      persistLocal(updated);
     },
-    [persist]
+    [useServer, userId, queryClient, persistLocal, allCards]
   );
 
   const deleteCard = useCallback(
-    (id: string) => {
-      persist(loadCards().filter((c) => c.id !== id));
+    async (id: string) => {
+      if (useServer) {
+        const { error } = await supabase
+          .from("cards")
+          .delete()
+          .eq("user_id", userId!)
+          .eq("client_id", id);
+        if (error) throw error;
+        await queryClient.invalidateQueries({ queryKey: ["flashcards", userId] });
+        return;
+      }
+      persistLocal(loadCards().filter((c) => c.id !== id));
     },
-    [persist]
+    [useServer, userId, queryClient, persistLocal]
   );
 
   const now = Date.now();

@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -10,15 +9,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Stethoscope, Loader2, Sparkles, BrainCircuit, MessageCircle, Mail, ShieldCheck } from "lucide-react";
+import { Stethoscope, Loader2, Sparkles, BrainCircuit, MessageCircle, Mail } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import ThemeToggle from "@/components/ThemeToggle";
+import AuthButton from "@/components/AuthButton";
 import GradientBackground from "@/components/GradientBackground";
 import OutputSection from "@/components/OutputSection";
 import StudyHistoryModal from "@/components/StudyHistoryModal";
 
-import { checkUsage, incrementUsage, MAX_DAILY_USES, isProUser, activateProCode, isProExpired, clearProExpired } from "@/hooks/use-usage-limit";
+import { useUsageLimit, MAX_DAILY_SHEETS } from "@/hooks/use-usage-limit";
 import type { StudyHistoryItem } from "@/hooks/use-study-history";
 import { useFlashcardDeck } from "@/hooks/use-flashcard-deck";
 import DueTodaySection from "@/components/DueTodaySection";
@@ -37,11 +37,7 @@ const MedicalNotesAssistant = () => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
-  const [usageCount, setUsageCount] = useState(() => checkUsage().count);
-  const [pro, setPro] = useState(() => isProUser());
-  const [expired, setExpired] = useState(() => isProExpired());
-  const [accessCode, setAccessCode] = useState("");
-  const [codeError, setCodeError] = useState(false);
+  const { sheetCount, isSheetLite, isProUser: pro, incrementSheet } = useUsageLimit();
 
   const { allCards, dueCards, saveCards, reviewCard, deleteCard, stats } = useFlashcardDeck();
   const [studyOpen, setStudyOpen] = useState(false);
@@ -80,20 +76,13 @@ const MedicalNotesAssistant = () => {
       return;
     }
 
-    // Re-check pro status (handles 30-day expiration)
-    const currentlyPro = isProUser();
-    if (currentlyPro !== pro) {
-      setPro(currentlyPro);
-      setExpired(isProExpired());
-    }
-    const { isLite } = checkUsage();
+    const isLite = isSheetLite;
 
     setLoading(true);
     setOutput("");
 
     try {
-      incrementUsage();
-      setUsageCount(checkUsage().count);
+      await incrementSheet();
 
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/medical-notes`,
@@ -220,6 +209,7 @@ const MedicalNotesAssistant = () => {
             <div className="flex items-center gap-2">
               <StudyHistoryModal onSelect={handleHistorySelect} />
               <ThemeToggle />
+              <AuthButton />
             </div>
           </header>
 
@@ -335,63 +325,24 @@ const MedicalNotesAssistant = () => {
                 </div>
               </div>
 
-              {/* Access Code / Pro Status */}
-              {pro ? (
+              {/* Pro Status */}
+              {pro && (
                 <div className="rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 text-center">
                   <p className="text-sm font-semibold text-primary">
                     ✅ Unlimited Access Activated
                   </p>
-                </div>
-              ) : (
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                    Enter Access Code (optional)
-                  </label>
-                  <div className="flex gap-2">
-                    <Input
-                      value={accessCode}
-                      onChange={(e) => { setAccessCode(e.target.value); setCodeError(false); }}
-                      className="bg-background/60 border-border/50 text-sm font-mono uppercase"
-                    />
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="shrink-0 h-10 border-primary/30"
-                      onClick={() => {
-                        if (activateProCode(accessCode)) {
-                          setPro(true);
-                          setExpired(false);
-                          setCodeError(false);
-                          clearProExpired();
-                          toast({ title: "Pro access activated!" });
-                        } else {
-                          setCodeError(true);
-                        }
-                      }}
-                    >
-                      Activate
-                    </Button>
-                  </div>
-                  {codeError && (
-                    <p className="text-xs text-destructive">Invalid code</p>
-                  )}
-                  {expired && !codeError && (
-                    <p className="text-xs text-amber-500 dark:text-amber-400">
-                      Access expired — please enter a new code
-                    </p>
-                  )}
                 </div>
               )}
 
               {/* Usage Indicator */}
               {!pro && (
                 <div className="text-center text-xs text-muted-foreground space-y-2">
-                  {usageCount >= MAX_DAILY_USES ? (
+                  {sheetCount >= MAX_DAILY_SHEETS ? (
                     <span className="text-amber-500 dark:text-amber-400 font-medium block">
                       Daily limit reached — Lite mode active
                     </span>
                   ) : (
-                    <span>{usageCount} / {MAX_DAILY_USES} uses today</span>
+                    <span>{sheetCount} / {MAX_DAILY_SHEETS} uses today</span>
                   )}
                 </div>
               )}

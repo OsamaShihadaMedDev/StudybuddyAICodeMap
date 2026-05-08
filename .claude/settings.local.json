@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(supabase functions *)",
+      "PowerShell(supabase functions deploy medical-notes)",
+      "Bash(npm run *)",
+      "Bash(supabase db *)",
+      "Bash(supabase migration *)",
+      "Bash(npx tsc *)"
+    ]
+  }
+}

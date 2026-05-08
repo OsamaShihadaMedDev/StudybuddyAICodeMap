@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,12 +12,7 @@ import {
 import { Loader2, Layers } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useFlashcardDeck } from "@/hooks/use-flashcard-deck";
-import {
-  checkCardsUsage,
-  incrementCardsUsage,
-  isProUser,
-  MAX_DAILY_CARDS,
-} from "@/hooks/use-usage-limit";
+import { useUsageLimit, MAX_DAILY_CARDS } from "@/hooks/use-usage-limit";
 import { parseFlashcardsFromOutput } from "@/lib/parse-flashcards";
 
 const FlashcardsGenerator = () => {
@@ -27,33 +22,23 @@ const FlashcardsGenerator = () => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const { saveCards, stats } = useFlashcardDeck();
-  const [pro, setPro] = useState(() => isProUser());
-  const [usage, setUsage] = useState(() => checkCardsUsage());
-  const remaining = Math.max(0, MAX_DAILY_CARDS - usage.count);
-
-  useEffect(() => {
-    const refresh = () => {
-      setPro(isProUser());
-      setUsage(checkCardsUsage());
-    };
-    refresh();
-    const onStorage = (e: StorageEvent) => {
-      if (e.key && (e.key.includes("studybuddy_usage") || e.key.includes("pro"))) refresh();
-    };
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
-  }, []);
+  const {
+    cardsCount,
+    isCardsLite,
+    isProUser: pro,
+    incrementCards,
+  } = useUsageLimit();
+  const remaining = Math.max(0, MAX_DAILY_CARDS - cardsCount);
 
   const handleGenerate = async () => {
     if (!topic.trim()) {
       toast({ title: "Please enter a topic", variant: "destructive" });
       return;
     }
-    const { isLite } = checkCardsUsage();
+    const isLite = isCardsLite;
     setLoading(true);
     try {
-      incrementCardsUsage();
-      setUsage(checkCardsUsage());
+      await incrementCards();
 
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/medical-notes`,
@@ -112,7 +97,7 @@ const FlashcardsGenerator = () => {
       }
 
       const parsed = parseFlashcardsFromOutput(fullText, topic);
-      const added = saveCards(parsed);
+      const added = await saveCards(parsed);
       toast({
         title: added > 0 ? `Added ${added} new cards to your deck` : "No new cards (all duplicates)",
       });
@@ -214,7 +199,7 @@ const FlashcardsGenerator = () => {
         </div>
         {!pro && (
           <p className="text-center text-xs text-muted-foreground">
-            {usage.isLite ? (
+            {isCardsLite ? (
               <span className="text-amber-500 dark:text-amber-400 font-medium">
                 Daily limit reached — Lite mode (6 cards)
               </span>
