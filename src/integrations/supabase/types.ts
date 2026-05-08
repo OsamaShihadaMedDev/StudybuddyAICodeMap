@@ -148,6 +148,45 @@ export type Database = {
         }
         Relationships: []
       }
+      study_history: {
+        Row: {
+          created_at: string
+          difficulty: string | null
+          exam_mode: string | null
+          focus: string | null
+          id: string
+          input: string
+          length: string | null
+          output: string
+          topic: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          difficulty?: string | null
+          exam_mode?: string | null
+          focus?: string | null
+          id?: string
+          input: string
+          length?: string | null
+          output: string
+          topic: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          difficulty?: string | null
+          exam_mode?: string | null
+          focus?: string | null
+          id?: string
+          input?: string
+          length?: string | null
+          output?: string
+          topic?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       usage_records: {
         Row: {
           count: number

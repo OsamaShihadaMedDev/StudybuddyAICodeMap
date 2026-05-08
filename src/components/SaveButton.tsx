@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Bookmark, BookmarkCheck } from "lucide-react";
-import { saveToHistory } from "@/hooks/use-study-history";
+import { useStudyHistory } from "@/hooks/use-study-history";
 import { useToast } from "@/hooks/use-toast";
 
 interface SaveButtonProps {
@@ -18,11 +18,20 @@ interface SaveButtonProps {
 const SaveButton = ({ input, output, modeInfo }: SaveButtonProps) => {
   const [saved, setSaved] = useState(false);
   const { toast } = useToast();
+  const { saveItem } = useStudyHistory();
 
-  const handleSave = () => {
-    saveToHistory(input, output, modeInfo);
-    setSaved(true);
-    toast({ title: "Saved to Study History" });
+  const handleSave = async () => {
+    try {
+      await saveItem(input, output, modeInfo);
+      setSaved(true);
+      toast({ title: "Saved to Study History" });
+    } catch (e: any) {
+      toast({
+        title: "Failed to save",
+        description: e?.message ?? "Please try again",
+        variant: "destructive",
+      });
+    }
   };
 
   return (

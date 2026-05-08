@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -10,8 +10,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { History, Trash2 } from "lucide-react";
 import {
-  loadHistory,
-  deleteFromHistory,
+  useStudyHistory,
   type StudyHistoryItem,
 } from "@/hooks/use-study-history";
 
@@ -32,16 +31,11 @@ interface Props {
 
 const StudyHistoryModal = ({ onSelect }: Props) => {
   const [open, setOpen] = useState(false);
-  const [items, setItems] = useState<StudyHistoryItem[]>([]);
-
-  useEffect(() => {
-    if (open) setItems(loadHistory());
-  }, [open]);
+  const { history: items, deleteItem } = useStudyHistory();
 
   const handleDelete = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    deleteFromHistory(id);
-    setItems((prev) => prev.filter((i) => i.id !== id));
+    void deleteItem(id);
   };
 
   return (

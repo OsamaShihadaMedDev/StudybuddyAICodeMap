@@ -4,6 +4,21 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
 const STORAGE_KEY = "studybuddy_decks_v1";
+const HISTORY_STORAGE_KEY = "studybuddy_history";
+
+type LocalHistoryItem = {
+  id: string;
+  topic: string;
+  input: string;
+  output: string;
+  timestamp: number;
+  modeInfo?: {
+    examMode: string;
+    difficulty: string;
+    focus: string;
+    length: string;
+  };
+};
 
 type LocalCard = {
   id: string;
@@ -104,6 +119,46 @@ async function migrateLocalCardsToServer(userId: string): Promise<void> {
   }
 }
 
+async function migrateLocalStudyHistoryToServer(userId: string): Promise<void> {
+  let raw: string | null = null;
+  try {
+    raw = localStorage.getItem(HISTORY_STORAGE_KEY);
+  } catch {
+    return;
+  }
+  if (!raw) return;
+
+  let items: LocalHistoryItem[];
+  try {
+    const parsed = JSON.parse(raw);
+    items = Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return;
+  }
+  if (!items.length) return;
+
+  const rows = items.map((item) => ({
+    user_id: userId,
+    topic: item.topic,
+    input: item.input,
+    output: item.output,
+    exam_mode: item.modeInfo?.examMode ?? null,
+    difficulty: item.modeInfo?.difficulty ?? null,
+    focus: item.modeInfo?.focus ?? null,
+    length: item.modeInfo?.length ?? null,
+    created_at: new Date(item.timestamp ?? Date.now()).toISOString(),
+  }));
+
+  const { error } = await supabase.from("study_history").insert(rows);
+  if (error) throw error;
+
+  try {
+    localStorage.removeItem(HISTORY_STORAGE_KEY);
+  } catch {
+    // ignore
+  }
+}
+
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -147,6 +202,14 @@ export function useAuth() {
         } catch {
           toast({
             title: "Couldn't sync local cards to your account, please try again later",
+            variant: "destructive",
+          });
+        }
+        try {
+          await migrateLocalStudyHistoryToServer(upgradedUserId);
+        } catch {
+          toast({
+            title: "Couldn't sync local study history to your account, please try again later",
             variant: "destructive",
           });
         }
