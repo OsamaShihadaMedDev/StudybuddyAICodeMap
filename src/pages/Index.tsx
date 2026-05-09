@@ -1,5 +1,5 @@
-import MedicalNotesAssistant from "@/components/MedicalNotesAssistant";
+import { Navigate } from "react-router-dom";
 
-const Index = () => <MedicalNotesAssistant />;
+const Index = () => <Navigate to="/dashboard" replace />;
 
 export default Index;
