@@ -21,7 +21,7 @@ const FlashcardsGenerator = () => {
   const [examMode, setExamMode] = useState("General");
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
-  const { saveCards, stats } = useFlashcardDeck();
+  const { saveCards } = useFlashcardDeck();
   const {
     cardsCount,
     isCardsLite,
@@ -116,11 +116,6 @@ const FlashcardsGenerator = () => {
   return (
     <Card className="glass-card animate-fade-in border-primary/20">
       <CardContent className="p-6 space-y-5">
-        {stats.total === 0 && (
-          <div className="rounded-lg bg-primary/5 border border-primary/20 px-4 py-3 text-sm text-foreground/80">
-            👋 Type a topic below (e.g., "DKA" or "Heart failure") to generate your first deck. Cards are saved automatically and you can review them anytime.
-          </div>
-        )}
         <div className="flex items-center gap-2.5">
           <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-primary/10">
             <Layers className="h-4 w-4 text-primary" />

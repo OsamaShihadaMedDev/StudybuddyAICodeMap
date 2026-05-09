@@ -3,9 +3,11 @@ import { Link } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import DashboardHero from "@/components/dashboard/DashboardHero";
+import StatsStrip from "@/components/dashboard/StatsStrip";
+import WelcomeCard from "@/components/dashboard/WelcomeCard";
+import MoreToolsSection from "@/components/dashboard/MoreToolsSection";
 import DeckList from "@/components/DeckList";
 import FlashcardsGenerator from "@/components/FlashcardsGenerator";
-import SheetGenerator from "@/components/SheetGenerator";
 import StudyMode from "@/components/StudyMode";
 import { useFlashcardDeck } from "@/hooks/use-flashcard-deck";
 import { useToast } from "@/hooks/use-toast";
@@ -58,9 +60,6 @@ const Dashboard = () => {
     toDelete.forEach((c) => deleteCard(c.id));
     toast({ title: `Deleted ${toDelete.length} cards from "${topic}"` });
   };
-  const handleCreateDeck = () => {
-    generatorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
 
   const studySessionCards = useMemo(() => {
     if (studyFilter.mode === "due") return dueCards;
@@ -82,13 +81,17 @@ const Dashboard = () => {
       )}
 
       <div className="space-y-8">
-        <DashboardHero
-          dueCount={stats.due}
-          totalDecks={totalDecks}
-          onStartReview={handleStartDue}
-          onReviewAny={handleReviewAny}
-          onCreateDeck={handleCreateDeck}
-        />
+        <StatsStrip />
+
+        {totalDecks === 0 && <WelcomeCard />}
+
+        {totalDecks > 0 && (
+          <DashboardHero
+            dueCount={stats.due}
+            onStartReview={handleStartDue}
+            onReviewAny={handleReviewAny}
+          />
+        )}
 
         {totalDecks > 0 && (
           <div className="space-y-3">
@@ -122,7 +125,7 @@ const Dashboard = () => {
           <FlashcardsGenerator />
         </div>
 
-        <SheetGenerator />
+        <MoreToolsSection />
       </div>
     </DashboardLayout>
   );
