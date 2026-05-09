@@ -6,7 +6,8 @@
       "Bash(npm run *)",
       "Bash(supabase db *)",
       "Bash(supabase migration *)",
-      "Bash(npx tsc *)"
+      "Bash(npx tsc *)",
+      "Bash(npx supabase *)"
     ]
   }
 }

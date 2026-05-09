@@ -271,7 +271,7 @@ export function useFlashcardDeck() {
         const card = allCards.find((c) => c.id === id);
         if (!card) return;
         const next = computeNext(card);
-        const { error } = await supabase
+        const { data: updated, error } = await supabase
           .from("cards")
           .update({
             interval_days: next.interval,
@@ -280,8 +280,32 @@ export function useFlashcardDeck() {
             review_count: card.reviewCount + 1,
           })
           .eq("user_id", userId!)
-          .eq("client_id", id);
+          .eq("client_id", id)
+          .select("id")
+          .maybeSingle();
         if (error) throw error;
+
+        if (updated?.id) {
+          try {
+            const { error: reviewError } = await supabase
+              .from("review_sessions")
+              .insert({
+                user_id: userId!,
+                card_id: updated.id,
+                rating,
+                reviewed_at: new Date(next.lastReviewed).toISOString(),
+              });
+            if (reviewError) console.error("review_sessions insert failed", reviewError);
+            else {
+              await queryClient.invalidateQueries({
+                queryKey: ["study-stats", userId],
+              });
+            }
+          } catch (e) {
+            console.error("review_sessions insert failed", e);
+          }
+        }
+
         await queryClient.invalidateQueries({ queryKey: ["flashcards", userId] });
         return;
       }

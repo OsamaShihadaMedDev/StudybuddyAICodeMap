@@ -148,6 +148,38 @@ export type Database = {
         }
         Relationships: []
       }
+      review_sessions: {
+        Row: {
+          card_id: string
+          id: string
+          rating: string
+          reviewed_at: string
+          user_id: string
+        }
+        Insert: {
+          card_id: string
+          id?: string
+          rating: string
+          reviewed_at?: string
+          user_id: string
+        }
+        Update: {
+          card_id?: string
+          id?: string
+          rating?: string
+          reviewed_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "review_sessions_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       study_history: {
         Row: {
           created_at: string

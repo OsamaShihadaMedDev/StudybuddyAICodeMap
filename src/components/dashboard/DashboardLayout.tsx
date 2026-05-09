@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import GradientBackground from "@/components/GradientBackground";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
-import DashboardRightRail from "@/components/dashboard/DashboardRightRail";
 import AuthModal from "@/components/AuthModal";
 import AccountDashboard from "@/components/AccountDashboard";
 
@@ -67,13 +66,8 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
             <div className="w-9" aria-hidden />
           </header>
 
-          <div className="flex flex-1 min-h-0">
-            <div className="flex-1 min-w-0 px-4 py-6 md:px-8 md:py-10">
-              <div className="mx-auto max-w-2xl">{children}</div>
-            </div>
-            <div className="hidden xl:block xl:py-10 xl:pr-8">
-              <DashboardRightRail />
-            </div>
+          <div className="flex-1 min-w-0 px-4 py-6 md:px-8 md:py-10">
+            <div className="mx-auto max-w-2xl">{children}</div>
           </div>
         </main>
       </div>

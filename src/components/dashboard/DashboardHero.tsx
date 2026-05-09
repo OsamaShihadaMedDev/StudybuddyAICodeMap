@@ -1,3 +1,4 @@
+import { ReactNode } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -6,7 +7,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Sparkles, Play, BookOpen, Repeat } from "lucide-react";
+import { Flame, TrendingUp, CalendarDays, Sparkles, Play, BookOpen, Repeat } from "lucide-react";
+import { useStudyStats } from "@/hooks/use-study-stats";
 
 interface DashboardHeroProps {
   dueCount: number;
@@ -23,6 +25,71 @@ const formatToday = () =>
     day: "numeric",
   });
 
+interface StatChipProps {
+  icon: ReactNode;
+  value: string;
+  label: string;
+  accent?: boolean;
+}
+
+const StatChip = ({ icon, value, label, accent }: StatChipProps) => (
+  <div className="flex flex-1 flex-col items-center gap-0.5 px-2 py-1 text-center">
+    <div className="flex items-center gap-1.5">
+      <span className="text-muted-foreground">{icon}</span>
+      <span
+        className={`text-2xl font-extrabold leading-none tracking-tight md:text-3xl ${
+          accent ? "text-primary" : "text-foreground"
+        }`}
+      >
+        {value}
+      </span>
+    </div>
+    <span className="text-[11px] text-muted-foreground tracking-wide">
+      {label}
+    </span>
+  </div>
+);
+
+const StatsStrip = () => {
+  const { streak, retentionRate, cardsThisWeek, isAnonymous } = useStudyStats();
+
+  const streakValue = streak === null ? "—" : String(streak);
+  const streakLabel =
+    streak === null ? "day streak" : `${streak === 1 ? "day" : "days"} streak`;
+  const retentionValue =
+    retentionRate === null ? "—" : `${retentionRate}%`;
+  const cardsValue =
+    cardsThisWeek === null ? "—" : String(cardsThisWeek);
+
+  return (
+    <div className="space-y-1.5">
+      <div className="flex flex-row items-stretch gap-1 divide-x divide-border/40">
+        <StatChip
+          icon={<Flame className="h-3.5 w-3.5" />}
+          value={streakValue}
+          label={streakLabel}
+          accent
+        />
+        <StatChip
+          icon={<TrendingUp className="h-3.5 w-3.5" />}
+          value={retentionValue}
+          label="retention"
+        />
+        <StatChip
+          icon={<CalendarDays className="h-3.5 w-3.5" />}
+          value={cardsValue}
+          label="this week"
+        />
+      </div>
+      {isAnonymous && (
+        <p className="text-center text-[11px] text-muted-foreground/80">
+          Sign in to track your progress
+        </p>
+      )}
+    </div>
+  );
+};
+
 const DashboardHero = ({
   dueCount,
   totalDecks,
@@ -33,7 +100,9 @@ const DashboardHero = ({
   if (totalDecks === 0) {
     return (
       <Card className="glass-card animate-fade-in border-primary/20">
-        <CardContent className="p-7 space-y-4">
+        <CardContent className="p-7 space-y-5">
+          <StatsStrip />
+          <div className="border-t border-border/40" />
           <div className="flex items-center gap-2.5">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
               <Sparkles className="h-5 w-5 text-primary" />
@@ -62,7 +131,9 @@ const DashboardHero = ({
   if (dueCount === 0) {
     return (
       <Card className="glass-card animate-fade-in">
-        <CardContent className="p-7 space-y-4">
+        <CardContent className="p-7 space-y-5">
+          <StatsStrip />
+          <div className="border-t border-border/40" />
           <div className="space-y-1.5">
             <p className="text-[11px] font-bold tracking-[0.15em] text-primary uppercase">
               Today
@@ -90,6 +161,8 @@ const DashboardHero = ({
   return (
     <Card className="glass-card animate-fade-in border-primary/20">
       <CardContent className="p-7 space-y-5">
+        <StatsStrip />
+        <div className="border-t border-border/40" />
         <div className="flex items-center justify-between">
           <p className="text-[11px] font-bold tracking-[0.15em] text-primary uppercase">
             Today, review
