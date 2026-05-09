@@ -9,7 +9,15 @@ interface FlashcardsSectionProps {
 const FlashcardsSection = ({ content }: FlashcardsSectionProps) => {
   const [showAll, setShowAll] = useState(false);
 
-  const cards = content.split(/\n(?=Q:)/g).filter(Boolean);
+  const cards = content
+    .split(/\n(?=Q:)/g)
+    .map((segment) => {
+      const lines = segment.trim().split("\n");
+      const q = lines.find((l) => l.startsWith("Q:"))?.replace(/^Q:\s*/, "").trim() ?? "";
+      const a = lines.find((l) => l.startsWith("A:"))?.replace(/^A:\s*/, "").trim() ?? "";
+      return { q, a };
+    })
+    .filter(({ q, a }) => q.length > 0 && a.length > 0);
 
   return (
     <div className="space-y-4">
@@ -23,12 +31,9 @@ const FlashcardsSection = ({ content }: FlashcardsSectionProps) => {
           {showAll ? <><EyeOff className="h-3.5 w-3.5 mr-1" /> Hide All</> : <><Eye className="h-3.5 w-3.5 mr-1" /> Show All</>}
         </Button>
       </div>
-      {cards.map((card, i) => {
-        const lines = card.trim().split("\n");
-        const q = lines.find((l) => l.startsWith("Q:"))?.replace(/^Q:\s*/, "") || "";
-        const a = lines.find((l) => l.startsWith("A:"))?.replace(/^A:\s*/, "") || "";
-        return <FlipCard key={i} question={q} answer={a} forceShow={showAll} />;
-      })}
+      {cards.map(({ q, a }, i) => (
+        <FlipCard key={i} question={q} answer={a} forceShow={showAll} />
+      ))}
     </div>
   );
 };
