@@ -5,6 +5,8 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import GradientBackground from "@/components/GradientBackground";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import DashboardRightRail from "@/components/dashboard/DashboardRightRail";
+import AuthModal from "@/components/AuthModal";
+import AccountDashboard from "@/components/AccountDashboard";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -12,6 +14,18 @@ interface DashboardLayoutProps {
 
 const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [accountModalOpen, setAccountModalOpen] = useState(false);
+
+  const handleOpenAuth = () => {
+    setAuthModalOpen(true);
+    setDrawerOpen(false);
+  };
+
+  const handleOpenAccount = () => {
+    setAccountModalOpen(true);
+    setDrawerOpen(false);
+  };
 
   return (
     <div className="relative min-h-screen">
@@ -19,13 +33,20 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       <div className="relative z-10 flex min-h-screen">
         {/* Desktop sidebar */}
         <div className="hidden lg:flex lg:w-[260px] lg:shrink-0 lg:border-r lg:border-border/40">
-          <DashboardSidebar />
+          <DashboardSidebar
+            onOpenAuth={handleOpenAuth}
+            onOpenAccount={handleOpenAccount}
+          />
         </div>
 
         {/* Mobile drawer */}
         <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
           <SheetContent side="left" className="w-[280px] p-0 border-r border-border/40">
-            <DashboardSidebar onNavigate={() => setDrawerOpen(false)} />
+            <DashboardSidebar
+              onNavigate={() => setDrawerOpen(false)}
+              onOpenAuth={handleOpenAuth}
+              onOpenAccount={handleOpenAccount}
+            />
           </SheetContent>
         </Sheet>
 
@@ -56,6 +77,9 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
           </div>
         </main>
       </div>
+
+      <AuthModal open={authModalOpen} onOpenChange={setAuthModalOpen} />
+      <AccountDashboard open={accountModalOpen} onOpenChange={setAccountModalOpen} />
     </div>
   );
 };

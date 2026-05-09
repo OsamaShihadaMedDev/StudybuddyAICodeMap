@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -14,8 +13,6 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import AuthModal from "@/components/AuthModal";
-import AccountDashboard from "@/components/AccountDashboard";
 import ThemeToggle from "@/components/ThemeToggle";
 
 interface ProfileRow {
@@ -37,15 +34,19 @@ const formatDate = (iso: string) => {
 
 interface DashboardSidebarProps {
   onNavigate?: () => void;
+  onOpenAuth: () => void;
+  onOpenAccount: () => void;
 }
 
-const DashboardSidebar = ({ onNavigate }: DashboardSidebarProps) => {
+const DashboardSidebar = ({
+  onNavigate,
+  onOpenAuth,
+  onOpenAccount,
+}: DashboardSidebarProps) => {
   const { user, isAnonymous, signOut } = useAuth();
   const { toast } = useToast();
   const location = useLocation();
   const navigate = useNavigate();
-  const [authOpen, setAuthOpen] = useState(false);
-  const [accountOpen, setAccountOpen] = useState(false);
 
   const userId = user?.id ?? null;
   const profileQuery = useQuery({
@@ -77,8 +78,7 @@ const DashboardSidebar = ({ onNavigate }: DashboardSidebarProps) => {
   };
 
   const handleSettingsClick = () => {
-    setAccountOpen(true);
-    if (onNavigate) onNavigate();
+    onOpenAccount();
   };
 
   const handleSignOut = async () => {
@@ -92,8 +92,7 @@ const DashboardSidebar = ({ onNavigate }: DashboardSidebarProps) => {
   };
 
   const handleSignIn = () => {
-    setAuthOpen(true);
-    if (onNavigate) onNavigate();
+    onOpenAuth();
   };
 
   return (
@@ -217,9 +216,6 @@ const DashboardSidebar = ({ onNavigate }: DashboardSidebarProps) => {
           )}
         </div>
       </aside>
-
-      <AuthModal open={authOpen} onOpenChange={setAuthOpen} />
-      <AccountDashboard open={accountOpen} onOpenChange={setAccountOpen} />
     </>
   );
 };
