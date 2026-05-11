@@ -1,0 +1,24 @@
+{
+  "name": "rag-spike",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "Standalone RAG spike for StudyBuddy: ingest one guideline PDF into Supabase pgvector, then test retrieval and grounded generation.",
+  "scripts": {
+    "ingest": "tsx src/ingest.ts",
+    "retrieve": "tsx src/retrieve.ts",
+    "generate": "tsx src/generate.ts"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.21.0",
+    "@supabase/supabase-js": "^2.45.0",
+    "dotenv": "^16.4.5",
+    "pdf-parse": "^1.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@types/pdf-parse": "^1.1.4",
+    "tsx": "^4.19.0",
+    "typescript": "^5.5.0"
+  }
+}

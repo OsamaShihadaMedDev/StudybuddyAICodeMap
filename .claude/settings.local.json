@@ -7,7 +7,12 @@
       "Bash(supabase db *)",
       "Bash(supabase migration *)",
       "Bash(npx tsc *)",
-      "Bash(npx supabase *)"
+      "Bash(npx supabase *)",
+      "Bash(ls scripts/rag-spike/)",
+      "Bash(ls scripts/rag-spike/pdfs/)",
+      "Bash(dir scripts *)",
+      "Bash(dir scripts\\\\rag-spike)",
+      "Bash(dir scripts\\\\rag-spike\\\\pdfs)"
     ]
   }
 }

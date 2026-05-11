@@ -156,6 +156,26 @@ const FlashcardsGenerator = () => {
           onChange={(e) => setTopic(e.target.value)}
           className="min-h-[100px] resize-y bg-background/60 border-border/50 focus:border-primary/40 transition-colors text-sm leading-relaxed"
         />
+        {!topic.trim() && (
+          <div className="flex flex-wrap gap-2 pt-1">
+            {[
+              "Myocardial Infarction",
+              "Nephrotic Syndrome",
+              "Pneumonia",
+              "Diabetic Ketoacidosis",
+              "Ischemic Stroke",
+            ].map((example) => (
+              <button
+                key={example}
+                type="button"
+                onClick={() => setTopic(example)}
+                className="px-3 py-1 rounded-full text-xs font-medium border border-border/60 bg-background/60 text-muted-foreground hover:border-primary/50 hover:text-primary hover:bg-primary/5 transition-colors"
+              >
+                {example}
+              </button>
+            ))}
+          </div>
+        )}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">

@@ -9,13 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Loader2,
-  Sparkles,
-  BrainCircuit,
-  MessageCircle,
-  Mail,
-} from "lucide-react";
+import { Loader2, Sparkles, BrainCircuit } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import OutputSection from "@/components/OutputSection";
@@ -42,6 +36,8 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
   const [examMode, setExamMode] = useState(prefill?.modeInfo?.examMode ?? "General");
   const [output, setOutput] = useState(prefill?.output ?? "");
   const [loading, setLoading] = useState(false);
+  const [isQuizMode, setIsQuizMode] = useState(false);
+  const [deckSaved, setDeckSaved] = useState(false);
   const { toast } = useToast();
 
   const { sheetCount, isSheetLite, isProUser: pro, incrementSheet } = useUsageLimit();
@@ -57,6 +53,7 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
 
     setLoading(true);
     setOutput("");
+    setDeckSaved(false);
 
     try {
       await incrementSheet();
@@ -117,15 +114,6 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
       }
 
       if (!fullText) setOutput("No response received.");
-
-      if (fullText && !quizMode) {
-        try {
-          const parsed = parseFlashcardsFromOutput(fullText, notes);
-          if (parsed.length) saveCards(parsed);
-        } catch {
-          // silent
-        }
-      }
     } catch (e: any) {
       toast({
         title: "Error",
@@ -137,8 +125,16 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
     }
   };
 
-  const handleGenerate = () => generate(false);
-  const handleQuizMode = () => generate(true);
+  const handleGenerate = () => {
+    setIsQuizMode(false);
+    setDeckSaved(false);
+    generate(false);
+  };
+  const handleQuizMode = () => {
+    setIsQuizMode(true);
+    setDeckSaved(false);
+    generate(true);
+  };
 
   return (
     <div className="space-y-6">
@@ -163,6 +159,26 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
               onChange={(e) => setNotes(e.target.value)}
               className="min-h-[160px] resize-y bg-background/60 border-border/50 focus:border-primary/40 transition-colors text-sm leading-relaxed"
             />
+            {!notes.trim() && (
+              <div className="flex flex-wrap gap-2 pt-1">
+                {[
+                  "Heart Failure",
+                  "Acute Kidney Injury",
+                  "Community-Acquired Pneumonia",
+                  "Type 2 Diabetes",
+                  "Pulmonary Embolism",
+                ].map((example) => (
+                  <button
+                    key={example}
+                    type="button"
+                    onClick={() => setNotes(example)}
+                    className="px-3 py-1 rounded-full text-xs font-medium border border-border/60 bg-background/60 text-muted-foreground hover:border-primary/50 hover:text-primary hover:bg-primary/5 transition-colors"
+                  >
+                    {example}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -248,29 +264,6 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
             </div>
           )}
 
-          <div className="flex flex-col items-center gap-1 text-xs text-muted-foreground">
-            <div className="flex items-center justify-center gap-3">
-              <span>Need full access?</span>
-              <a
-                href="https://wa.me/972592823030"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-primary hover:underline"
-              >
-                <MessageCircle className="h-3.5 w-3.5" />
-                WhatsApp
-              </a>
-              <a
-                href="mailto:Osama200az@gmail.com"
-                className="inline-flex items-center gap-1 text-primary hover:underline"
-              >
-                <Mail className="h-3.5 w-3.5" />
-                Email
-              </a>
-            </div>
-            <span className="text-[11px] opacity-70">Access is granted manually</span>
-          </div>
-
           <div className="flex gap-3">
             <Button
               className="flex-1 h-12 text-sm font-bold rounded-xl btn-gradient"
@@ -323,6 +316,32 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
           inputText={notes}
           modeInfo={{ examMode, difficulty, focus, length }}
         />
+      )}
+
+      {output && !isQuizMode && (
+        <div className="flex justify-center pt-2">
+          <Button
+            variant="outline"
+            className="h-10 rounded-xl border-primary/40 text-primary hover:bg-primary/10 font-semibold text-sm px-5"
+            disabled={deckSaved}
+            onClick={() => {
+              try {
+                const parsed = parseFlashcardsFromOutput(output, notes);
+                if (parsed.length) {
+                  saveCards(parsed);
+                  setDeckSaved(true);
+                  toast({ title: `${parsed.length} cards saved to your library` });
+                } else {
+                  toast({ title: "No flashcards found in this sheet", variant: "destructive" });
+                }
+              } catch {
+                toast({ title: "Could not parse flashcards", variant: "destructive" });
+              }
+            }}
+          >
+            {deckSaved ? "✓ Deck saved" : "＋ Save deck to library"}
+          </Button>
+        </div>
       )}
     </div>
   );

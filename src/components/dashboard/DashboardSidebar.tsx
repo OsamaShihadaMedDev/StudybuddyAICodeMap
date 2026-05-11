@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -14,6 +15,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import ThemeToggle from "@/components/ThemeToggle";
+import GoProModal from "@/components/GoProModal";
 
 interface ProfileRow {
   is_pro: boolean;
@@ -47,6 +49,7 @@ const DashboardSidebar = ({
   const { toast } = useToast();
   const location = useLocation();
   const navigate = useNavigate();
+  const [goProOpen, setGoProOpen] = useState(false);
 
   const userId = user?.id ?? null;
   const profileQuery = useQuery({
@@ -194,12 +197,13 @@ const DashboardSidebar = ({
           <Button
             variant="outline"
             className="w-full h-10 rounded-xl border-primary/40 text-primary hover:bg-primary/10 font-semibold"
-            onClick={() => toast({ title: "Coming soon" })}
+            onClick={() => setGoProOpen(true)}
           >
             <Sparkles className="h-4 w-4 mr-2" />
             Go Pro
           </Button>
         )}
+        <GoProModal open={goProOpen} onOpenChange={setGoProOpen} />
 
         <div className="flex items-center justify-between gap-2 pt-2 border-t border-border/40">
           <ThemeToggle />
