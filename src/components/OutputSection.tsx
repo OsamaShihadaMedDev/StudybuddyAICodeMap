@@ -161,12 +161,22 @@ const OutputSection = ({ output, inputText, modeInfo }: OutputSectionProps) => {
               drilling the key concepts with spaced repetition.
             </p>
             <div className="flex flex-col sm:flex-row gap-2 justify-center">
-              <a href="/dashboard">
-                <Button className="w-full sm:w-auto h-10 rounded-xl btn-gradient font-semibold text-sm gap-2 px-6">
-                  <Layers className="h-4 w-4" />
-                  Generate flashcards now
-                </Button>
-              </a>
+              <Button
+                className="w-full sm:w-auto h-10 rounded-xl btn-gradient font-semibold text-sm gap-2 px-6"
+                onClick={() => {
+                  const topic = (inputText || "").trim();
+                  if (!topic) return;
+                  setShowNudge(false);
+                  window.dispatchEvent(
+                    new CustomEvent("studybuddy:generate-flashcards", {
+                      detail: { topic, cardCount: 5 },
+                    })
+                  );
+                }}
+              >
+                <Layers className="h-4 w-4" />
+                Generate flashcards now
+              </Button>
               <Button
                 variant="ghost"
                 size="sm"

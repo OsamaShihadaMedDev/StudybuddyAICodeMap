@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -21,6 +21,7 @@ const FlashcardsGenerator = () => {
   const [examMode, setExamMode] = useState("General");
   const [loading, setLoading] = useState(false);
   const [showTextarea, setShowTextarea] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const { saveCards } = useFlashcardDeck();
   const {
@@ -31,8 +32,9 @@ const FlashcardsGenerator = () => {
   } = useUsageLimit();
   const remaining = Math.max(0, MAX_DAILY_CARDS - cardsCount);
 
-  const handleGenerate = async (overrideTopic?: string) => {
+  const handleGenerate = async (overrideTopic?: string, overrideCardCount?: number) => {
     const activeTopic = overrideTopic ?? topic;
+    const activeCardCount = overrideCardCount ?? parseInt(cardCount, 10);
     if (!activeTopic.trim()) {
       toast({ title: "Please enter a topic", variant: "destructive" });
       return;
@@ -57,7 +59,7 @@ const FlashcardsGenerator = () => {
             focus: "Quick Revision",
             length: "Concise",
             cardsOnly: true,
-            cardCount: parseInt(cardCount, 10),
+            cardCount: activeCardCount,
             lite: isLite,
           }),
         }
@@ -117,8 +119,22 @@ const FlashcardsGenerator = () => {
     }
   };
 
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ topic: string; cardCount?: number }>).detail;
+      if (!detail?.topic) return;
+      setTopic(detail.topic);
+      setShowTextarea(true);
+      setCardCount(String(detail.cardCount ?? 5));
+      cardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      handleGenerate(detail.topic, detail.cardCount ?? 5);
+    };
+    window.addEventListener("studybuddy:generate-flashcards", handler);
+    return () => window.removeEventListener("studybuddy:generate-flashcards", handler);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   return (
-    <Card className="glass-card animate-fade-in border-primary/20">
+    <Card ref={cardRef} className="glass-card animate-fade-in border-primary/20">
       <CardContent className="p-6 space-y-5">
         <div className="flex items-center gap-2.5">
           <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-primary/10">
