@@ -20,6 +20,7 @@ const FlashcardsGenerator = () => {
   const [cardCount, setCardCount] = useState("12");
   const [examMode, setExamMode] = useState("General");
   const [loading, setLoading] = useState(false);
+  const [showTextarea, setShowTextarea] = useState(false);
   const { toast } = useToast();
   const { saveCards } = useFlashcardDeck();
   const {
@@ -30,8 +31,9 @@ const FlashcardsGenerator = () => {
   } = useUsageLimit();
   const remaining = Math.max(0, MAX_DAILY_CARDS - cardsCount);
 
-  const handleGenerate = async () => {
-    if (!topic.trim()) {
+  const handleGenerate = async (overrideTopic?: string) => {
+    const activeTopic = overrideTopic ?? topic;
+    if (!activeTopic.trim()) {
       toast({ title: "Please enter a topic", variant: "destructive" });
       return;
     }
@@ -49,7 +51,7 @@ const FlashcardsGenerator = () => {
             Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
           },
           body: JSON.stringify({
-            notes: topic,
+            notes: activeTopic,
             examMode,
             difficulty: "Basic",
             focus: "Quick Revision",
@@ -96,12 +98,14 @@ const FlashcardsGenerator = () => {
         }
       }
 
-      const parsed = parseFlashcardsFromOutput(fullText, topic);
+      const parsed = parseFlashcardsFromOutput(fullText, activeTopic);
       const added = await saveCards(parsed);
+      localStorage.setItem("sb_first_deck_seen", "1");
       toast({
         title: added > 0 ? `Added ${added} new cards to your deck` : "No new cards (all duplicates)",
       });
       setTopic("");
+      setShowTextarea(false);
     } catch (e: any) {
       toast({
         title: "Error",
@@ -150,30 +154,61 @@ const FlashcardsGenerator = () => {
             })}
           </div>
         </div>
-        <Textarea
-          placeholder="Enter a topic to drill (e.g., 'DKA', 'Heart failure pharmacology')"
-          value={topic}
-          onChange={(e) => setTopic(e.target.value)}
-          className="min-h-[100px] resize-y bg-background/60 border-border/50 focus:border-primary/40 transition-colors text-sm leading-relaxed"
-        />
-        {!topic.trim() && (
-          <div className="flex flex-wrap gap-2 pt-1">
-            {[
-              "Myocardial Infarction",
-              "Nephrotic Syndrome",
-              "Pneumonia",
-              "Diabetic Ketoacidosis",
-              "Ischemic Stroke",
-            ].map((example) => (
+        {!showTextarea ? (
+          <div className="rounded-xl border border-border/50 bg-background/60 p-4 space-y-3">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Pick a topic to start — or type your own
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { emoji: "❤️", label: "Myocardial Infarction" },
+                { emoji: "🫁", label: "Pneumonia" },
+                { emoji: "🧠", label: "Ischemic Stroke" },
+                { emoji: "🍬", label: "Diabetic Ketoacidosis" },
+                { emoji: "🩺", label: "Nephrotic Syndrome" },
+              ].map(({ emoji, label }) => (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() => {
+                    setTopic(label);
+                    setShowTextarea(false);
+                    handleGenerate(label);
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-medium border border-border/60 bg-background hover:border-primary/50 hover:bg-primary/5 hover:text-primary transition-all cursor-pointer"
+                >
+                  <span>{emoji}</span>
+                  <span>{label}</span>
+                </button>
+              ))}
               <button
-                key={example}
                 type="button"
-                onClick={() => setTopic(example)}
-                className="px-3 py-1 rounded-full text-xs font-medium border border-border/60 bg-background/60 text-muted-foreground hover:border-primary/50 hover:text-primary hover:bg-primary/5 transition-colors"
+                onClick={() => setShowTextarea(true)}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-medium border border-dashed border-border/60 bg-transparent text-muted-foreground hover:border-primary/40 hover:text-primary transition-all cursor-pointer"
               >
-                {example}
+                ✏️ Type my own topic
               </button>
-            ))}
+            </div>
+          </div>
+        ) : (
+          <div className="relative">
+            <Textarea
+              autoFocus
+              placeholder="Enter a topic to drill (e.g., 'DKA', 'Heart failure pharmacology')"
+              value={topic}
+              onChange={(e) => setTopic(e.target.value)}
+              className="min-h-[100px] resize-y bg-background/60 border-border/50 focus:border-primary/40 transition-colors text-sm leading-relaxed"
+            />
+            {topic && (
+              <button
+                type="button"
+                onClick={() => { setTopic(""); setShowTextarea(false); }}
+                className="absolute top-2 right-2 text-muted-foreground/50 hover:text-muted-foreground transition-colors text-lg leading-none"
+                aria-label="Clear"
+              >
+                ×
+              </button>
+            )}
           </div>
         )}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
@@ -196,7 +231,7 @@ const FlashcardsGenerator = () => {
           </div>
           <Button
             className="w-full h-12 text-sm font-bold rounded-xl btn-gradient"
-            onClick={handleGenerate}
+            onClick={() => handleGenerate()}
             disabled={loading}
           >
             {loading ? (

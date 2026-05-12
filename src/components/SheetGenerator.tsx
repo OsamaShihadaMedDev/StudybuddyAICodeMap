@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/select";
 import { Loader2, Sparkles, BrainCircuit } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { Skeleton } from "@/components/ui/skeleton";
 import OutputSection from "@/components/OutputSection";
 import { useUsageLimit, MAX_DAILY_SHEETS } from "@/hooks/use-usage-limit";
 import { useFlashcardDeck } from "@/hooks/use-flashcard-deck";
@@ -38,13 +37,17 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
   const [loading, setLoading] = useState(false);
   const [isQuizMode, setIsQuizMode] = useState(false);
   const [deckSaved, setDeckSaved] = useState(false);
+  const [loadingMsg, setLoadingMsg] = useState("");
+  const [pendingOutput, setPendingOutput] = useState<string | null>(null);
+  const [showTextarea, setShowTextarea] = useState(false);
   const { toast } = useToast();
 
   const { sheetCount, isSheetLite, isProUser: pro, incrementSheet } = useUsageLimit();
   const { saveCards } = useFlashcardDeck();
 
-  const generate = async (quizMode: boolean) => {
-    if (!notes.trim()) {
+  const generate = async (quizMode: boolean, overrideNotes?: string) => {
+    const activeNotes = overrideNotes ?? notes;
+    if (!activeNotes.trim()) {
       toast({ title: "Please enter medical notes", variant: "destructive" });
       return;
     }
@@ -54,6 +57,8 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
     setLoading(true);
     setOutput("");
     setDeckSaved(false);
+    setPendingOutput(null);
+    setShowTextarea(false);
 
     try {
       await incrementSheet();
@@ -66,7 +71,7 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
             "Content-Type": "application/json",
             Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
           },
-          body: JSON.stringify({ notes, difficulty, focus, length, examMode, lite: isLite, quizMode }),
+          body: JSON.stringify({ notes: activeNotes, difficulty, focus, length, examMode, lite: isLite, quizMode }),
         }
       );
 
@@ -104,7 +109,6 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
             const content = parsed.choices?.[0]?.delta?.content;
             if (content) {
               fullText += content;
-              setOutput(fullText);
             }
           } catch {
             textBuffer = line + "\n" + textBuffer;
@@ -113,17 +117,60 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
         }
       }
 
-      if (!fullText) setOutput("No response received.");
+      setPendingOutput(fullText || "No response received.");
     } catch (e: any) {
+      setLoading(false);
+      setLoadingMsg("");
+      setPendingOutput(null);
       toast({
         title: "Error",
         description: e.message || "Failed to generate study material",
         variant: "destructive",
       });
-    } finally {
-      setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!loading) return;
+
+    const steps = [
+      "Reading topic…",
+      "Structuring notes…",
+      "Finding exam traps…",
+      "Adding memory hooks…",
+      "Finalizing your sheet…",
+    ];
+
+    let currentStep = 0;
+    let allStepsDone = false;
+    setLoadingMsg(steps[0]);
+
+    const interval = setInterval(() => {
+      currentStep += 1;
+
+      if (currentStep < steps.length) {
+        setLoadingMsg(steps[currentStep]);
+      } else {
+        allStepsDone = true;
+        setLoadingMsg(steps[steps.length - 1]);
+      }
+
+      if (allStepsDone) {
+        setPendingOutput((pending) => {
+          if (pending !== null) {
+            clearInterval(interval);
+            setOutput(pending);
+            setLoading(false);
+            setLoadingMsg("");
+            return null;
+          }
+          return pending;
+        });
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [loading]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleGenerate = () => {
     setIsQuizMode(false);
@@ -153,30 +200,61 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
             <label className="text-sm font-semibold text-foreground">
               Medical Notes
             </label>
-            <Textarea
-              placeholder="Paste notes, type a topic, or say what you want to study…"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              className="min-h-[160px] resize-y bg-background/60 border-border/50 focus:border-primary/40 transition-colors text-sm leading-relaxed"
-            />
-            {!notes.trim() && (
-              <div className="flex flex-wrap gap-2 pt-1">
-                {[
-                  "Heart Failure",
-                  "Acute Kidney Injury",
-                  "Community-Acquired Pneumonia",
-                  "Type 2 Diabetes",
-                  "Pulmonary Embolism",
-                ].map((example) => (
+            {!showTextarea ? (
+              <div className="rounded-xl border border-border/50 bg-background/60 p-4 space-y-3">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Pick a topic to start — or type your own
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { emoji: "❤️", label: "Heart Failure" },
+                    { emoji: "🫁", label: "Pneumonia" },
+                    { emoji: "🧠", label: "Ischemic Stroke" },
+                    { emoji: "🍬", label: "Diabetic Ketoacidosis" },
+                    { emoji: "🩺", label: "Nephrotic Syndrome" },
+                  ].map(({ emoji, label }) => (
+                    <button
+                      key={label}
+                      type="button"
+                      onClick={() => {
+                        setNotes(label);
+                        setShowTextarea(false);
+                        generate(false, label);
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-medium border border-border/60 bg-background hover:border-primary/50 hover:bg-primary/5 hover:text-primary transition-all cursor-pointer"
+                    >
+                      <span>{emoji}</span>
+                      <span>{label}</span>
+                    </button>
+                  ))}
                   <button
-                    key={example}
                     type="button"
-                    onClick={() => setNotes(example)}
-                    className="px-3 py-1 rounded-full text-xs font-medium border border-border/60 bg-background/60 text-muted-foreground hover:border-primary/50 hover:text-primary hover:bg-primary/5 transition-colors"
+                    onClick={() => setShowTextarea(true)}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-medium border border-dashed border-border/60 bg-transparent text-muted-foreground hover:border-primary/40 hover:text-primary transition-all cursor-pointer"
                   >
-                    {example}
+                    ✏️ Type my own topic
                   </button>
-                ))}
+                </div>
+              </div>
+            ) : (
+              <div className="relative">
+                <Textarea
+                  autoFocus
+                  placeholder="Paste notes, type a topic, or say what you want to study…"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  className="min-h-[120px] resize-y bg-background/60 border-border/50 focus:border-primary/40 transition-colors text-sm leading-relaxed"
+                />
+                {notes && (
+                  <button
+                    type="button"
+                    onClick={() => { setNotes(""); setShowTextarea(false); }}
+                    className="absolute top-2 right-2 text-muted-foreground/50 hover:text-muted-foreground transition-colors text-lg leading-none"
+                    aria-label="Clear"
+                  >
+                    ×
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -296,17 +374,36 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
       </Card>
 
       {loading && !output && (
-        <div className="space-y-4 animate-fade-in">
-          {[1, 2, 3].map((i) => (
-            <Card key={i} className="glass-card">
-              <CardContent className="p-6 space-y-3">
-                <Skeleton className="h-5 w-32" />
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-4/5" />
-                <Skeleton className="h-4 w-3/5" />
-              </CardContent>
-            </Card>
-          ))}
+        <div className="flex flex-col items-center justify-center gap-4 py-14 animate-fade-in">
+          {/* Spinner */}
+          <div className="relative h-14 w-14">
+            <div className="absolute inset-0 rounded-full border-4 border-primary/10" />
+            <div className="absolute inset-0 rounded-full border-4 border-t-primary animate-spin" />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <Sparkles className="h-5 w-5 text-primary" />
+            </div>
+          </div>
+
+          {/* Step message */}
+          <div className="text-center space-y-1">
+            <p className="text-sm font-semibold text-foreground transition-all duration-300">
+              {loadingMsg}
+            </p>
+            <p className="text-xs text-muted-foreground opacity-50">
+              Building your exam-ready sheet…
+            </p>
+          </div>
+
+          {/* Pulsing dots */}
+          <div className="flex gap-1.5">
+            {[0, 1, 2].map((i) => (
+              <div
+                key={i}
+                className="h-1.5 w-1.5 rounded-full bg-primary/40 animate-pulse"
+                style={{ animationDelay: `${i * 200}ms` }}
+              />
+            ))}
+          </div>
         </div>
       )}
 

@@ -1,6 +1,7 @@
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { BookOpen, List, HelpCircle, FileText, Stethoscope, Settings2, AlertTriangle, Lightbulb } from "lucide-react";
+import { BookOpen, List, HelpCircle, FileText, Stethoscope, Settings2, AlertTriangle, Lightbulb, Layers } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import CopyButton from "@/components/CopyButton";
 import FlashcardsSection from "@/components/FlashcardsSection";
 import SaveButton from "@/components/SaveButton";
@@ -67,6 +68,13 @@ function renderFormattedContent(content: string) {
 const OutputSection = ({ output, inputText, modeInfo }: OutputSectionProps) => {
   const ref = useRef<HTMLDivElement>(null);
   const sections = parseSections(output);
+  const [showNudge, setShowNudge] = useState(() => !localStorage.getItem("sb_first_sheet_seen"));
+
+  useEffect(() => {
+    if (showNudge) {
+      localStorage.setItem("sb_first_sheet_seen", "1");
+    }
+  }, [showNudge]);
 
   useEffect(() => {
     if (ref.current && sections.length > 0) {
@@ -141,6 +149,36 @@ const OutputSection = ({ output, inputText, modeInfo }: OutputSectionProps) => {
           </Card>
         );
       })}
+
+      {showNudge && (
+        <div className="mt-4 animate-fade-in">
+          <div className="rounded-xl border border-primary/30 bg-primary/5 p-5 text-center space-y-3">
+            <p className="text-sm font-semibold text-foreground">
+              🎉 Your first sheet is ready!
+            </p>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Now lock it in — generate a flashcard deck from this topic and start
+              drilling the key concepts with spaced repetition.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-2 justify-center">
+              <a href="/dashboard">
+                <Button className="w-full sm:w-auto h-10 rounded-xl btn-gradient font-semibold text-sm gap-2 px-6">
+                  <Layers className="h-4 w-4" />
+                  Generate flashcards now
+                </Button>
+              </a>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-xs text-muted-foreground hover:text-foreground"
+                onClick={() => setShowNudge(false)}
+              >
+                Maybe later
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

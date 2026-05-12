@@ -115,7 +115,7 @@ const DashboardSidebar = ({
               StudyBuddy
             </p>
             <p className="text-[10px] font-medium tracking-wide text-muted-foreground">
-              Smart medical revision
+              High-yield exam prep in seconds
             </p>
           </div>
         </Link>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Collapsible,
   CollapsibleContent,
@@ -39,12 +39,25 @@ const RowShell = ({ icon: Icon, title, description, right }: RowShellProps) => (
   </CardContent>
 );
 
-const MoreToolsSection = () => {
-  const [openId, setOpenId] = useState<string | null>(null);
+interface MoreToolsSectionProps {
+  autoOpen?: boolean;
+}
+
+const MoreToolsSection = ({ autoOpen = false }: MoreToolsSectionProps) => {
+  const [openId, setOpenId] = useState<string | null>(autoOpen ? "study-sheet" : null);
   const sheetOpen = openId === "study-sheet";
+  const sheetRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (autoOpen && sheetRef.current) {
+      setTimeout(() => {
+        sheetRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 300);
+    }
+  }, [autoOpen]);
 
   return (
-    <div className="space-y-3">
+    <div ref={sheetRef} className="space-y-3">
       <p className="text-[11px] font-bold tracking-[0.15em] text-muted-foreground uppercase pl-1">
         More Tools
       </p>

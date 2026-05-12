@@ -1,14 +1,18 @@
 import { useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import DashboardHero from "@/components/dashboard/DashboardHero";
 import StatsStrip from "@/components/dashboard/StatsStrip";
 import WelcomeCard from "@/components/dashboard/WelcomeCard";
 import MoreToolsSection from "@/components/dashboard/MoreToolsSection";
+import FirstDeckBanner from "@/components/dashboard/FirstDeckBanner";
+import GoProNudgeBanner from "@/components/dashboard/GoProNudgeBanner";
+import WelcomeModal from "@/components/WelcomeModal";
 import DeckList from "@/components/DeckList";
 import FlashcardsGenerator from "@/components/FlashcardsGenerator";
 import StudyMode from "@/components/StudyMode";
+import { useAuth } from "@/hooks/use-auth";
 import { useFlashcardDeck } from "@/hooks/use-flashcard-deck";
 import { useToast } from "@/hooks/use-toast";
 
@@ -18,11 +22,18 @@ type StudyFilter = { topic?: string; mode: "due" | "all-cards" | "deck" };
 
 const Dashboard = () => {
   const { toast } = useToast();
+  const { isAnonymous } = useAuth();
   const { allCards, dueCards, reviewCard, deleteCard, stats } = useFlashcardDeck();
   const [studyOpen, setStudyOpen] = useState(false);
   const [studyFilter, setStudyFilter] = useState<StudyFilter>({ mode: "due" });
+  const [searchParams] = useSearchParams();
+  const autoOpenSheet = searchParams.get("start") === "sheet";
 
   const generatorRef = useRef<HTMLDivElement>(null);
+
+  const handleGoToFlashcards = () => {
+    generatorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   const { totalDecks, recentDeckCards } = useMemo(() => {
     const latestByTopic = new Map<string, number>();
@@ -72,6 +83,7 @@ const Dashboard = () => {
 
   return (
     <DashboardLayout>
+      <WelcomeModal />
       {studyOpen && (
         <StudyMode
           dueCards={studySessionCards}
@@ -81,6 +93,8 @@ const Dashboard = () => {
       )}
 
       <div className="space-y-8">
+        <GoProNudgeBanner isRealUser={!isAnonymous} />
+        <FirstDeckBanner onGoToFlashcards={handleGoToFlashcards} />
         <StatsStrip />
 
         {totalDecks === 0 && <WelcomeCard />}
@@ -125,7 +139,7 @@ const Dashboard = () => {
           <FlashcardsGenerator />
         </div>
 
-        <MoreToolsSection />
+        <MoreToolsSection autoOpen={autoOpenSheet} />
       </div>
     </DashboardLayout>
   );
