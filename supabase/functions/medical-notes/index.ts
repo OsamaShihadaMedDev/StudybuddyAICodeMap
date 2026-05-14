@@ -12,18 +12,13 @@ serve(async (req) => {
   }
 
   try {
-    const { notes, difficulty, focus, length, examMode, lite, quizMode, cardsOnly, cardCount, focusCard, explainMode } = await req.json();
+    const { notes, difficulty, focus, length, examMode, lite, quizMode, cardsOnly, cardCount, focusCard, explainMode, provider } = await req.json();
 
     if (!notes || typeof notes !== "string" || !notes.trim()) {
       return new Response(
         JSON.stringify({ error: "Notes are required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
-    }
-
-    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
-    if (!GEMINI_API_KEY) {
-      throw new Error("GEMINI_API_KEY is not configured");
     }
 
     const mode = examMode || "General";
@@ -333,24 +328,36 @@ GLOBAL CONSTRAINTS:
       ? `Focus specifically on this concept: ${focusCard}\n\nTopic: ${notes}`
       : notes;
 
-    const combinedPrompt = `System: ${systemPrompt}\n\nUser: ${userContent}`;
+    const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
+    if (!OPENROUTER_API_KEY) {
+      throw new Error("OPENROUTER_API_KEY is not configured");
+    }
+
+    const model = (explainMode || cardsOnly || quizMode)
+  ? "google/gemini-2.5-flash-lite"
+  : "google/gemini-2.5-flash";
+
+    console.log("[MODEL_USED]:", model);
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:streamGenerateContent?alt=sse&key=${GEMINI_API_KEY}`,
+      "https://openrouter.ai/api/v1/chat/completions",
       {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+          "HTTP-Referer": "https://studybuddy.app",
+          "X-Title": "StudyBuddy",
         },
         body: JSON.stringify({
-          contents: [{ role: "user", parts: [{ text: combinedPrompt }] }],
-          generationConfig: {
-            temperature: 0.7,
-            maxOutputTokens: 8192,
-            thinkingConfig: {
-              thinkingBudget: 0
-            }
-          },
+          model,
+          stream: true,
+          temperature: 0.7,
+          max_tokens: 8192,
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userContent },
+          ],
         }),
       }
     );
@@ -372,7 +379,7 @@ GLOBAL CONSTRAINTS:
       }
       if (response.status === 403) {
         return new Response(
-          JSON.stringify({ error: "Invalid API key" }),
+          JSON.stringify({ error: "Invalid or missing API key" }),
           { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
@@ -391,42 +398,32 @@ GLOBAL CONSTRAINTS:
     const transform = new TransformStream<Uint8Array, Uint8Array>({
       transform(chunk, controller) {
         buffer += decoder.decode(chunk, { stream: true });
-        console.log("[RAW_BYTES]:", chunk.length, "bytes");
-        console.log("[BUFFER_SO_FAR]:", buffer.slice(0, 500));
         const events = buffer.split(/\r?\n\r?\n/);
-        console.log("[EVENTS_FOUND]:", events.length);
         buffer = events.pop() ?? "";
 
         for (const event of events) {
           const trimmed = event.trim();
           if (!trimmed) continue;
-          console.log("[EVENT]:", trimmed.slice(0, 300));
 
           const dataLine = trimmed
             .split("\n")
             .find((line) => line.startsWith("data:"));
           if (!dataLine) {
-            console.log("[NO_DATA_LINE]:", trimmed.slice(0, 200));
             continue;
           }
 
           const payload = dataLine.slice(5).trim();
-          if (!payload || payload === "[DONE]") continue;
+          if (!payload || payload === "[DONE]" || payload.includes("[DONE]")) continue;
 
           try {
             const parsed = JSON.parse(payload);
-            const text = parsed?.candidates?.[0]?.content?.parts?.[0]?.text;
-            console.log("[PARSED_TEXT]:", typeof text, text ? text.slice(0, 100) : "MISSING");
+            const text = parsed?.choices?.[0]?.delta?.content;
             if (typeof text !== "string" || text.length === 0) continue;
-
-            const openAiChunk = {
-              choices: [{ delta: { content: text } }],
-            };
             controller.enqueue(
-              encoder.encode(`data: ${JSON.stringify(openAiChunk)}\n\n`)
+              encoder.encode(`data: ${JSON.stringify(parsed)}\n\n`)
             );
           } catch {
-            console.log("[PARSE_ERROR]:", payload.slice(0, 200));
+            // skip unparseable chunks silently
           }
         }
       },
