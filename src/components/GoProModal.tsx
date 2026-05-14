@@ -6,7 +6,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { MessageCircle, Mail, Sparkles } from "lucide-react";
+import { MessageCircle, Mail, Sparkles, Check } from "lucide-react";
 
 interface GoProModalProps {
   open: boolean;
@@ -30,11 +30,29 @@ const GoProModal = ({ open, onOpenChange }: GoProModalProps) => {
             </p>
           </div>
           <DialogDescription className="text-sm text-muted-foreground pt-2">
-            Unlock unlimited study sheet and flashcard generations with the Pro
-            monthly subscription. Pro access is granted manually — reach out on
-            WhatsApp or Email and we'll activate your account within a few hours.
+            Everything in StudyBuddy, unlocked. Pro access is granted manually —
+            reach out on WhatsApp or Email and we'll activate your account within
+            a few hours.
           </DialogDescription>
         </DialogHeader>
+
+        <ul className="space-y-2 text-left pt-1">
+          {[
+            "Unlimited sheets & flashcard generations",
+            "Publication-backed sources on every generation — cited directly from PubMed",
+            "Priority access to new features",
+          ].map((benefit) => (
+            <li
+              key={benefit}
+              className="flex items-start gap-2.5 text-sm text-foreground"
+            >
+              <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-primary/15">
+                <Check className="h-3 w-3 text-primary" />
+              </span>
+              <span className="leading-snug">{benefit}</span>
+            </li>
+          ))}
+        </ul>
 
         <div className="flex flex-col gap-3 pt-2">
           <a

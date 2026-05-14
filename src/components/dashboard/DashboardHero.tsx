@@ -40,6 +40,10 @@ const DashboardHero = ({
             <p className="text-sm text-muted-foreground">
               Generate new material below or review any deck to keep practicing.
             </p>
+            <div className="flex items-center gap-1.5 text-[11px] text-amber-400/80 font-medium mt-1">
+              <span>⚡</span>
+              <span>Generations are cited from PubMed peer-reviewed literature</span>
+            </div>
           </div>
           <Button
             onClick={onReviewAny}
@@ -102,6 +106,10 @@ const DashboardHero = ({
           </button>
         </div>
         <p className="text-[11px] text-muted-foreground">{formatToday()}</p>
+        <div className="flex items-center gap-1.5 text-[11px] text-amber-400/80 font-medium">
+          <span>⚡</span>
+          <span>Generations are cited from PubMed & NICE Guidelines</span>
+        </div>
       </CardContent>
     </Card>
   );

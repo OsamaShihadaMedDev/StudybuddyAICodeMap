@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 
 export const MAX_DAILY_SHEETS = 5;
-export const MAX_DAILY_CARDS = 10;
+export const MAX_DAILY_CARDS = 5;
 
 type UsageKind = "sheet" | "cards";
 

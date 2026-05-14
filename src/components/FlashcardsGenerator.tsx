@@ -13,7 +13,16 @@ import { Loader2, Layers } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useFlashcardDeck } from "@/hooks/use-flashcard-deck";
 import { useUsageLimit, MAX_DAILY_CARDS } from "@/hooks/use-usage-limit";
+import { useCitationUsage } from "@/hooks/use-citation-usage";
 import { parseFlashcardsFromOutput } from "@/lib/parse-flashcards";
+import { fetchBestCitation, type CitationResult } from "@/lib/citation";
+import { saveCitationsForTopic } from "@/lib/citation-store";
+import CitationCTABanner from "@/components/CitationCTABanner";
+import CitationBadgeList from "@/components/CitationBadgeList";
+import GoProModal from "@/components/GoProModal";
+import AuthModal from "@/components/AuthModal";
+
+type CitationState = "idle" | "loading" | "found" | "locked" | "hidden";
 
 const FlashcardsGenerator = () => {
   const [topic, setTopic] = useState("");
@@ -21,6 +30,10 @@ const FlashcardsGenerator = () => {
   const [examMode, setExamMode] = useState("General");
   const [loading, setLoading] = useState(false);
   const [showTextarea, setShowTextarea] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [citationState, setCitationState] = useState<CitationState>("idle");
+  const [citations, setCitations] = useState<CitationResult[]>([]);
+  const [goProOpen, setGoProOpen] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const { saveCards } = useFlashcardDeck();
@@ -30,6 +43,11 @@ const FlashcardsGenerator = () => {
     isProUser: pro,
     incrementCards,
   } = useUsageLimit();
+  const {
+    canUseCitation,
+    isLoggedIn,
+    incrementCitation,
+  } = useCitationUsage();
   const remaining = Math.max(0, MAX_DAILY_CARDS - cardsCount);
 
   const handleGenerate = async (overrideTopic?: string, overrideCardCount?: number) => {
@@ -41,6 +59,11 @@ const FlashcardsGenerator = () => {
     }
     const isLite = isCardsLite;
     setLoading(true);
+    setCitationState("idle");
+    setCitations([]);
+    setTimeout(() => {
+      cardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 80);
     try {
       await incrementCards();
 
@@ -108,6 +131,30 @@ const FlashcardsGenerator = () => {
       });
       setTopic("");
       setShowTextarea(false);
+
+      // Citation lookup — runs after cards are saved
+      try {
+        if (canUseCitation) {
+          setCitationState("loading");
+          const results = await fetchBestCitation(activeTopic);
+          setCitations(results);
+          setCitationState(results.length > 0 ? "found" : "hidden");
+          if (results.length > 0) {
+            saveCitationsForTopic(activeTopic, results);
+            try {
+              await incrementCitation();
+            } catch {
+              // ignore — citation already stored
+            }
+          }
+        } else if (isLoggedIn) {
+          setCitationState("locked");
+        } else {
+          setCitationState("hidden");
+        }
+      } catch {
+        setCitationState("hidden");
+      }
     } catch (e: any) {
       toast({
         title: "Error",
@@ -142,6 +189,9 @@ const FlashcardsGenerator = () => {
           </div>
           <h2 className="text-base font-bold text-foreground">Generate Flashcards</h2>
         </div>
+        {!isLoggedIn && (
+          <CitationCTABanner onSignInClick={() => setAuthModalOpen(true)} />
+        )}
         <div className="space-y-1.5">
           <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
             Exam Mode
@@ -274,7 +324,21 @@ const FlashcardsGenerator = () => {
             )}
           </p>
         )}
+        {citationState !== "idle" && citationState !== "hidden" && (
+          <div className="pt-1">
+            <CitationBadgeList
+              state={citationState}
+              citations={citations}
+              onLockedClick={() =>
+                isLoggedIn ? setGoProOpen(true) : setAuthModalOpen(true)
+              }
+              isLoggedIn={isLoggedIn}
+            />
+          </div>
+        )}
       </CardContent>
+      <AuthModal open={authModalOpen} onOpenChange={setAuthModalOpen} />
+      <GoProModal open={goProOpen} onOpenChange={setGoProOpen} />
     </Card>
   );
 };

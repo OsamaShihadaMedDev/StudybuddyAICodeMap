@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -11,10 +11,15 @@ import {
 } from "@/components/ui/select";
 import { Loader2, Sparkles, BrainCircuit } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import OutputSection from "@/components/OutputSection";
+import OutputSection, { type CitationState } from "@/components/OutputSection";
 import { useUsageLimit, MAX_DAILY_SHEETS } from "@/hooks/use-usage-limit";
+import { useCitationUsage } from "@/hooks/use-citation-usage";
 import { useFlashcardDeck } from "@/hooks/use-flashcard-deck";
 import { parseFlashcardsFromOutput } from "@/lib/parse-flashcards";
+import { fetchBestCitation, type CitationResult } from "@/lib/citation";
+import CitationCTABanner from "@/components/CitationCTABanner";
+import AuthModal from "@/components/AuthModal";
+import GoProModal from "@/components/GoProModal";
 import type { StudyHistoryItem } from "@/hooks/use-study-history";
 
 export interface SheetGeneratorPrefill {
@@ -40,9 +45,19 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
   const [loadingMsg, setLoadingMsg] = useState("");
   const [pendingOutput, setPendingOutput] = useState<string | null>(null);
   const [showTextarea, setShowTextarea] = useState(false);
+  const [citationState, setCitationState] = useState<CitationState>("idle");
+  const [citations, setCitations] = useState<CitationResult[]>([]);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [goProOpen, setGoProOpen] = useState(false);
+  const outputRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
   const { sheetCount, isSheetLite, isProUser: pro, incrementSheet } = useUsageLimit();
+  const {
+    canUseCitation,
+    isLoggedIn,
+    incrementCitation,
+  } = useCitationUsage();
   const { saveCards } = useFlashcardDeck();
 
   const generate = async (quizMode: boolean, overrideNotes?: string) => {
@@ -59,6 +74,12 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
     setDeckSaved(false);
     setPendingOutput(null);
     setShowTextarea(false);
+    setCitationState("idle");
+    setCitations([]);
+
+    setTimeout(() => {
+      outputRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 80);
 
     try {
       await incrementSheet();
@@ -118,6 +139,29 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
       }
 
       setPendingOutput(fullText || "No response received.");
+
+      // Citation lookup — runs after stream completes
+      try {
+        if (canUseCitation) {
+          setCitationState("loading");
+          const results = await fetchBestCitation(activeNotes);
+          setCitations(results);
+          setCitationState(results.length > 0 ? "found" : "hidden");
+          if (results.length > 0) {
+            try {
+              await incrementCitation();
+            } catch {
+              // ignore — citation already shown
+            }
+          }
+        } else if (isLoggedIn) {
+          setCitationState("locked");
+        } else {
+          setCitationState("hidden");
+        }
+      } catch {
+        setCitationState("hidden");
+      }
     } catch (e: any) {
       setLoading(false);
       setLoadingMsg("");
@@ -196,6 +240,9 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
 
       <Card className="glass-card animate-fade-in">
         <CardContent className="p-6 space-y-5">
+          {!isLoggedIn && (
+            <CitationCTABanner onSignInClick={() => setAuthModalOpen(true)} />
+          )}
           <div className="space-y-2">
             <label className="text-sm font-semibold text-foreground">
               Medical Notes
@@ -373,6 +420,7 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
         </CardContent>
       </Card>
 
+      <div ref={outputRef}>
       {loading && !output && (
         <div className="flex flex-col items-center justify-center gap-4 py-14 animate-fade-in">
           {/* Spinner */}
@@ -412,8 +460,15 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
           output={output}
           inputText={notes}
           modeInfo={{ examMode, difficulty, focus, length }}
+          citations={citations}
+          citationState={citationState}
+          onCitationLockedClick={() =>
+            isLoggedIn ? setGoProOpen(true) : setAuthModalOpen(true)
+          }
+          citationIsLoggedIn={isLoggedIn}
         />
       )}
+      </div>
 
       {output && !isQuizMode && (
         <div className="flex justify-center pt-2">
@@ -440,6 +495,9 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
           </Button>
         </div>
       )}
+
+      <AuthModal open={authModalOpen} onOpenChange={setAuthModalOpen} />
+      <GoProModal open={goProOpen} onOpenChange={setGoProOpen} />
     </div>
   );
 };

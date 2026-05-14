@@ -1,10 +1,14 @@
 import { useRef, useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { BookOpen, List, HelpCircle, FileText, Stethoscope, Settings2, AlertTriangle, Lightbulb, Layers } from "lucide-react";
+import { BookOpen, List, HelpCircle, FileText, Stethoscope, Settings2, AlertTriangle, Lightbulb, Layers, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import CopyButton from "@/components/CopyButton";
 import FlashcardsSection from "@/components/FlashcardsSection";
 import SaveButton from "@/components/SaveButton";
+import CitationBadgeList from "@/components/CitationBadgeList";
+import type { CitationResult } from "@/lib/citation";
+
+export type CitationState = "idle" | "loading" | "found" | "locked" | "hidden";
 
 interface OutputSectionProps {
   output: string;
@@ -15,6 +19,30 @@ interface OutputSectionProps {
     focus: string;
     length: string;
   };
+  citations?: CitationResult[];
+  citationState?: CitationState;
+  onCitationLockedClick?: () => void;
+  citationIsLoggedIn?: boolean;
+}
+
+const EVIDENCE_SECTIONS: ReadonlyArray<SectionKey> = [
+  "SUMMARY",
+  "CLINICAL APPROACH",
+  "KEY POINTS",
+];
+
+function EvidenceBadge({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-amber-500/15 text-amber-400 border border-amber-500/30 hover:bg-amber-500/25 transition-colors cursor-pointer animate-pulse-subtle ml-2"
+      title="This section is backed by peer-reviewed sources — see below"
+    >
+      <Zap className="h-3 w-3" />
+      Evidence-backed
+    </button>
+  );
 }
 
 const sectionConfig = {
@@ -65,10 +93,26 @@ function renderFormattedContent(content: string) {
   });
 }
 
-const OutputSection = ({ output, inputText, modeInfo }: OutputSectionProps) => {
+const OutputSection = ({
+  output,
+  inputText,
+  modeInfo,
+  citations,
+  citationState,
+  onCitationLockedClick,
+  citationIsLoggedIn,
+}: OutputSectionProps) => {
   const ref = useRef<HTMLDivElement>(null);
+  const referenceNoteRef = useRef<HTMLDivElement>(null);
   const sections = parseSections(output);
   const [showNudge, setShowNudge] = useState(() => !localStorage.getItem("sb_first_sheet_seen"));
+
+  const scrollToReference = () => {
+    referenceNoteRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  };
 
   useEffect(() => {
     if (showNudge) {
@@ -94,6 +138,8 @@ const OutputSection = ({ output, inputText, modeInfo }: OutputSectionProps) => {
     );
   }
 
+  const hasReferenceSection = sections.some((s) => s.title === "REFERENCE NOTE");
+
   return (
     <div ref={ref} className="space-y-5">
       {/* Save + Mode Header */}
@@ -118,22 +164,28 @@ const OutputSection = ({ output, inputText, modeInfo }: OutputSectionProps) => {
       {sections.map(({ title, content }, idx) => {
         const config = sectionConfig[title];
         const Icon = config.icon;
-
+        const isReference = title === "REFERENCE NOTE";
+        const showEvidenceBadge =
+          citationState === "found" && EVIDENCE_SECTIONS.includes(title);
 
         return (
           <Card
             key={title}
+            ref={isReference ? referenceNoteRef : undefined}
             className={`glass-card animate-fade-in overflow-hidden hover-lift ${config.className}`}
             style={{ animationDelay: `${idx * 100}ms` }}
           >
-            <div className="px-6 pt-5 pb-2 flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
+            <div className="px-6 pt-5 pb-2 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2.5 flex-wrap">
                 <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-primary/10">
                   <Icon className="h-4 w-4 text-primary" />
                 </div>
                 <h3 className="text-base font-bold tracking-wide text-foreground uppercase">
                   {config.label}
                 </h3>
+                {showEvidenceBadge && (
+                  <EvidenceBadge onClick={scrollToReference} />
+                )}
               </div>
               <CopyButton text={content} />
             </div>
@@ -145,10 +197,39 @@ const OutputSection = ({ output, inputText, modeInfo }: OutputSectionProps) => {
                   {renderFormattedContent(content)}
                 </div>
               )}
+              {isReference &&
+                citationState &&
+                (citationState === "found" ||
+                  citationState === "loading" ||
+                  citationState === "locked") && (
+                  <div className="mt-3">
+                    <CitationBadgeList
+                      state={citationState}
+                      citations={citations}
+                      onLockedClick={onCitationLockedClick}
+                      isLoggedIn={citationIsLoggedIn}
+                    />
+                  </div>
+                )}
             </CardContent>
           </Card>
         );
       })}
+
+      {!hasReferenceSection &&
+        citationState &&
+        (citationState === "found" ||
+          citationState === "loading" ||
+          citationState === "locked") && (
+          <div className="animate-fade-in">
+            <CitationBadgeList
+              state={citationState}
+              citations={citations}
+              onLockedClick={onCitationLockedClick}
+              isLoggedIn={citationIsLoggedIn}
+            />
+          </div>
+        )}
 
       {showNudge && (
         <div className="mt-4 animate-fade-in">

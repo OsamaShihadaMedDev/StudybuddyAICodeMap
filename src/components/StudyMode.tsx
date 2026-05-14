@@ -6,6 +6,8 @@ import type { Card } from "@/hooks/use-flashcard-deck";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useUsageLimit } from "@/hooks/use-usage-limit";
+import { getCitationsForTopic } from "@/lib/citation-store";
+import CitationBadgeList from "@/components/CitationBadgeList";
 
 interface StudyModeProps {
   dueCards: Card[];
@@ -122,7 +124,7 @@ const StudyMode = ({ dueCards, onReview, onClose }: StudyModeProps) => {
                 </div>
                 {/* Back */}
                 <div className="flip-face flip-face-back absolute inset-0 w-full">
-                  <CardFace card={current} text={current.answer} />
+                  <CardFace card={current} text={current.answer} showCitation />
                 </div>
               </div>
             </div>
@@ -208,8 +210,17 @@ const StudyMode = ({ dueCards, onReview, onClose }: StudyModeProps) => {
   );
 };
 
-const CardFace = ({ card, text }: { card: Card; text: string }) => {
+const CardFace = ({
+  card,
+  text,
+  showCitation = false,
+}: {
+  card: Card;
+  text: string;
+  showCitation?: boolean;
+}) => {
   const tagColors = getTagColors(card.tag);
+  const citations = showCitation ? getCitationsForTopic(card.topic) : [];
   function cardFontSize(text: string): string {
     if (text.length < 120) return "text-lg md:text-xl";
     if (text.length < 220) return "text-base md:text-lg";
@@ -235,6 +246,11 @@ const CardFace = ({ card, text }: { card: Card; text: string }) => {
           {text}
         </p>
       </div>
+      {showCitation && citations.length > 0 && (
+        <div className="shrink-0 mt-1">
+          <CitationBadgeList state="found" citations={citations} />
+        </div>
+      )}
     </div>
   );
 };

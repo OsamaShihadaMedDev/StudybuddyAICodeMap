@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Sparkles, FileText, Layers, Brain, ArrowRight, Zap } from "lucide-react";
+import { Sparkles, FileText, Layers, Brain, ArrowRight, Zap, BookMarked } from "lucide-react";
 
 const APP_STORAGE_KEYS = [
   "sb_welcomed",
@@ -47,7 +47,7 @@ const Index = () => {
         <div className="space-y-4 max-w-lg">
           <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/5 px-4 py-1.5 text-xs font-semibold text-primary">
             <Zap className="h-3 w-3" />
-            Built for medical students
+            Built for medical students · Evidence-backed
           </div>
           <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-foreground leading-tight">
             Exam-ready notes
@@ -56,8 +56,9 @@ const Index = () => {
           </h1>
           <p className="text-base text-muted-foreground leading-relaxed max-w-sm mx-auto">
             No prompting. No setup. Type a topic and get structured study sheets
-            with memory hooks, exam traps, and instant flashcard decks. The
-            fastest way for medical students to study smarter.
+            with memory hooks, exam traps, and instant flashcard decks — each
+            backed by PubMed-cited literature. The fastest way for medical
+            students to study smarter.
           </p>
         </div>
 
@@ -70,6 +71,11 @@ const Index = () => {
           <ArrowRight className="h-5 w-5" />
         </Button>
 
+        <div className="flex items-center justify-center gap-1.5 text-xs text-amber-500/80 font-medium">
+          <span>⚡</span>
+          <span>Every generation cited from peer-reviewed PubMed literature</span>
+        </div>
+
         <p className="text-xs text-muted-foreground opacity-60">
           Free to start · No credit card needed
         </p>
@@ -80,6 +86,7 @@ const Index = () => {
             { icon: FileText, label: "Exam-focused sheets" },
             { icon: Layers, label: "Auto flashcard decks" },
             { icon: Brain, label: "Spaced repetition" },
+            { icon: BookMarked, label: "PubMed-cited sources" },
           ].map(({ icon: Icon, label }) => (
             <div
               key={label}

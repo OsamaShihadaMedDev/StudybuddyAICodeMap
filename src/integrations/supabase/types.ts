@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      citation_usage: {
+        Row: {
+          id: string
+          user_id: string
+          usage_date: string
+          count: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          usage_date?: string
+          count?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          usage_date?: string
+          count?: number
+          created_at?: string
+        }
+        Relationships: []
+      }
       cards: {
         Row: {
           answer: string

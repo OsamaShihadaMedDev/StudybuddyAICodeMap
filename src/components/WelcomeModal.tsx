@@ -5,7 +5,7 @@ import {
   DialogContent,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Sparkles, FileText, Layers, Brain } from "lucide-react";
+import { Sparkles, FileText, Layers, Brain, BookMarked } from "lucide-react";
 
 const WelcomeModal = () => {
   const [open, setOpen] = useState(false);
@@ -53,6 +53,11 @@ const WelcomeModal = () => {
               icon: Layers,
               title: "Instant flashcard decks",
               desc: "Generated from any topic and ready to review.",
+            },
+            {
+              icon: BookMarked,
+              title: "Evidence-backed sources on every generation",
+              desc: "Cited directly from PubMed peer-reviewed literature.",
             },
             {
               icon: Brain,
