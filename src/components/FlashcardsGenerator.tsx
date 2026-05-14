@@ -39,7 +39,7 @@ const FlashcardsGenerator = () => {
   const { saveCards } = useFlashcardDeck();
   const {
     cardsCount,
-    isCardsLite,
+    isCardsLimited,
     isProUser: pro,
     incrementCards,
   } = useUsageLimit();
@@ -57,7 +57,10 @@ const FlashcardsGenerator = () => {
       toast({ title: "Please enter a topic", variant: "destructive" });
       return;
     }
-    const isLite = isCardsLite;
+    if (isCardsLimited) {
+      setGoProOpen(true);
+      return;
+    }
     setLoading(true);
     setCitationState("idle");
     setCitations([]);
@@ -83,7 +86,6 @@ const FlashcardsGenerator = () => {
             length: "Concise",
             cardsOnly: true,
             cardCount: activeCardCount,
-            lite: isLite,
           }),
         }
       );
@@ -315,12 +317,12 @@ const FlashcardsGenerator = () => {
         </div>
         {!pro && (
           <p className="text-center text-xs text-muted-foreground">
-            {isCardsLite ? (
+            {isCardsLimited ? (
               <span className="text-amber-500 dark:text-amber-400 font-medium">
-                Daily limit reached — Lite mode (6 cards)
+                Daily limit reached · Resets at midnight
               </span>
             ) : (
-              <>{remaining} / {MAX_DAILY_CARDS} cards generations today</>
+              <>{remaining} / {MAX_DAILY_CARDS} cards generations today · Resets at midnight</>
             )}
           </p>
         )}

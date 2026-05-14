@@ -52,7 +52,7 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
   const outputRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
-  const { sheetCount, isSheetLite, isProUser: pro, incrementSheet } = useUsageLimit();
+  const { sheetCount, isSheetLimited, isProUser: pro, incrementSheet } = useUsageLimit();
   const {
     canUseCitation,
     isLoggedIn,
@@ -66,9 +66,10 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
       toast({ title: "Please enter medical notes", variant: "destructive" });
       return;
     }
-
-    const isLite = isSheetLite;
-
+    if (isSheetLimited) {
+      setGoProOpen(true);
+      return;
+    }
     setLoading(true);
     setOutput("");
     setDeckSaved(false);
@@ -92,7 +93,7 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
             "Content-Type": "application/json",
             Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
           },
-          body: JSON.stringify({ notes: activeNotes, difficulty, focus, length, examMode, lite: isLite, quizMode }),
+          body: JSON.stringify({ notes: activeNotes, difficulty, focus, length, examMode, quizMode }),
         }
       );
 
@@ -379,12 +380,12 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
 
           {!pro && (
             <div className="text-center text-xs text-muted-foreground space-y-2">
-              {sheetCount >= MAX_DAILY_SHEETS ? (
+              {isSheetLimited ? (
                 <span className="text-amber-500 dark:text-amber-400 font-medium block">
-                  Daily limit reached — Lite mode active
+                  Daily limit reached · Resets at midnight
                 </span>
               ) : (
-                <span>{sheetCount} / {MAX_DAILY_SHEETS} uses today</span>
+                <span>{sheetCount} / {MAX_DAILY_SHEETS} uses today · Resets at midnight</span>
               )}
             </div>
           )}

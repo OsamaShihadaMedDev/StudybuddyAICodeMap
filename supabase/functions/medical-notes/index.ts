@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { notes, difficulty, focus, length, examMode, lite, quizMode, cardsOnly, cardCount, focusCard, explainMode, provider } = await req.json();
+    const { notes, difficulty, focus, length, examMode, quizMode, cardsOnly, cardCount, focusCard, explainMode } = await req.json();
 
     if (!notes || typeof notes !== "string" || !notes.trim()) {
       return new Response(
@@ -55,7 +55,6 @@ STRICT RULES:
 - Start directly with EXPLANATION. No preamble.`;
     } else if (cardsOnly) {
       const count = Math.min(Math.max(parseInt(cardCount) || 12, 5), 20);
-      const liteCount = Math.min(count, 6);
       systemPrompt = `You are an expert medical educator generating USMLE-style active recall questions.
 
 Mode: ${mode}
@@ -64,7 +63,7 @@ Difficulty Level: ${diff}
 INPUT HANDLING:
 The user input is a medical topic. Normalize it, then generate questions.
 
-Generate exactly ${lite ? liteCount : count} flashcards. Mix of:
+Generate exactly ${count} flashcards. Mix of:
 - Clinical vignette questions (patient scenario → diagnosis or next step)
 - Concept recall (mechanism, association, complication)
 
@@ -87,7 +86,7 @@ FLASHCARDS
 Q: [Mechanism] What is...
 A: Short answer in 1-2 sentences max.
 
-(continue for ${lite ? liteCount : count} total)
+(continue for ${count} total)
 
 EMOJI RULE: After "FLASHCARDS" and before the first Q:, output exactly ONE emoji on its own line representing the topic visually (e.g., 🫀 for cardiac topics, 🩸 for hematology, 🧠 for neuro, 🫁 for pulmonary, 🦴 for ortho, 🩺 for general clinical, 💊 for pharmacology, 🧬 for genetics, 👁️ for ophthalmology, 🦷 for dental, 🤰 for OB/GYN, 👶 for pediatrics, 🧫 for micro, ⚗️ for biochem, 🩹 for trauma/surgery, 🛡️ for immunology). Use only one emoji. Do not surround it with text.
 
@@ -139,7 +138,7 @@ GLOBAL CONSTRAINTS:
 - Generate only questions for active recall. Do not include explanations unless necessary.
 - Do NOT add any introduction, closing remarks, or meta-commentary.
 - Start directly with FLASHCARDS.
-- Keep Q/A concise.${lite ? `\n\nLITE MODE: Generate only 3 questions.` : ""}`;
+- Keep Q/A concise.`;
     } else {
       systemPrompt = `You are an expert medical educator creating polished, exam-ready study material.
 
@@ -321,7 +320,7 @@ GLOBAL CONSTRAINTS:
 - Do NOT increase verbosity unnecessarily.
 - Avoid redundancy across sections.
 - Maintain concise, high-yield output throughout.
-- Do NOT add sections beyond those specified above.${lite ? `\n\nLITE MODE ACTIVE:\n- Keep output concise and reduced in length (lite mode).\n- Summary: reduce to ~50% length.\n- Memory Hooks: max 2 bullets.\n- Clinical Approach: max 3 steps total.\n- Key Points: max 5 bullets.\n- Flashcards: max 3.\n- Keep Reference Note as-is.` : ""}`;
+- Do NOT add sections beyond those specified above.`;
     }
 
     const userContent = focusCard && !quizMode && !cardsOnly

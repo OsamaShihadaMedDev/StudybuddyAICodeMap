@@ -221,8 +221,49 @@ export function useAuth() {
   };
 
   const signIn = async (email: string, password: string): Promise<{ error: string | null }> => {
+    const anonUserId = session?.user?.is_anonymous ? session.user.id : null;
+    const today = new Date().toISOString().split("T")[0];
+
+    let anonUsage: { kind: string; count: number }[] = [];
+    if (anonUserId) {
+      const { data } = await supabase
+        .from("usage_records")
+        .select("kind, count")
+        .eq("user_id", anonUserId)
+        .eq("usage_date", today);
+      anonUsage = data ?? [];
+    }
+
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return { error: error?.message ?? null };
+    if (error) return { error: error.message };
+
+    if (anonUsage.length > 0) {
+      const { data: { user: realUser } } = await supabase.auth.getUser();
+      const realUserId = realUser?.id;
+      if (realUserId && realUserId !== anonUserId) {
+        for (const record of anonUsage) {
+          const { data: existing } = await supabase
+            .from("usage_records")
+            .select("count")
+            .eq("user_id", realUserId)
+            .eq("kind", record.kind)
+            .eq("usage_date", today)
+            .maybeSingle();
+
+          const existingCount = existing?.count ?? 0;
+          const mergedCount = Math.max(existingCount, record.count);
+
+          await supabase
+            .from("usage_records")
+            .upsert(
+              { user_id: realUserId, kind: record.kind, usage_date: today, count: mergedCount },
+              { onConflict: "user_id,kind,usage_date" }
+            );
+        }
+      }
+    }
+
+    return { error: null };
   };
 
   const signOut = async (): Promise<{ error: string | null }> => {

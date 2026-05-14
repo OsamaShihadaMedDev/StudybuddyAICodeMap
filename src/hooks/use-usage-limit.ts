@@ -65,8 +65,8 @@ export function useUsageLimit() {
   const cardsCount =
     usageQuery.data?.find((r) => r.kind === "cards")?.count ?? 0;
 
-  const isSheetLite = sheetCount >= MAX_DAILY_SHEETS && !isProUser;
-  const isCardsLite = cardsCount >= MAX_DAILY_CARDS && !isProUser;
+  const isSheetLimited = sheetCount >= MAX_DAILY_SHEETS && !isProUser;
+  const isCardsLimited = cardsCount >= MAX_DAILY_CARDS && !isProUser;
 
   const increment = async (kind: UsageKind) => {
     if (!userId) return;
@@ -90,8 +90,8 @@ export function useUsageLimit() {
   return {
     sheetCount,
     cardsCount,
-    isSheetLite,
-    isCardsLite,
+    isSheetLimited,
+    isCardsLimited,
     isProUser: !!isProUser,
     isLoading: profileQuery.isLoading || usageQuery.isLoading,
     incrementSheet: () => increment("sheet"),

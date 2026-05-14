@@ -6,6 +6,7 @@ import type { Card } from "@/hooks/use-flashcard-deck";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useUsageLimit } from "@/hooks/use-usage-limit";
+import GoProModal from "@/components/GoProModal";
 import { getCitationsForTopic } from "@/lib/citation-store";
 import CitationBadgeList from "@/components/CitationBadgeList";
 
@@ -295,19 +296,17 @@ interface ExplainPanelProps {
 
 const ExplainPanel = ({ open, scope, card, onClose }: ExplainPanelProps) => {
   const { toast } = useToast();
-  const { isSheetLite, incrementSheet } = useUsageLimit();
+  const { isSheetLimited, incrementSheet } = useUsageLimit();
   const [output, setOutput] = useState("");
   const [loading, setLoading] = useState(false);
   const [started, setStarted] = useState(false);
-  const [blocked, setBlocked] = useState(false);
+  const [goProOpen, setGoProOpen] = useState(false);
 
   useEffect(() => {
     if (!open || started) return;
-    if (isSheetLite) {
-      // At limit — show toast and block
-      toast({ title: "Daily study sheet limit reached", variant: "destructive" });
-      setBlocked(true);
+    if (isSheetLimited) {
       onClose();
+      setGoProOpen(true);
       return;
     }
     setStarted(true);
@@ -395,13 +394,12 @@ const ExplainPanel = ({ open, scope, card, onClose }: ExplainPanelProps) => {
       setStarted(false);
       setOutput("");
       setLoading(false);
-      setBlocked(false);
     }
   }, [open]);
 
-  if (blocked) return null;
-
   return (
+    <>
+    <GoProModal open={goProOpen} onOpenChange={setGoProOpen} />
     <div
       className="fixed inset-x-0 bottom-0 top-[15vh] z-50 bg-background rounded-t-2xl shadow-2xl flex flex-col"
       style={{
@@ -438,5 +436,6 @@ const ExplainPanel = ({ open, scope, card, onClose }: ExplainPanelProps) => {
         </div>
       </div>
     </div>
+    </>
   );
 };
