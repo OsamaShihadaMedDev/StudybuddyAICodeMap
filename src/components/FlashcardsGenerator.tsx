@@ -14,6 +14,9 @@ import { useToast } from "@/hooks/use-toast";
 import { useFlashcardDeck } from "@/hooks/use-flashcard-deck";
 import { useUsageLimit, MAX_DAILY_CARDS } from "@/hooks/use-usage-limit";
 import { useCitationUsage } from "@/hooks/use-citation-usage";
+import { usePremiumHook } from "@/hooks/use-premium-hook";
+import { useModelPreference } from "@/hooks/use-model-preference";
+import { useAuth } from "@/hooks/use-auth";
 import { parseFlashcardsFromOutput } from "@/lib/parse-flashcards";
 import { fetchBestCitation, type CitationResult } from "@/lib/citation";
 import { saveCitationsForTopic } from "@/lib/citation-store";
@@ -43,6 +46,9 @@ const FlashcardsGenerator = () => {
     isProUser: pro,
     incrementCards,
   } = useUsageLimit();
+  const { premiumRemaining, isPremiumHookActive } = usePremiumHook();
+  const { preferredModel, setPreferredModel, saving: modelSaving } = useModelPreference();
+  const { user, isAnonymous } = useAuth();
   const {
     canUseCitation,
     isLoggedIn,
@@ -86,6 +92,10 @@ const FlashcardsGenerator = () => {
             length: "Concise",
             cardsOnly: true,
             cardCount: activeCardCount,
+            userId: user?.id ?? null,
+            isAnonymous: isAnonymous ?? false,
+            isPro: pro,
+            preferredModel: pro ? preferredModel : undefined,
           }),
         }
       );
@@ -316,15 +326,45 @@ const FlashcardsGenerator = () => {
           </Button>
         </div>
         {!pro && (
-          <p className="text-center text-xs text-muted-foreground">
+          <div className="text-center text-xs text-muted-foreground space-y-1">
             {isCardsLimited ? (
-              <span className="text-amber-500 dark:text-amber-400 font-medium">
+              <span className="text-amber-500 dark:text-amber-400 font-medium block">
                 Daily limit reached · Resets at midnight
               </span>
             ) : (
-              <>{remaining} / {MAX_DAILY_CARDS} cards generations today · Resets at midnight</>
+              <span className="block">{remaining} / {MAX_DAILY_CARDS} cards generations today · Resets at midnight</span>
             )}
-          </p>
+            {isPremiumHookActive ? (
+              <span className="text-violet-400 font-medium block">
+                ✦ {premiumRemaining} premium generation{premiumRemaining !== 1 ? "s" : ""} left ·{" "}
+                <button
+                  type="button"
+                  className="underline hover:text-violet-300 transition-colors"
+                  onClick={() => setGoProOpen(true)}
+                >
+                  Go Pro for unlimited
+                </button>
+              </span>
+            ) : !isCardsLimited ? (
+              <span className="text-muted-foreground/60 block">Powered by GPT-OSS 20B</span>
+            ) : null}
+          </div>
+        )}
+        {pro && (
+          <div className="text-center text-xs text-muted-foreground">
+            <span className="text-primary font-medium">
+              ✦ Powered by {preferredModel === "gpt-oss" ? "GPT-OSS 20B" : "Gemini Flash"}
+            </span>
+            <span className="mx-2 opacity-40">·</span>
+            <button
+              type="button"
+              className="underline hover:text-foreground transition-colors"
+              onClick={() => setPreferredModel(preferredModel === "gpt-oss" ? "flash" : "gpt-oss")}
+              disabled={modelSaving}
+            >
+              Switch to {preferredModel === "gpt-oss" ? "Gemini Flash" : "GPT-OSS 20B"}
+            </button>
+          </div>
         )}
         {citationState !== "idle" && citationState !== "hidden" && (
           <div className="pt-1">

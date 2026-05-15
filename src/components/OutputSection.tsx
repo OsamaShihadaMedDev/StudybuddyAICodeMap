@@ -23,6 +23,8 @@ interface OutputSectionProps {
   citationState?: CitationState;
   onCitationLockedClick?: () => void;
   citationIsLoggedIn?: boolean;
+  modelUsed?: "flash" | "gpt-oss";
+  isPro?: boolean;
 }
 
 const EVIDENCE_SECTIONS: ReadonlyArray<SectionKey> = [
@@ -30,6 +32,30 @@ const EVIDENCE_SECTIONS: ReadonlyArray<SectionKey> = [
   "CLINICAL APPROACH",
   "KEY POINTS",
 ];
+
+function ModelBadge({ model, isPro }: { model: "flash" | "gpt-oss"; isPro: boolean }) {
+  if (isPro) {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-primary/10 text-primary border border-primary/20 ml-2">
+        <Zap className="h-3 w-3" />
+        Powered by {model === "flash" ? "Gemini Flash" : "GPT-OSS 20B"}
+      </span>
+    );
+  }
+  if (model === "flash") {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-violet-500/15 text-violet-400 border border-violet-500/30 ml-2">
+        <Zap className="h-3 w-3" />
+        ✦ Premium AI
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-secondary/60 text-muted-foreground border border-border/40 ml-2">
+      GPT-OSS 20B
+    </span>
+  );
+}
 
 function EvidenceBadge({ onClick }: { onClick: () => void }) {
   return (
@@ -101,6 +127,8 @@ const OutputSection = ({
   citationState,
   onCitationLockedClick,
   citationIsLoggedIn,
+  modelUsed,
+  isPro = false,
 }: OutputSectionProps) => {
   const ref = useRef<HTMLDivElement>(null);
   const referenceNoteRef = useRef<HTMLDivElement>(null);
@@ -185,6 +213,9 @@ const OutputSection = ({
                 </h3>
                 {showEvidenceBadge && (
                   <EvidenceBadge onClick={scrollToReference} />
+                )}
+                {title === "SUMMARY" && modelUsed && (
+                  <ModelBadge model={modelUsed} isPro={isPro} />
                 )}
               </div>
               <CopyButton text={content} />

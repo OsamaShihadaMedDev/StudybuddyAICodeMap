@@ -153,6 +153,8 @@ export type Database = {
           is_pro: boolean
           pro_expires_at: string | null
           pro_source: string | null
+          premium_used: number
+          preferred_model: string
         }
         Insert: {
           created_at?: string
@@ -161,6 +163,8 @@ export type Database = {
           is_pro?: boolean
           pro_expires_at?: string | null
           pro_source?: string | null
+          premium_used?: number
+          preferred_model?: string
         }
         Update: {
           created_at?: string
@@ -169,6 +173,8 @@ export type Database = {
           is_pro?: boolean
           pro_expires_at?: string | null
           pro_source?: string | null
+          premium_used?: number
+          preferred_model?: string
         }
         Relationships: []
       }

@@ -14,6 +14,9 @@ import { useToast } from "@/hooks/use-toast";
 import OutputSection, { type CitationState } from "@/components/OutputSection";
 import { useUsageLimit, MAX_DAILY_SHEETS } from "@/hooks/use-usage-limit";
 import { useCitationUsage } from "@/hooks/use-citation-usage";
+import { usePremiumHook } from "@/hooks/use-premium-hook";
+import { useModelPreference } from "@/hooks/use-model-preference";
+import { useAuth } from "@/hooks/use-auth";
 import { useFlashcardDeck } from "@/hooks/use-flashcard-deck";
 import { parseFlashcardsFromOutput } from "@/lib/parse-flashcards";
 import { fetchBestCitation, type CitationResult } from "@/lib/citation";
@@ -39,6 +42,7 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
   const [length, setLength] = useState(prefill?.modeInfo?.length ?? "Concise");
   const [examMode, setExamMode] = useState(prefill?.modeInfo?.examMode ?? "General");
   const [output, setOutput] = useState(prefill?.output ?? "");
+  const [modelUsed, setModelUsed] = useState<"flash" | "gpt-oss" | undefined>(undefined);
   const [loading, setLoading] = useState(false);
   const [isQuizMode, setIsQuizMode] = useState(false);
   const [deckSaved, setDeckSaved] = useState(false);
@@ -53,6 +57,9 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
   const { toast } = useToast();
 
   const { sheetCount, isSheetLimited, isProUser: pro, incrementSheet } = useUsageLimit();
+  const { premiumRemaining, isPremiumHookActive } = usePremiumHook();
+  const { preferredModel, setPreferredModel, saving: modelSaving } = useModelPreference();
+  const { user, isAnonymous } = useAuth();
   const {
     canUseCitation,
     isLoggedIn,
@@ -93,9 +100,23 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
             "Content-Type": "application/json",
             Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
           },
-          body: JSON.stringify({ notes: activeNotes, difficulty, focus, length, examMode, quizMode }),
+          body: JSON.stringify({
+            notes: activeNotes,
+            difficulty,
+            focus,
+            length,
+            examMode,
+            quizMode,
+            userId: user?.id ?? null,
+            isAnonymous: isAnonymous ?? false,
+            isPro: pro,
+            preferredModel: pro ? preferredModel : undefined,
+          }),
         }
       );
+
+      const xModel = response.headers.get("X-Model-Used") ?? "";
+      setModelUsed(xModel.includes("gpt-oss") ? "gpt-oss" : "flash");
 
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));
@@ -379,7 +400,7 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
           )}
 
           {!pro && (
-            <div className="text-center text-xs text-muted-foreground space-y-2">
+            <div className="text-center text-xs text-muted-foreground space-y-1">
               {isSheetLimited ? (
                 <span className="text-amber-500 dark:text-amber-400 font-medium block">
                   Daily limit reached · Resets at midnight
@@ -387,6 +408,38 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
               ) : (
                 <span>{sheetCount} / {MAX_DAILY_SHEETS} uses today · Resets at midnight</span>
               )}
+              {isPremiumHookActive ? (
+                <span className="text-violet-400 font-medium block">
+                  ✦ {premiumRemaining} premium generation{premiumRemaining !== 1 ? "s" : ""} left ·{" "}
+                  <button
+                    type="button"
+                    className="underline hover:text-violet-300 transition-colors"
+                    onClick={() => setGoProOpen(true)}
+                  >
+                    Go Pro for unlimited
+                  </button>
+                </span>
+              ) : !isSheetLimited ? (
+                <span className="text-muted-foreground/60 block">
+                  Powered by GPT-OSS 20B
+                </span>
+              ) : null}
+            </div>
+          )}
+          {pro && (
+            <div className="text-center text-xs text-muted-foreground">
+              <span className="text-primary font-medium">
+                ✦ Powered by {preferredModel === "gpt-oss" ? "GPT-OSS 20B" : "Gemini Flash"}
+              </span>
+              <span className="mx-2 opacity-40">·</span>
+              <button
+                type="button"
+                className="underline hover:text-foreground transition-colors"
+                onClick={() => setPreferredModel(preferredModel === "gpt-oss" ? "flash" : "gpt-oss")}
+                disabled={modelSaving}
+              >
+                Switch to {preferredModel === "gpt-oss" ? "Gemini Flash" : "GPT-OSS 20B"}
+              </button>
             </div>
           )}
 
@@ -463,6 +516,8 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
           modeInfo={{ examMode, difficulty, focus, length }}
           citations={citations}
           citationState={citationState}
+          modelUsed={modelUsed}
+          isPro={pro}
           onCitationLockedClick={() =>
             isLoggedIn ? setGoProOpen(true) : setAuthModalOpen(true)
           }

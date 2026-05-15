@@ -4,7 +4,15 @@ const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  "Access-Control-Expose-Headers": "x-model-used, x-is-premium",
 };
+
+// ─── MODEL SWITCH ────────────────────────────────────────────────────────────
+// Change this one value to switch the entire app between model stacks.
+// Options: "gpt-oss-20b" | "gpt-oss-120b" | "gemini"
+type ActiveModel = "gpt-oss-20b" | "gpt-oss-120b" | "gemini";
+const ACTIVE_MODEL = "gpt-oss-20b" as ActiveModel;
+// ─────────────────────────────────────────────────────────────────────────────
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -12,7 +20,7 @@ serve(async (req) => {
   }
 
   try {
-    const { notes, difficulty, focus, length, examMode, quizMode, cardsOnly, cardCount, focusCard, explainMode } = await req.json();
+    const { notes, difficulty, focus, length, examMode, quizMode, cardsOnly, cardCount, focusCard, explainMode, userId, isAnonymous, isPro, preferredModel } = await req.json();
 
     if (!notes || typeof notes !== "string" || !notes.trim()) {
       return new Response(
@@ -32,8 +40,8 @@ serve(async (req) => {
 
     let systemPrompt: string;
 
-    if (explainMode) {
-      systemPrompt = `You are a senior medical educator giving a brief mid-study clarification.
+    // ── GEMINI PROMPTS (unchanged) ─────────────────────────────────────────
+    const geminiExplainPrompt = `You are a senior medical educator giving a brief mid-study clarification.
 
 The student is reviewing flashcards and hit a concept they don't fully understand. Give them a short, focused refresher — NOT a full study sheet.
 
@@ -53,9 +61,8 @@ STRICT RULES:
 - No markdown symbols (no #, *, -, **).
 - Use plain uppercase section headers exactly as shown above.
 - Start directly with EXPLANATION. No preamble.`;
-    } else if (cardsOnly) {
-      const count = Math.min(Math.max(parseInt(cardCount) || 12, 5), 20);
-      systemPrompt = `You are an expert medical educator generating USMLE-style active recall questions.
+
+    const geminiCardsPrompt = (count: number) => `You are an expert medical educator generating USMLE-style active recall questions.
 
 Mode: ${mode}
 Difficulty Level: ${diff}
@@ -91,8 +98,8 @@ A: Short answer in 1-2 sentences max.
 EMOJI RULE: After "FLASHCARDS" and before the first Q:, output exactly ONE emoji on its own line representing the topic visually (e.g., 🫀 for cardiac topics, 🩸 for hematology, 🧠 for neuro, 🫁 for pulmonary, 🦴 for ortho, 🩺 for general clinical, 💊 for pharmacology, 🧬 for genetics, 👁️ for ophthalmology, 🦷 for dental, 🤰 for OB/GYN, 👶 for pediatrics, 🧫 for micro, ⚗️ for biochem, 🩹 for trauma/surgery, 🛡️ for immunology). Use only one emoji. Do not surround it with text.
 
 Start directly with FLASHCARDS. No preamble or commentary.`;
-    } else if (quizMode) {
-      systemPrompt = `You are an expert medical educator generating USMLE-style active recall questions.
+
+    const geminiQuizPrompt = `You are an expert medical educator generating USMLE-style active recall questions.
 
 Mode: ${mode}
 Difficulty Level: ${diff}
@@ -139,8 +146,8 @@ GLOBAL CONSTRAINTS:
 - Do NOT add any introduction, closing remarks, or meta-commentary.
 - Start directly with FLASHCARDS.
 - Keep Q/A concise.`;
-    } else {
-      systemPrompt = `You are an expert medical educator creating polished, exam-ready study material.
+
+    const geminiSheetPrompt = `You are an expert medical educator creating polished, exam-ready study material.
 
 Mode: ${mode}
 Difficulty Level: ${diff}
@@ -321,6 +328,260 @@ GLOBAL CONSTRAINTS:
 - Avoid redundancy across sections.
 - Maintain concise, high-yield output throughout.
 - Do NOT add sections beyond those specified above.`;
+
+    // ── GPT-OSS PROMPTS (optimized for reasoning model behavior) ───────────
+    const gptOssExplainPrompt = `You are a senior medical educator. A student reviewing flashcards needs a quick clarification on one concept.
+
+Your task: write a brief, clear refresher. Think through the concept first, then output ONLY the formatted response below.
+
+EXPLANATION
+
+Write 3-5 plain sentences. Start with the core mechanism. No jargon unless essential. No lists.
+
+KEY INSIGHT
+
+One sentence. The single most important thing to never forget about this concept.
+
+Rules:
+- Under 150 words total.
+- No markdown (no #, *, -, **).
+- Plain uppercase headers only.
+- Nothing before EXPLANATION. Nothing after KEY INSIGHT.`;
+
+    const gptOssCardsPrompt = (count: number) => `You are a medical educator. Generate exactly ${count} USMLE-style flashcards on the given topic.
+
+Mode: ${mode} | Difficulty: ${diff}
+
+Think through the highest-yield concepts for this topic, then output ONLY the flashcards in the exact format below. No preamble, no commentary, no explanations outside the cards.
+
+OUTPUT FORMAT — copy this structure exactly:
+
+FLASHCARDS
+
+[one emoji representing the topic on its own line]
+
+Q: [Tag] Question ending with question mark?
+A: Answer in 1-2 sentences maximum.
+
+Q: [Tag] Next question?
+A: Answer.
+
+[blank line between every card — this is mandatory]
+
+TAGS (pick one per card): [Diagnosis] [Mechanism] [Next Step] [Complication] [Association]
+
+EMOJI: Pick one that matches the topic — 🫀 cardiac, 🩸 hematology, 🧠 neuro, 🫁 pulmonary, 🦴 ortho, 🩺 general, 💊 pharmacology, 🧬 genetics, 👁️ ophthalmology, 🤰 OB/GYN, 👶 pediatrics, 🧫 micro, ⚗️ biochem, 🩹 trauma, 🛡️ immunology
+
+HARD RULES:
+- Exactly ${count} cards. No more, no less.
+- Each card: Q: on one line, A: on next line, blank line after.
+- Tags in square brackets at start of every Q: line.
+- Questions end with ?
+- Answers: 1-2 sentences only — never more.
+- No "Q:" or "A:" anywhere inside question or answer text.
+- No numbering. No headers between cards. No explanations.
+- Mix clinical vignettes and concept recall cards.`;
+
+    const gptOssQuizPrompt = `You are a medical educator. Generate 5-7 USMLE-style quiz questions on the given topic.
+
+Mode: ${mode} | Difficulty: ${diff}
+
+Think through the most testable concepts, then output ONLY the formatted questions. No preamble.
+
+OUTPUT FORMAT — copy exactly:
+
+FLASHCARDS
+
+[one emoji on its own line]
+
+Q: [Tag] Question?
+A: Answer in 1-2 sentences.
+
+Q: [Tag] Question?
+A: Answer.
+
+[blank line between every card — mandatory]
+
+TAGS: [Diagnosis] [Mechanism] [Next Step] [Complication] [Association]
+EMOJI: 🫀 cardiac, 🩸 hematology, 🧠 neuro, 🫁 pulmonary, 🦴 ortho, 🩺 general, 💊 pharmacology, 🧬 genetics, 👁️ ophthalmology, 🤰 OB/GYN, 👶 pediatrics, 🧫 micro, ⚗️ biochem, 🩹 trauma, 🛡️ immunology
+
+HARD RULES:
+- 5-7 cards total. Mix vignette and concept recall.
+- Q: and A: start their own lines. Blank line after each card.
+- No "Q:" or "A:" inside answer text. No numbering. No commentary.
+- Answers: 1-2 sentences max.`;
+
+    const gptOssSheetPrompt = `You are a senior medical educator and USMLE question writer. Generate a high-yield, exam-ready study sheet that reads like it was written by an experienced clinician — rich, precise, and immediately useful.
+
+Mode: ${mode} | Difficulty: ${diff} | Focus: ${foc} | Length: ${len}
+
+Before writing anything: identify the core medical concept from the input, reason through the highest-yield facts a student needs for exams and clinical practice, then generate the full output below.
+
+FORMATTING RULES (non-negotiable):
+- Use **double asterisks** around key terms in SUMMARY only. This is the ONLY markdown allowed.
+- Use numbered lists (1. 2. 3.) for all lists.
+- Use arrows (→) to show clinical flow and associations.
+- Plain uppercase section headers on their own line.
+- No #, *, -, bullet symbols anywhere except numbered lists.
+- No preamble. Start directly with SUMMARY.
+
+---
+
+SUMMARY
+
+Write a dense, scannable clinical snapshot. Every line should carry information a student would highlight.
+
+Definition: **Bold the disease name**. One crisp sentence — pathophysiological definition, not a dictionary definition.
+Mechanism / Pathophysiology: 2-3 sentences max. Lead with the core defect. Bold **key mechanisms** and **mediators**. Include the cascade if it's high-yield.
+Key Associations / Features:
+1. **Buzzword/finding** → what it means clinically
+2. **Classic presentation** → key distinguishing feature
+3. **Risk factor or etiology** → mechanism if relevant
+4. (add more only if genuinely high-yield — do not pad)
+Diagnosis: Gold standard test → what it shows. Include sensitivity/specificity tradeoffs only if exam-relevant.
+Management: First-line → drug class + mechanism if high-yield. Include dose only for commonly tested drugs.
+
+Rules:
+- Each labeled segment is its own line or short block — never a paragraph.
+- Bold liberally in this section — every buzzword, every key mechanism, every classic association.
+- If the topic is large (e.g. heart failure, sepsis), compress ruthlessly — only the most-tested facts.
+- No repetition of content that appears in Clinical Approach or Key Points.
+
+
+MEMORY HOOKS
+
+Write 3-5 mnemonic-style one-liners that a student can recall in 2 seconds during an exam. Think First Aid style.
+
+1. Mechanism chain using → arrows
+2. Classic "if you see X think Y" association
+3. Drug/treatment shortcut or mnemonic
+4. Distinguishing feature vs similar condition
+5. (add only if genuinely sticky and non-redundant)
+
+Rules: Arrow format preferred. Each line = one association. Instantly memorable. No overlap with Key Points.
+Bad example: "Heart failure is a complex syndrome" — too vague, no value.
+Good example: "HFrEF → ↓EF → ACEi + BB + spironolactone → mortality benefit"
+
+
+CLINICAL APPROACH
+
+Write this like a clinical decision tree. A student should be able to follow this in a real patient encounter.
+
+Diagnosis:
+1. Classic presentation → key finding that clinches it
+2. Confirmatory test → expected result + why it confirms
+
+Workup:
+1. First-line investigation → what it shows and why you order it
+2. Second investigation → when to order and what it rules in/out
+3. (additional only if high-yield)
+
+Management:
+1. First-line treatment → drug/intervention + brief rationale
+2. If unstable or severe → immediate action
+3. If refractory or treatment fails → escalation step
+4. Special population or exception → modification if high-yield
+
+Complications:
+1. Most common complication → mechanism if non-obvious
+2. Most dangerous complication → why it's lethal and how to recognize it
+
+Rules:
+- One line per step. Arrows show logical flow.
+- Include specific drug names, not just drug classes.
+- Include numbers where they matter (e.g. "IV furosemide 40mg", "MAP < 65", "GCS < 8 → intubate").
+- 4-8 steps total across all groups — quality over quantity.
+
+
+KEY POINTS
+
+Write 6-10 high-yield one-liners in "If X → think Y" exam-trigger format. These should be the exact associations that separate a 240 from a 220 on Step 2.
+
+1. If [classic finding/scenario] → [diagnosis/drug/next step]
+2. If [buzzword] → [association]
+3. [Condition A] vs [Condition B] → key distinguishing feature
+4. [Drug] → [mechanism] → [key side effect or indication]
+5. (continue for 6-10 total)
+
+Rules:
+- Every point = exactly 1 line. No explanations.
+- Focus on what students get wrong or what's classically tested.
+- Include at least 2 comparison points (X vs Y).
+- No overlap with Memory Hooks or Clinical Approach.
+
+
+EXAM TRAPS
+
+Write 4-6 specific, clinical pitfalls — the exact mistakes that lose points on Step 2 CK. Each trap should describe both the error and the correct thinking.
+
+1. [Wrong assumption] → [why it's wrong] → [correct approach]
+2. [Condition commonly confused with topic] → [key distinguishing feature]
+3. [Diagnostic trap] → [what to look for instead]
+4. (continue for 4-6 total)
+
+Rules: One line each. Specific and clinical — not generic advice like "don't miss the diagnosis."
+Bad: "Be careful not to confuse similar conditions."
+Good: "Cardiac tamponade vs tension pneumo → both cause obstructive shock, but tamponade has muffled heart sounds + JVD without tracheal deviation."
+
+
+FLASHCARDS
+
+[EMOJI — one emoji on its own line, matching the topic. No text around it.]
+
+Generate exactly 5 flashcards. All must be clinical vignettes — real patient scenarios, not abstract concept questions. Each vignette should read like a mini USMLE stem: age, sex, brief history, key findings, then the question.
+
+REQUIRED mix:
+- 2 x [Next Step] — what to do next in management
+- 1 x [Diagnosis] — identify the condition from a vignette
+- 1 x [Mechanism] — explain why something happens
+- 1 x [Complication] — identify or manage a complication
+
+FORMAT — copy exactly, including blank lines between cards:
+
+Q: [Next Step] A 67-year-old man with known COPD presents with worsening dyspnea, pursed-lip breathing, and ABG showing pH 7.28, PaCO2 72 mmHg, HCO3 32 mEq/L. He is alert. What is the next best step?
+A: Initiate non-invasive positive pressure ventilation (BiPAP); reserve intubation for failure of NIV or altered consciousness.
+
+Q: [Diagnosis] A 52-year-old woman presents with progressive exertional dyspnea, orthopnea, and bilateral crackles. Echo shows EF of 35%. What is the diagnosis?
+A: Heart failure with reduced ejection fraction (HFrEF).
+
+Q: [Mechanism] Why does left heart failure cause pulmonary edema?
+A: Elevated LVEDP increases pulmonary capillary hydrostatic pressure beyond oncotic pressure, forcing fluid into the alveolar space.
+
+Q: [Next Step] A 44-year-old man with hypertension presents with BP 210/130 and confusion. CT head is negative. What is the next step?
+A: IV labetalol or nicardipine to reduce MAP by no more than 25% in the first hour; avoid sudden drops that can cause ischemia.
+
+Q: [Complication] A patient on ACE inhibitor therapy develops sudden lip and tongue swelling without urticaria. What is this and how is it managed?
+A: Bradykinin-mediated angioedema; stop the ACE inhibitor immediately, administer fresh frozen plasma or icatibant for severe cases.
+
+HARD RULES — parser depends on these:
+- Tags MUST be in square brackets: [Next Step] NOT "Next Step" NOT Next Step.
+- Q: on its own line. A: on the next line. Then ONE blank line. Then next Q:.
+- Questions end with ?
+- Answers: 1-2 sentences only. Never more. Never start with "I would..."
+- No "Q:" or "A:" anywhere inside the question or answer text.
+- No numbering. No headers between cards.
+- EMOJI: 🫀 cardiac, 🩸 hematology, 🧠 neuro, 🫁 pulmonary, 🦴 ortho, 🩺 general, 💊 pharmacology, 🧬 genetics, 👁️ ophthalmology, 🤰 OB/GYN, 👶 pediatrics, 🧫 micro, ⚗️ biochem, 🩹 trauma, 🛡️ immunology
+
+
+REFERENCE NOTE
+
+${referenceNote}
+
+---
+Output ONLY the sections above in order. Start directly with SUMMARY. No introduction, no conclusion, no meta-commentary.`;
+
+    // ── PROMPT SELECTION ───────────────────────────────────────────────────
+    const isGemini = ACTIVE_MODEL === "gemini";
+
+    if (explainMode) {
+      systemPrompt = isGemini ? geminiExplainPrompt : gptOssExplainPrompt;
+    } else if (cardsOnly) {
+      const count = Math.min(Math.max(parseInt(cardCount) || 12, 5), 20);
+      systemPrompt = isGemini ? geminiCardsPrompt(count) : gptOssCardsPrompt(count);
+    } else if (quizMode) {
+      systemPrompt = isGemini ? geminiQuizPrompt : gptOssQuizPrompt;
+    } else {
+      systemPrompt = isGemini ? geminiSheetPrompt : gptOssSheetPrompt;
     }
 
     const userContent = focusCard && !quizMode && !cardsOnly
@@ -332,11 +593,72 @@ GLOBAL CONSTRAINTS:
       throw new Error("OPENROUTER_API_KEY is not configured");
     }
 
-    const model = (explainMode || cardsOnly || quizMode)
-  ? "google/gemini-2.5-flash-lite"
-  : "google/gemini-2.5-flash";
+    // ── MODEL SELECTION LOGIC ──────────────────────────────────────────────
+    // Hook limits: anon = 1 premium gen, free signed-in = 3 premium gens
+    // Premium gen = Gemini Flash (best quality, used to hook users)
+    // After hook exhausted: GPT-OSS 20B for free/anon, Gemini Flash for Pro
+    // Pro default is always Gemini Flash unless they explicitly switch to GPT-OSS
 
-    console.log("[MODEL_USED]:", model);
+    const ANON_PREMIUM_LIMIT = 1;
+    const FREE_PREMIUM_LIMIT = 3;
+
+    let model: string;
+    let isPremiumGeneration = false;
+
+    if (isPro) {
+      const proModel = preferredModel === "gpt-oss" ? "gpt-oss" : "flash";
+      if (proModel === "flash") {
+        model = (explainMode || cardsOnly || quizMode)
+          ? "google/gemini-2.5-flash-lite"
+          : "google/gemini-2.5-flash";
+      } else {
+        model = "openai/gpt-oss-20b";
+      }
+      isPremiumGeneration = proModel === "flash";
+    } else {
+      const premiumLimit = isAnonymous ? ANON_PREMIUM_LIMIT : FREE_PREMIUM_LIMIT;
+      let currentPremiumUsed = 0;
+
+      if (userId) {
+        const { data: profileData } = await (await import("https://esm.sh/@supabase/supabase-js@2"))
+          .createClient(
+            Deno.env.get("SUPABASE_URL")!,
+            Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+          )
+          .from("profiles")
+          .select("premium_used")
+          .eq("id", userId)
+          .maybeSingle();
+        currentPremiumUsed = profileData?.premium_used ?? 0;
+      }
+
+      if (currentPremiumUsed < premiumLimit) {
+        model = (explainMode || cardsOnly || quizMode)
+          ? "google/gemini-2.5-flash-lite"
+          : "google/gemini-2.5-flash";
+        isPremiumGeneration = true;
+
+        if (userId) {
+          await (await import("https://esm.sh/@supabase/supabase-js@2"))
+            .createClient(
+              Deno.env.get("SUPABASE_URL")!,
+              Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+            )
+            .from("profiles")
+            .update({ premium_used: currentPremiumUsed + 1 })
+            .eq("id", userId);
+        }
+      } else {
+        model = "openai/gpt-oss-20b";
+        isPremiumGeneration = false;
+      }
+    }
+
+    const providerRouting = model.startsWith("openai/gpt-oss")
+      ? { provider: { order: ["Cerebras", "Groq"], allow_fallbacks: true } }
+      : {};
+
+    console.log("[MODEL_USED]:", model, "| isPremium:", isPremiumGeneration);
 
     const response = await fetch(
       "https://openrouter.ai/api/v1/chat/completions",
@@ -357,6 +679,7 @@ GLOBAL CONSTRAINTS:
             { role: "system", content: systemPrompt },
             { role: "user", content: userContent },
           ],
+          ...providerRouting,
         }),
       }
     );
@@ -370,7 +693,7 @@ GLOBAL CONSTRAINTS:
       }
       if (response.status === 400) {
         const t = await response.text();
-        console.error("Gemini 400 error:", t);
+        console.error("AI 400 error:", t);
         return new Response(
           JSON.stringify({ error: "Bad request to AI service" }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -383,7 +706,7 @@ GLOBAL CONSTRAINTS:
         );
       }
       const t = await response.text();
-      console.error("Gemini error:", response.status, t);
+      console.error("AI error:", response.status, t);
       return new Response(
         JSON.stringify({ error: "AI service error" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -432,7 +755,12 @@ GLOBAL CONSTRAINTS:
     });
 
     return new Response(response.body!.pipeThrough(transform), {
-      headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "text/event-stream",
+        "X-Model-Used": model,
+        "X-Is-Premium": isPremiumGeneration ? "true" : "false",
+      },
     });
   } catch (e) {
     console.error("medical-notes error:", e);
