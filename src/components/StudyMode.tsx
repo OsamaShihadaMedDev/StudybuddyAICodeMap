@@ -144,7 +144,7 @@ const StudyMode = ({ dueCards, onReview, onClose }: StudyModeProps) => {
                     className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
                   >
                     <Layers className="h-3.5 w-3.5" />
-                    Explain this topic
+                    Explain this question
                   </button>
                 </div>
               </div>
@@ -259,10 +259,14 @@ const CardFace = ({
 export default StudyMode;
 
 const ExplainContent = ({ output }: { output: string }) => {
-  const explanationMatch = output.match(/EXPLANATION\s*\n([\s\S]*?)(?=\n\s*KEY\s+INSIGHT|$)/i);
+  const explanationMatch = output.match(/EXPLANATION\s*\n([\s\S]*?)(?=\n\s*(?:WHY\s+THIS\s+ANSWER|EXAM\s+TIP|KEY\s+INSIGHT)|$)/i);
+  const whyMatch = output.match(/WHY\s+THIS\s+ANSWER\s*\n([\s\S]*?)(?=\n\s*(?:EXAM\s+TIP|KEY\s+INSIGHT)|$)/i);
+  const tipMatch = output.match(/EXAM\s+TIP\s*\n([\s\S]*?)(?=\n\s*KEY\s+INSIGHT|$)/i);
   const insightMatch = output.match(/KEY\s+INSIGHT\s*\n([\s\S]*)$/i);
 
   const explanation = explanationMatch?.[1]?.trim() || output.trim();
+  const why = whyMatch?.[1]?.trim() || "";
+  const tip = tipMatch?.[1]?.trim() || "";
   const insight = insightMatch?.[1]?.trim() || "";
 
   return (
@@ -275,6 +279,22 @@ const ExplainContent = ({ output }: { output: string }) => {
           {explanation}
         </p>
       </div>
+      {why && (
+        <div className="space-y-2.5 rounded-xl border border-primary/30 bg-primary/5 p-4">
+          <h3 className="text-xs uppercase tracking-wider text-primary font-semibold">
+            Why This Answer
+          </h3>
+          <p className="text-sm leading-relaxed text-foreground">{why}</p>
+        </div>
+      )}
+      {tip && (
+        <div className="space-y-2.5 rounded-xl border border-amber-500/30 bg-amber-500/5 p-4">
+          <h3 className="text-xs uppercase tracking-wider text-amber-400 font-semibold">
+            Exam Tip
+          </h3>
+          <p className="text-sm leading-relaxed text-foreground">{tip}</p>
+        </div>
+      )}
       {insight && (
         <div className="space-y-2.5 rounded-xl border border-primary/30 bg-primary/5 p-4">
           <h3 className="text-xs uppercase tracking-wider text-primary font-semibold">
@@ -303,6 +323,11 @@ const ExplainPanel = ({ open, scope, card, onClose }: ExplainPanelProps) => {
   const [goProOpen, setGoProOpen] = useState(false);
 
   useEffect(() => {
+    setStarted(false);
+    setOutput("");
+  }, [card.id, scope]);
+
+  useEffect(() => {
     if (!open || started) return;
     if (isSheetLimited) {
       onClose();
@@ -319,12 +344,12 @@ const ExplainPanel = ({ open, scope, card, onClose }: ExplainPanelProps) => {
         const isCard = scope === "card";
         const body = isCard
           ? {
-              notes: card.question + " — " + card.answer,
+              notes: `CARD QUESTION: ${card.question}\n\nCARD ANSWER: ${card.answer}\n\nTOPIC CONTEXT: ${card.topic}`,
               examMode: "General",
               explainMode: true,
             }
           : {
-              notes: card.topic,
+              notes: `Topic: ${card.topic}\n\nQuestion being studied: ${card.question}`,
               examMode: "General",
               explainMode: true,
             };

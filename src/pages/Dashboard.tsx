@@ -1,17 +1,17 @@
-import { useMemo, useRef, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
-import { ArrowRight } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "react-router-dom";
+import { ArrowRight, Play, Repeat } from "lucide-react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
-import DashboardHero from "@/components/dashboard/DashboardHero";
 import StatsStrip from "@/components/dashboard/StatsStrip";
 import WelcomeCard from "@/components/dashboard/WelcomeCard";
-import MoreToolsSection from "@/components/dashboard/MoreToolsSection";
 import FirstDeckBanner from "@/components/dashboard/FirstDeckBanner";
 import GoProNudgeBanner from "@/components/dashboard/GoProNudgeBanner";
 import WelcomeModal from "@/components/WelcomeModal";
 import DeckList from "@/components/DeckList";
 import FlashcardsGenerator from "@/components/FlashcardsGenerator";
+import SheetGenerator from "@/components/SheetGenerator";
 import StudyMode from "@/components/StudyMode";
+import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { useFlashcardDeck } from "@/hooks/use-flashcard-deck";
 import { useToast } from "@/hooks/use-toast";
@@ -20,20 +20,54 @@ const RECENT_DECK_LIMIT = 5;
 
 type StudyFilter = { topic?: string; mode: "due" | "all-cards" | "deck" };
 
+interface DueCardsReminderStripProps {
+  dueCount: number;
+  onStartReview: () => void;
+}
+
+const DueCardsReminderStrip = ({ dueCount, onStartReview }: DueCardsReminderStripProps) => (
+  <div className="flex items-center justify-between rounded-xl border border-primary/20 bg-primary/5 px-4 py-2.5 animate-fade-in">
+    <div className="flex items-center gap-2">
+      <Repeat className="h-3.5 w-3.5 text-primary" />
+      <span className="text-sm font-medium text-foreground">
+        <span className="font-bold text-primary">{dueCount}</span>{" "}
+        {dueCount === 1 ? "card" : "cards"} due for review today
+      </span>
+    </div>
+    <Button
+      onClick={onStartReview}
+      size="sm"
+      className="btn-gradient h-7 rounded-lg px-3 text-xs font-semibold"
+    >
+      <Play className="h-3 w-3 mr-1" />
+      Review
+    </Button>
+  </div>
+);
+
 const Dashboard = () => {
   const { toast } = useToast();
   const { isAnonymous } = useAuth();
   const { allCards, dueCards, reviewCard, deleteCard, stats } = useFlashcardDeck();
   const [studyOpen, setStudyOpen] = useState(false);
   const [studyFilter, setStudyFilter] = useState<StudyFilter>({ mode: "due" });
-  const [searchParams] = useSearchParams();
-  const autoOpenSheet = searchParams.get("start") === "sheet";
 
   const generatorRef = useRef<HTMLDivElement>(null);
+  const deckListRef = useRef<HTMLDivElement>(null);
 
   const handleGoToFlashcards = () => {
     generatorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
+
+  useEffect(() => {
+    const handler = () => {
+      setTimeout(() => {
+        deckListRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 150);
+    };
+    window.addEventListener("studybuddy:deck-saved", handler);
+    return () => window.removeEventListener("studybuddy:deck-saved", handler);
+  }, []);
 
   const { totalDecks, recentDeckCards } = useMemo(() => {
     const latestByTopic = new Map<string, number>();
@@ -94,21 +128,36 @@ const Dashboard = () => {
 
       <div className="space-y-8">
         <GoProNudgeBanner isRealUser={!isAnonymous} />
-        <FirstDeckBanner onGoToFlashcards={handleGoToFlashcards} />
+
+        {stats.due > 0 && totalDecks > 0 && (
+          <DueCardsReminderStrip
+            dueCount={stats.due}
+            onStartReview={handleStartDue}
+          />
+        )}
+
         <StatsStrip />
 
         {totalDecks === 0 && <WelcomeCard />}
 
-        {totalDecks > 0 && (
-          <DashboardHero
-            dueCount={stats.due}
-            onStartReview={handleStartDue}
-            onReviewAny={handleReviewAny}
-          />
-        )}
+        <div className="space-y-2">
+          <p className="text-[11px] font-bold tracking-[0.15em] text-primary uppercase pl-1">
+            Study Sheet
+          </p>
+          <div className="glass-card rounded-2xl p-4">
+            <SheetGenerator />
+          </div>
+        </div>
+
+        <div ref={generatorRef} className="space-y-2">
+          <p className="text-[11px] font-bold tracking-[0.15em] text-primary uppercase pl-1">
+            Flashcards
+          </p>
+          <FlashcardsGenerator />
+        </div>
 
         {totalDecks > 0 && (
-          <div className="space-y-3">
+          <div ref={deckListRef} className="space-y-3">
             <h3 className="text-sm font-bold tracking-tight text-foreground pl-1">
               My decks
             </h3>
@@ -132,14 +181,7 @@ const Dashboard = () => {
           </div>
         )}
 
-        <div ref={generatorRef} className="space-y-2">
-          <p className="text-[11px] font-bold tracking-[0.15em] text-primary uppercase pl-1">
-            Flashcards
-          </p>
-          <FlashcardsGenerator />
-        </div>
-
-        <MoreToolsSection autoOpen={autoOpenSheet} />
+        <FirstDeckBanner onGoToFlashcards={handleGoToFlashcards} />
       </div>
     </DashboardLayout>
   );

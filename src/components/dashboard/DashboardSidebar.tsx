@@ -105,16 +105,19 @@ const DashboardSidebar = ({
         <Link
           to="/dashboard"
           onClick={handleNavClick}
-          className="flex items-center gap-2.5 px-2 py-1 rounded-lg hover:bg-secondary/40 transition-colors"
+          className="flex items-center gap-3 px-2 py-1.5 rounded-lg hover:bg-secondary/40 transition-colors"
         >
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10">
-            <Stethoscope className="h-4.5 w-4.5 text-primary" />
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary shadow-lg shadow-primary/30 shrink-0">
+            <Stethoscope className="h-5 w-5 text-primary-foreground" />
           </div>
-          <div className="leading-tight">
-            <p className="text-sm font-extrabold tracking-tight text-foreground">
+          <div className="leading-tight space-y-0.5">
+            <p className="text-base font-extrabold tracking-tight text-foreground">
               StudyBuddy
             </p>
-            <p className="text-[10px] font-medium tracking-wide text-muted-foreground">
+            <p
+              className="text-[11px] font-semibold tracking-wide text-primary"
+              style={{ textShadow: "0 0 12px hsl(var(--primary) / 0.6)" }}
+            >
               High-yield exam prep in seconds
             </p>
           </div>

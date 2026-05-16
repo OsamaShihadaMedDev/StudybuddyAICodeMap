@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, Sparkles, BrainCircuit } from "lucide-react";
+import { Loader2, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import OutputSection, { type CitationState } from "@/components/OutputSection";
 import { useUsageLimit, MAX_DAILY_SHEETS } from "@/hooks/use-usage-limit";
@@ -44,7 +44,6 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
   const [output, setOutput] = useState(prefill?.output ?? "");
   const [modelUsed, setModelUsed] = useState<"flash" | "gpt-oss" | undefined>(undefined);
   const [loading, setLoading] = useState(false);
-  const [isQuizMode, setIsQuizMode] = useState(false);
   const [deckSaved, setDeckSaved] = useState(false);
   const [loadingMsg, setLoadingMsg] = useState("");
   const [pendingOutput, setPendingOutput] = useState<string | null>(null);
@@ -67,7 +66,7 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
   } = useCitationUsage();
   const { saveCards } = useFlashcardDeck();
 
-  const generate = async (quizMode: boolean, overrideNotes?: string) => {
+  const generate = async (overrideNotes?: string) => {
     const activeNotes = overrideNotes ?? notes;
     if (!activeNotes.trim()) {
       toast({ title: "Please enter medical notes", variant: "destructive" });
@@ -106,7 +105,6 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
             focus,
             length,
             examMode,
-            quizMode,
             userId: user?.id ?? null,
             isAnonymous: isAnonymous ?? false,
             isPro: pro,
@@ -239,14 +237,8 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
   }, [loading]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleGenerate = () => {
-    setIsQuizMode(false);
     setDeckSaved(false);
-    generate(false);
-  };
-  const handleQuizMode = () => {
-    setIsQuizMode(true);
-    setDeckSaved(false);
-    generate(true);
+    generate();
   };
 
   return (
@@ -288,7 +280,7 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
                       onClick={() => {
                         setNotes(label);
                         setShowTextarea(false);
-                        generate(false, label);
+                        generate(label);
                       }}
                       className="flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-medium border border-border/60 bg-background hover:border-primary/50 hover:bg-primary/5 hover:text-primary transition-all cursor-pointer"
                     >
@@ -443,34 +435,23 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
             </div>
           )}
 
-          <div className="flex gap-3">
-            <Button
-              className="flex-1 h-12 text-sm font-bold rounded-xl btn-gradient"
-              onClick={handleGenerate}
-              disabled={loading}
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Generating…
-                </>
-              ) : (
-                <>
-                  <Sparkles className="mr-2 h-4 w-4" />
-                  Generate Study Material
-                </>
-              )}
-            </Button>
-            <Button
-              variant="outline"
-              className="h-12 px-5 text-sm font-bold rounded-xl border-primary/30 hover:bg-primary/10"
-              onClick={handleQuizMode}
-              disabled={loading}
-            >
-              <BrainCircuit className="mr-2 h-4 w-4" />
-              Test Me
-            </Button>
-          </div>
+          <Button
+            className="w-full h-12 text-sm font-bold rounded-xl btn-gradient"
+            onClick={handleGenerate}
+            disabled={loading}
+          >
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Generating…
+              </>
+            ) : (
+              <>
+                <Sparkles className="mr-2 h-4 w-4" />
+                Generate Study Material
+              </>
+            )}
+          </Button>
         </CardContent>
       </Card>
 
@@ -526,7 +507,7 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
       )}
       </div>
 
-      {output && !isQuizMode && (
+      {output && (
         <div className="flex justify-center pt-2">
           <Button
             variant="outline"

@@ -32,6 +32,8 @@ const FlashcardsGenerator = () => {
   const [cardCount, setCardCount] = useState("12");
   const [examMode, setExamMode] = useState("General");
   const [loading, setLoading] = useState(false);
+  const [loadingMsg, setLoadingMsg] = useState("");
+  const [pendingCards, setPendingCards] = useState<ReturnType<typeof parseFlashcardsFromOutput> | null>(null);
   const [showTextarea, setShowTextarea] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [citationState, setCitationState] = useState<CitationState>("idle");
@@ -136,13 +138,7 @@ const FlashcardsGenerator = () => {
       }
 
       const parsed = parseFlashcardsFromOutput(fullText, activeTopic);
-      const added = await saveCards(parsed);
-      localStorage.setItem("sb_first_deck_seen", "1");
-      toast({
-        title: added > 0 ? `Added ${added} new cards to your deck` : "No new cards (all duplicates)",
-      });
-      setTopic("");
-      setShowTextarea(false);
+      setPendingCards(parsed);
 
       // Citation lookup — runs after cards are saved
       try {
@@ -168,15 +164,67 @@ const FlashcardsGenerator = () => {
         setCitationState("hidden");
       }
     } catch (e: any) {
+      setLoading(false);
+      setLoadingMsg("");
+      setPendingCards(null);
       toast({
         title: "Error",
         description: e.message || "Failed to generate flashcards",
         variant: "destructive",
       });
-    } finally {
-      setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!loading) return;
+
+    const steps = [
+      "Identifying key concepts…",
+      "Building Q&A pairs…",
+      "Calibrating difficulty…",
+      "Adding clinical vignettes…",
+      "Finalizing your deck…",
+    ];
+
+    let currentStep = 0;
+    let allStepsDone = false;
+    setLoadingMsg(steps[0]);
+
+    const interval = setInterval(() => {
+      currentStep += 1;
+
+      if (currentStep < steps.length) {
+        setLoadingMsg(steps[currentStep]);
+      } else {
+        allStepsDone = true;
+        setLoadingMsg(steps[steps.length - 1]);
+      }
+
+      if (allStepsDone) {
+        setPendingCards((pending) => {
+          if (pending !== null) {
+            clearInterval(interval);
+            (async () => {
+              const added = await saveCards(pending);
+              localStorage.setItem("sb_first_deck_seen", "1");
+              toast({
+                title: added > 0 ? `Added ${added} new cards to your deck` : "No new cards (all duplicates)",
+              });
+              setTopic("");
+              setShowTextarea(false);
+              setLoading(false);
+              setLoadingMsg("");
+              window.dispatchEvent(new CustomEvent("studybuddy:deck-saved"));
+            })();
+            return null;
+          }
+          return pending;
+        });
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [loading]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -193,6 +241,7 @@ const FlashcardsGenerator = () => {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
+    <div className="space-y-6">
     <Card ref={cardRef} className="glass-card animate-fade-in border-primary/20">
       <CardContent className="p-6 space-y-5">
         <div className="flex items-center gap-2.5">
@@ -382,6 +431,36 @@ const FlashcardsGenerator = () => {
       <AuthModal open={authModalOpen} onOpenChange={setAuthModalOpen} />
       <GoProModal open={goProOpen} onOpenChange={setGoProOpen} />
     </Card>
+
+    {loading && (
+      <div className="flex flex-col items-center justify-center gap-4 py-10 animate-fade-in">
+        <div className="relative h-12 w-12">
+          <div className="absolute inset-0 rounded-full border-4 border-primary/10" />
+          <div className="absolute inset-0 rounded-full border-4 border-t-primary animate-spin" />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <Layers className="h-4 w-4 text-primary" />
+          </div>
+        </div>
+        <div className="text-center space-y-1">
+          <p className="text-sm font-semibold text-foreground transition-all duration-300">
+            {loadingMsg}
+          </p>
+          <p className="text-xs text-muted-foreground opacity-50">
+            Building your exam-ready deck…
+          </p>
+        </div>
+        <div className="flex gap-1.5">
+          {[0, 1, 2].map((i) => (
+            <div
+              key={i}
+              className="h-1.5 w-1.5 rounded-full bg-primary/40 animate-pulse"
+              style={{ animationDelay: `${i * 200}ms` }}
+            />
+          ))}
+        </div>
+      </div>
+    )}
+    </div>
   );
 };
 

@@ -40,8 +40,8 @@ const CitationBadgeList = ({
         <Lock className="h-3 w-3" />
         <span>
           {isLoggedIn
-            ? "Go Pro for unlimited sources"
-            : "Sign in for 3 free daily citations"}
+            ? "Upgrade to Pro to cite sources"
+            : "Sign in to access cited generations"}
         </span>
       </button>
     );
@@ -58,7 +58,7 @@ const CitationBadgeList = ({
       >
         <BookOpen className="h-3 w-3 shrink-0" />
         <span className="font-semibold text-foreground/85 shrink-0">
-          {c.label}
+          PubMed
         </span>
         <span className="opacity-50">·</span>
         <span className="truncate">{truncate(c.title)}</span>

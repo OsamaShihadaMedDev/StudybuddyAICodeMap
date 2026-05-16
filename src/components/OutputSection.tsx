@@ -252,14 +252,27 @@ const OutputSection = ({
         (citationState === "found" ||
           citationState === "loading" ||
           citationState === "locked") && (
-          <div className="animate-fade-in">
-            <CitationBadgeList
-              state={citationState}
-              citations={citations}
-              onLockedClick={onCitationLockedClick}
-              isLoggedIn={citationIsLoggedIn}
-            />
-          </div>
+          <Card className="glass-card animate-fade-in overflow-hidden hover-lift section-reference">
+            <div className="px-6 pt-5 pb-2 flex items-center gap-2.5">
+              <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-primary/10">
+                <FileText className="h-4 w-4 text-primary" />
+              </div>
+              <h3 className="text-base font-bold tracking-wide text-foreground uppercase">
+                Reference Note
+              </h3>
+            </div>
+            <CardContent className="px-6 pb-6 pt-2">
+              <p className="text-sm text-muted-foreground leading-relaxed mb-3">
+                Based on standard medical references and clinical guidelines.
+              </p>
+              <CitationBadgeList
+                state={citationState}
+                citations={citations}
+                onLockedClick={onCitationLockedClick}
+                isLoggedIn={citationIsLoggedIn}
+              />
+            </CardContent>
+          </Card>
         )}
 
       {showNudge && (

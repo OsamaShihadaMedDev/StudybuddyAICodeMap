@@ -7,20 +7,13 @@ const corsHeaders = {
   "Access-Control-Expose-Headers": "x-model-used, x-is-premium",
 };
 
-// ─── MODEL SWITCH ────────────────────────────────────────────────────────────
-// Change this one value to switch the entire app between model stacks.
-// Options: "gpt-oss-20b" | "gpt-oss-120b" | "gemini"
-type ActiveModel = "gpt-oss-20b" | "gpt-oss-120b" | "gemini";
-const ACTIVE_MODEL = "gpt-oss-20b" as ActiveModel;
-// ─────────────────────────────────────────────────────────────────────────────
-
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { notes, difficulty, focus, length, examMode, quizMode, cardsOnly, cardCount, focusCard, explainMode, userId, isAnonymous, isPro, preferredModel } = await req.json();
+    const { notes, difficulty, focus, length, examMode, cardsOnly, cardCount, focusCard, explainMode, userId, isAnonymous, isPro, preferredModel } = await req.json();
 
     if (!notes || typeof notes !== "string" || !notes.trim()) {
       return new Response(
@@ -41,23 +34,31 @@ serve(async (req) => {
     let systemPrompt: string;
 
     // ── GEMINI PROMPTS (unchanged) ─────────────────────────────────────────
-    const geminiExplainPrompt = `You are a senior medical educator giving a brief mid-study clarification.
+    const geminiExplainPrompt = `You are a senior medical educator giving a targeted mid-study clarification.
 
-The student is reviewing flashcards and hit a concept they don't fully understand. Give them a short, focused refresher — NOT a full study sheet.
+The student is reviewing a specific flashcard and needs a deeper explanation of that exact question and answer — NOT a general overview of the topic.
+
+If the input starts with "CARD QUESTION:" and "CARD ANSWER:", focus exclusively on explaining WHY that answer is correct: the underlying mechanism, the clinical reasoning, what makes it distinguishable from wrong answers, and what examiners test about it. Do not repeat the question or answer verbatim.
+
+If the input is just a topic name, give a brief high-yield refresher on that topic.
 
 OUTPUT FORMAT (follow exactly, no other sections):
 
 EXPLANATION
 
-A 3-5 sentence plain-language explanation of the concept. Lead with the core mechanism or idea. Avoid jargon unless necessary. No bullet points, no headers within the paragraph.
+3-5 sentences explaining the mechanism or reasoning behind this specific concept. Lead with the core idea. No jargon unless necessary.
 
-KEY INSIGHT
+WHY THIS ANSWER
 
-One single sentence — the one thing the student must remember to never miss this concept again.
+One sentence: the single most important reason this answer is correct over alternatives.
+
+EXAM TIP
+
+One sentence: what examiners specifically test or the classic trap on this concept.
 
 STRICT RULES:
-- Total output must be under 150 words.
-- No flashcards, no clinical approach, no memory hooks, no exam traps, no reference note.
+- Total output under 180 words.
+- No flashcards, no full study sheet, no memory hooks section, no reference note.
 - No markdown symbols (no #, *, -, **).
 - Use plain uppercase section headers exactly as shown above.
 - Start directly with EXPLANATION. No preamble.`;
@@ -98,54 +99,6 @@ A: Short answer in 1-2 sentences max.
 EMOJI RULE: After "FLASHCARDS" and before the first Q:, output exactly ONE emoji on its own line representing the topic visually (e.g., 🫀 for cardiac topics, 🩸 for hematology, 🧠 for neuro, 🫁 for pulmonary, 🦴 for ortho, 🩺 for general clinical, 💊 for pharmacology, 🧬 for genetics, 👁️ for ophthalmology, 🦷 for dental, 🤰 for OB/GYN, 👶 for pediatrics, 🧫 for micro, ⚗️ for biochem, 🩹 for trauma/surgery, 🛡️ for immunology). Use only one emoji. Do not surround it with text.
 
 Start directly with FLASHCARDS. No preamble or commentary.`;
-
-    const geminiQuizPrompt = `You are an expert medical educator generating USMLE-style active recall questions.
-
-Mode: ${mode}
-Difficulty Level: ${diff}
-
-INPUT HANDLING:
-The user input may be raw notes, a study request, or a direct topic name.
-Normalize the input into a clear medical topic, then generate questions.
-
-Generate exactly 5-7 questions. Mix of:
-- Clinical vignette questions (patient scenario → diagnosis or next step)
-- Concept recall questions (mechanism, association, or complication)
-
-STRICT FORMATTING (CRITICAL — violations break the parser):
-- No markdown symbols (no #, *, -, **, _).
-- Each question MUST start with a tag in brackets: [Diagnosis] / [Mechanism] / [Next Step] / [Complication] / [Association]
-- Every question MUST end with a question mark.
-- Every answer MUST be 1-2 sentences. NEVER more than 2 sentences.
-- NEVER write "Q:" or "A:" inside a question or answer body — those characters mark new card boundaries only.
-- Each card MUST be separated by exactly one blank line.
-- Do NOT number the cards.
-- Do NOT include explanations, headers, or commentary between cards.
-
-OUTPUT FORMAT (follow exactly):
-
-FLASHCARDS
-
-🩸
-
-Q: [Diagnosis] A clinical vignette question...
-A: Short, precise answer in 1-2 sentences max
-
-Q: [Next Step] Another question...
-A: Answer
-
-Q: [Mechanism] What is the underlying...
-A: Answer
-
-(Continue for 5-7 total questions)
-
-EMOJI RULE: After "FLASHCARDS" and before the first Q:, output exactly ONE emoji on its own line representing the topic visually (e.g., 🫀 for cardiac topics, 🩸 for hematology, 🧠 for neuro, 🫁 for pulmonary, 🦴 for ortho, 🩺 for general clinical, 💊 for pharmacology, 🧬 for genetics, 👁️ for ophthalmology, 🦷 for dental, 🤰 for OB/GYN, 👶 for pediatrics, 🧫 for micro, ⚗️ for biochem, 🩹 for trauma/surgery, 🛡️ for immunology). Use only one emoji. Do not surround it with text.
-
-GLOBAL CONSTRAINTS:
-- Generate only questions for active recall. Do not include explanations unless necessary.
-- Do NOT add any introduction, closing remarks, or meta-commentary.
-- Start directly with FLASHCARDS.
-- Keep Q/A concise.`;
 
     const geminiSheetPrompt = `You are an expert medical educator creating polished, exam-ready study material.
 
@@ -330,23 +283,24 @@ GLOBAL CONSTRAINTS:
 - Do NOT add sections beyond those specified above.`;
 
     // ── GPT-OSS PROMPTS (optimized for reasoning model behavior) ───────────
-    const gptOssExplainPrompt = `You are a senior medical educator. A student reviewing flashcards needs a quick clarification on one concept.
+    const gptOssExplainPrompt = `You are a senior medical educator. A student reviewing a specific flashcard needs a targeted explanation of that exact Q&A pair.
 
-Your task: write a brief, clear refresher. Think through the concept first, then output ONLY the formatted response below.
+If the input starts with "CARD QUESTION:" and "CARD ANSWER:", explain WHY that answer is correct: the mechanism, clinical reasoning, and what makes it distinguishable. Do not repeat the question or answer.
+
+If the input is just a topic, give a brief focused refresher.
+
+OUTPUT FORMAT:
 
 EXPLANATION
+3-5 sentences on the mechanism or reasoning. Lead with the core idea.
 
-Write 3-5 plain sentences. Start with the core mechanism. No jargon unless essential. No lists.
+WHY THIS ANSWER
+One sentence: the key reason this answer is correct over alternatives.
 
-KEY INSIGHT
+EXAM TIP
+One sentence: the classic examiner trap or high-yield test point.
 
-One sentence. The single most important thing to never forget about this concept.
-
-Rules:
-- Under 150 words total.
-- No markdown (no #, *, -, **).
-- Plain uppercase headers only.
-- Nothing before EXPLANATION. Nothing after KEY INSIGHT.`;
+RULES: Under 180 words total. No markdown. No flashcards or full sheets. Start with EXPLANATION directly.`;
 
     const gptOssCardsPrompt = (count: number) => `You are a medical educator. Generate exactly ${count} USMLE-style flashcards on the given topic.
 
@@ -381,35 +335,6 @@ HARD RULES:
 - No "Q:" or "A:" anywhere inside question or answer text.
 - No numbering. No headers between cards. No explanations.
 - Mix clinical vignettes and concept recall cards.`;
-
-    const gptOssQuizPrompt = `You are a medical educator. Generate 5-7 USMLE-style quiz questions on the given topic.
-
-Mode: ${mode} | Difficulty: ${diff}
-
-Think through the most testable concepts, then output ONLY the formatted questions. No preamble.
-
-OUTPUT FORMAT — copy exactly:
-
-FLASHCARDS
-
-[one emoji on its own line]
-
-Q: [Tag] Question?
-A: Answer in 1-2 sentences.
-
-Q: [Tag] Question?
-A: Answer.
-
-[blank line between every card — mandatory]
-
-TAGS: [Diagnosis] [Mechanism] [Next Step] [Complication] [Association]
-EMOJI: 🫀 cardiac, 🩸 hematology, 🧠 neuro, 🫁 pulmonary, 🦴 ortho, 🩺 general, 💊 pharmacology, 🧬 genetics, 👁️ ophthalmology, 🤰 OB/GYN, 👶 pediatrics, 🧫 micro, ⚗️ biochem, 🩹 trauma, 🛡️ immunology
-
-HARD RULES:
-- 5-7 cards total. Mix vignette and concept recall.
-- Q: and A: start their own lines. Blank line after each card.
-- No "Q:" or "A:" inside answer text. No numbering. No commentary.
-- Answers: 1-2 sentences max.`;
 
     const gptOssSheetPrompt = `You are a senior medical educator and USMLE question writer. Generate a high-yield, exam-ready study sheet that reads like it was written by an experienced clinician — rich, precise, and immediately useful.
 
@@ -570,21 +495,7 @@ ${referenceNote}
 ---
 Output ONLY the sections above in order. Start directly with SUMMARY. No introduction, no conclusion, no meta-commentary.`;
 
-    // ── PROMPT SELECTION ───────────────────────────────────────────────────
-    const isGemini = ACTIVE_MODEL === "gemini";
-
-    if (explainMode) {
-      systemPrompt = isGemini ? geminiExplainPrompt : gptOssExplainPrompt;
-    } else if (cardsOnly) {
-      const count = Math.min(Math.max(parseInt(cardCount) || 12, 5), 20);
-      systemPrompt = isGemini ? geminiCardsPrompt(count) : gptOssCardsPrompt(count);
-    } else if (quizMode) {
-      systemPrompt = isGemini ? geminiQuizPrompt : gptOssQuizPrompt;
-    } else {
-      systemPrompt = isGemini ? geminiSheetPrompt : gptOssSheetPrompt;
-    }
-
-    const userContent = focusCard && !quizMode && !cardsOnly
+    const userContent = focusCard && !cardsOnly
       ? `Focus specifically on this concept: ${focusCard}\n\nTopic: ${notes}`
       : notes;
 
@@ -608,7 +519,7 @@ Output ONLY the sections above in order. Start directly with SUMMARY. No introdu
     if (isPro) {
       const proModel = preferredModel === "gpt-oss" ? "gpt-oss" : "flash";
       if (proModel === "flash") {
-        model = (explainMode || cardsOnly || quizMode)
+        model = (explainMode || cardsOnly)
           ? "google/gemini-2.5-flash-lite"
           : "google/gemini-2.5-flash";
       } else {
@@ -633,7 +544,7 @@ Output ONLY the sections above in order. Start directly with SUMMARY. No introdu
       }
 
       if (currentPremiumUsed < premiumLimit) {
-        model = (explainMode || cardsOnly || quizMode)
+        model = (explainMode || cardsOnly)
           ? "google/gemini-2.5-flash-lite"
           : "google/gemini-2.5-flash";
         isPremiumGeneration = true;
@@ -652,6 +563,18 @@ Output ONLY the sections above in order. Start directly with SUMMARY. No introdu
         model = "openai/gpt-oss-20b";
         isPremiumGeneration = false;
       }
+    }
+
+    // ── PROMPT SELECTION ───────────────────────────────────────────────────
+    const isGemini = model.startsWith("google/gemini");
+
+    if (explainMode) {
+      systemPrompt = isGemini ? geminiExplainPrompt : gptOssExplainPrompt;
+    } else if (cardsOnly) {
+      const count = Math.min(Math.max(parseInt(cardCount) || 12, 5), 20);
+      systemPrompt = isGemini ? geminiCardsPrompt(count) : gptOssCardsPrompt(count);
+    } else {
+      systemPrompt = isGemini ? geminiSheetPrompt : gptOssSheetPrompt;
     }
 
     const providerRouting = model.startsWith("openai/gpt-oss")
@@ -674,7 +597,7 @@ Output ONLY the sections above in order. Start directly with SUMMARY. No introdu
           model,
           stream: true,
           temperature: 0.7,
-          max_tokens: 8192,
+          max_tokens: 6000,
           messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: userContent },
