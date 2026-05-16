@@ -475,6 +475,9 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
             <p className="text-xs text-muted-foreground opacity-50">
               Building your exam-ready sheet…
             </p>
+            <p className="text-[10px] text-muted-foreground/40 mt-1">
+              Takes a little longer during peak hours — hang tight
+            </p>
           </div>
 
           {/* Pulsing dots */}

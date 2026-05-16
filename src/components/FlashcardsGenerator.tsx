@@ -448,6 +448,9 @@ const FlashcardsGenerator = () => {
           <p className="text-xs text-muted-foreground opacity-50">
             Building your exam-ready deck…
           </p>
+          <p className="text-[10px] text-muted-foreground/40 mt-1">
+            Takes a little longer during peak hours — hang tight
+          </p>
         </div>
         <div className="flex gap-1.5">
           {[0, 1, 2].map((i) => (
