@@ -208,6 +208,10 @@ const DashboardSidebar = ({
         )}
         <GoProModal open={goProOpen} onOpenChange={setGoProOpen} />
 
+        <p className="text-[10px] text-muted-foreground/40 leading-snug text-center px-1 pb-1">
+          For educational use only · Not for clinical practice
+        </p>
+
         <div className="flex items-center justify-between gap-2 pt-2 border-t border-border/40">
           <ThemeToggle />
           {!isAnonymous && user && (

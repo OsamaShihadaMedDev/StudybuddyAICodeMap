@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, Layers } from "lucide-react";
+import { Loader2, Layers, ChevronDown, ChevronUp } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useFlashcardDeck } from "@/hooks/use-flashcard-deck";
 import { useUsageLimit, MAX_DAILY_CARDS } from "@/hooks/use-usage-limit";
@@ -39,6 +39,16 @@ const FlashcardsGenerator = () => {
   const [citationState, setCitationState] = useState<CitationState>("idle");
   const [citations, setCitations] = useState<CitationResult[]>([]);
   const [goProOpen, setGoProOpen] = useState(false);
+  const [hasGenerated, setHasGenerated] = useState(false);
+  const [flashDisclaimer, setFlashDisclaimer] = useState(false);
+
+  const toggleFlashDisclaimer = () => {
+    setFlashDisclaimer((prev) => {
+      const next = !prev;
+      sessionStorage.setItem("sb_flash_disclaimer_collapsed", next ? "1" : "0");
+      return next;
+    });
+  };
   const cardRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const { saveCards } = useFlashcardDeck();
@@ -59,6 +69,8 @@ const FlashcardsGenerator = () => {
   const remaining = Math.max(0, MAX_DAILY_CARDS - cardsCount);
 
   const handleGenerate = async (overrideTopic?: string, overrideCardCount?: number) => {
+    setFlashDisclaimer(false);
+    sessionStorage.removeItem("sb_flash_disclaimer_collapsed");
     const activeTopic = overrideTopic ?? topic;
     const activeCardCount = overrideCardCount ?? parseInt(cardCount, 10);
     if (!activeTopic.trim()) {
@@ -214,6 +226,7 @@ const FlashcardsGenerator = () => {
               setShowTextarea(false);
               setLoading(false);
               setLoadingMsg("");
+              setHasGenerated(true);
               window.dispatchEvent(new CustomEvent("studybuddy:deck-saved"));
             })();
             return null;
@@ -461,6 +474,44 @@ const FlashcardsGenerator = () => {
             />
           ))}
         </div>
+      </div>
+    )}
+
+    {!loading && hasGenerated && (
+      <div className="flex items-start justify-between gap-2 pt-1 animate-fade-in">
+        <div className="flex items-start gap-1.5 min-w-0">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-3.5 w-3.5 text-muted-foreground/50 mt-0.5 shrink-0"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
+          {!flashDisclaimer && (
+            <p className="text-[11px] text-muted-foreground/50 leading-snug">
+              AI-generated content · May contain errors · Not a substitute for clinical judgment
+            </p>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={toggleFlashDisclaimer}
+          className="shrink-0 text-muted-foreground/40 hover:text-muted-foreground/70 transition-colors"
+          aria-label={flashDisclaimer ? "Expand disclaimer" : "Collapse disclaimer"}
+        >
+          {flashDisclaimer ? (
+            <ChevronDown className="h-3.5 w-3.5" />
+          ) : (
+            <ChevronUp className="h-3.5 w-3.5" />
+          )}
+        </button>
       </div>
     )}
     </div>

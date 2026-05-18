@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { BookOpen, List, HelpCircle, FileText, Stethoscope, Settings2, AlertTriangle, Lightbulb, Layers, Zap } from "lucide-react";
+import { BookOpen, List, HelpCircle, FileText, Stethoscope, Settings2, AlertTriangle, Lightbulb, Layers, Zap, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import CopyButton from "@/components/CopyButton";
 import FlashcardsSection from "@/components/FlashcardsSection";
@@ -134,6 +134,17 @@ const OutputSection = ({
   const referenceNoteRef = useRef<HTMLDivElement>(null);
   const sections = parseSections(output);
   const [showNudge, setShowNudge] = useState(() => !localStorage.getItem("sb_first_sheet_seen"));
+  const [disclaimerCollapsed, setDisclaimerCollapsed] = useState(() =>
+    sessionStorage.getItem("sb_disclaimer_collapsed") === "1"
+  );
+
+  const toggleDisclaimer = () => {
+    setDisclaimerCollapsed((prev) => {
+      const next = !prev;
+      sessionStorage.setItem("sb_disclaimer_collapsed", next ? "1" : "0");
+      return next;
+    });
+  };
 
   const scrollToReference = () => {
     referenceNoteRef.current?.scrollIntoView({
@@ -150,6 +161,8 @@ const OutputSection = ({
 
   useEffect(() => {
     if (ref.current && sections.length > 0) {
+      setDisclaimerCollapsed(false);
+      sessionStorage.removeItem("sb_disclaimer_collapsed");
       ref.current.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   }, [sections.length > 0]);
@@ -314,6 +327,43 @@ const OutputSection = ({
           </div>
         </div>
       )}
+
+      {/* AI Disclaimer Strip */}
+      <div className="flex items-start justify-between gap-2 pt-1 animate-fade-in">
+        <div className="flex items-start gap-1.5 min-w-0">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-3.5 w-3.5 text-muted-foreground/50 mt-0.5 shrink-0"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
+          {!disclaimerCollapsed && (
+            <p className="text-[11px] text-muted-foreground/50 leading-snug">
+              AI-generated content · May contain errors · Not a substitute for clinical judgment
+            </p>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={toggleDisclaimer}
+          className="shrink-0 text-muted-foreground/40 hover:text-muted-foreground/70 transition-colors"
+          aria-label={disclaimerCollapsed ? "Expand disclaimer" : "Collapse disclaimer"}
+        >
+          {disclaimerCollapsed ? (
+            <ChevronDown className="h-3.5 w-3.5" />
+          ) : (
+            <ChevronUp className="h-3.5 w-3.5" />
+          )}
+        </button>
+      </div>
     </div>
   );
 };
