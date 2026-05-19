@@ -597,7 +597,7 @@ Output ONLY the sections above in order. Start directly with SUMMARY. No introdu
           model,
           stream: true,
           temperature: 0.7,
-          max_tokens: 6000,
+          max_tokens: 8192,
           messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: userContent },

@@ -271,5 +271,17 @@ export function useAuth() {
     return { error: error?.message ?? null };
   };
 
-  return { user, session, loading, isAnonymous, signUp, signIn, signOut };
+  const resetPasswordForEmail = async (email: string): Promise<{ error: string | null }> => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: "https://www.studyybuddyai.com/reset-password",
+    });
+    return { error: error?.message ?? null };
+  };
+
+  const updatePassword = async (newPassword: string): Promise<{ error: string | null }> => {
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    return { error: error?.message ?? null };
+  };
+
+  return { user, session, loading, isAnonymous, signUp, signIn, signOut, resetPasswordForEmail, updatePassword };
 }

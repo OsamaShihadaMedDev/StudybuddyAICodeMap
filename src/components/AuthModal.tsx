@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -20,7 +20,7 @@ interface AuthModalProps {
 }
 
 const AuthModal = ({ open, onOpenChange }: AuthModalProps) => {
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, resetPasswordForEmail } = useAuth();
   const { toast } = useToast();
 
   const [tab, setTab] = useState<"signin" | "signup">("signin");
@@ -34,6 +34,22 @@ const AuthModal = ({ open, onOpenChange }: AuthModalProps) => {
   const [signUpPassword, setSignUpPassword] = useState("");
   const [signUpError, setSignUpError] = useState<string | null>(null);
   const [signUpLoading, setSignUpLoading] = useState(false);
+
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotError, setForgotError] = useState<string | null>(null);
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotSent, setForgotSent] = useState(false);
+
+  useEffect(() => {
+    if (!open) {
+      setShowForgotPassword(false);
+      setForgotEmail("");
+      setForgotError(null);
+      setForgotLoading(false);
+      setForgotSent(false);
+    }
+  }, [open]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,6 +65,19 @@ const AuthModal = ({ open, onOpenChange }: AuthModalProps) => {
     setSignInEmail("");
     setSignInPassword("");
     onOpenChange(false);
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setForgotError(null);
+    setForgotLoading(true);
+    const { error } = await resetPasswordForEmail(forgotEmail);
+    setForgotLoading(false);
+    if (error) {
+      setForgotError(error);
+      return;
+    }
+    setForgotSent(true);
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
@@ -83,43 +112,110 @@ const AuthModal = ({ open, onOpenChange }: AuthModalProps) => {
           </TabsList>
 
           <TabsContent value="signin">
-            <form onSubmit={handleSignIn} className="space-y-4 pt-2">
-              <div className="space-y-2">
-                <Label htmlFor="signin-email">Email</Label>
-                <Input
-                  id="signin-email"
-                  type="email"
-                  autoComplete="email"
-                  value={signInEmail}
-                  onChange={(e) => setSignInEmail(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="signin-password">Password</Label>
-                <Input
-                  id="signin-password"
-                  type="password"
-                  autoComplete="current-password"
-                  value={signInPassword}
-                  onChange={(e) => setSignInPassword(e.target.value)}
-                  required
-                />
-              </div>
-              {signInError && (
-                <p className="text-sm text-destructive">{signInError}</p>
-              )}
-              <Button type="submit" className="w-full" disabled={signInLoading}>
-                {signInLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Signing in…
-                  </>
-                ) : (
-                  "Sign In"
+            {!showForgotPassword ? (
+              <form onSubmit={handleSignIn} className="space-y-4 pt-2">
+                <div className="space-y-2">
+                  <Label htmlFor="signin-email">Email</Label>
+                  <Input
+                    id="signin-email"
+                    type="email"
+                    autoComplete="email"
+                    value={signInEmail}
+                    onChange={(e) => setSignInEmail(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signin-password">Password</Label>
+                  <Input
+                    id="signin-password"
+                    type="password"
+                    autoComplete="current-password"
+                    value={signInPassword}
+                    onChange={(e) => setSignInPassword(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="flex justify-end -mt-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-auto p-0 text-xs text-muted-foreground hover:text-foreground hover:bg-transparent"
+                    onClick={() => setShowForgotPassword(true)}
+                  >
+                    Forgot password?
+                  </Button>
+                </div>
+                {signInError && (
+                  <p className="text-sm text-destructive">{signInError}</p>
                 )}
-              </Button>
-            </form>
+                <Button type="submit" className="w-full" disabled={signInLoading}>
+                  {signInLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Signing in…
+                    </>
+                  ) : (
+                    "Sign In"
+                  )}
+                </Button>
+              </form>
+            ) : (
+              <div className="space-y-4 pt-2">
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={() => {
+                      setShowForgotPassword(false);
+                      setForgotEmail("");
+                      setForgotError(null);
+                      setForgotSent(false);
+                    }}
+                    aria-label="Back to sign in"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                  </Button>
+                  <h3 className="text-base font-semibold">Reset your password</h3>
+                </div>
+
+                {forgotSent ? (
+                  <p className="text-sm text-muted-foreground">
+                    Check your email for a reset link.
+                  </p>
+                ) : (
+                  <form onSubmit={handleForgotPassword} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="forgot-email">Email</Label>
+                      <Input
+                        id="forgot-email"
+                        type="email"
+                        autoComplete="email"
+                        value={forgotEmail}
+                        onChange={(e) => setForgotEmail(e.target.value)}
+                        required
+                      />
+                    </div>
+                    {forgotError && (
+                      <p className="text-sm text-destructive">{forgotError}</p>
+                    )}
+                    <Button type="submit" className="w-full" disabled={forgotLoading}>
+                      {forgotLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Sending…
+                        </>
+                      ) : (
+                        "Send reset link"
+                      )}
+                    </Button>
+                  </form>
+                )}
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="signup">
