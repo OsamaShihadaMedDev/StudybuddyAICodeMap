@@ -3,6 +3,8 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Library as LibraryIcon,
+  FileText,
+  Layers,
   Settings,
   LogOut,
   LogIn,
@@ -73,6 +75,8 @@ const DashboardSidebar = ({
 
   const navItems = [
     { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { to: "/sheets", label: "Study Sheet", icon: FileText },
+    { to: "/flashcards", label: "Flashcards", icon: Layers },
     { to: "/library", label: "Library", icon: LibraryIcon },
   ];
 

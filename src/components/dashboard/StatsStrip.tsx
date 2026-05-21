@@ -1,7 +1,9 @@
 import { ReactNode } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Flame, TrendingUp, CalendarDays } from "lucide-react";
+import { Flame, FileText, Layers } from "lucide-react";
 import { useStudyStats } from "@/hooks/use-study-stats";
+import { useSheetsStats } from "@/hooks/use-sheets-stats";
+import { useFlashcardDeck } from "@/hooks/use-flashcard-deck";
 
 interface StatChipProps {
   icon: ReactNode;
@@ -29,33 +31,38 @@ const StatChip = ({ icon, value, label, accent }: StatChipProps) => (
 );
 
 const StatsStrip = () => {
-  const { streak, retentionRate, cardsThisWeek, isAnonymous } = useStudyStats();
+  const { streak, isAnonymous } = useStudyStats();
+  const { sheetsThisWeek } = useSheetsStats();
+  const { stats } = useFlashcardDeck();
 
-  const streakValue = streak === null ? "—" : String(streak);
-  const streakLabel =
-    streak === null ? "day streak" : `${streak === 1 ? "day" : "days"} streak`;
-  const retentionValue = retentionRate === null ? "—" : `${retentionRate}%`;
-  const cardsValue = cardsThisWeek === null ? "—" : String(cardsThisWeek);
+  const streakValue = isAnonymous || streak === null ? "—" : String(streak);
+  const streakLabel = !isAnonymous && streak === 1 ? "day streak" : "days streak";
+
+  const sheetsValue = isAnonymous || sheetsThisWeek === null ? "—" : String(sheetsThisWeek);
+  const sheetsLabel = "sheets this week";
+
+  const dueValue = isAnonymous ? "—" : String(stats.due);
+  const dueLabel = "cards due today";
 
   return (
     <Card className="glass-card animate-fade-in">
       <CardContent className="p-5 space-y-1.5">
         <div className="flex flex-row items-stretch gap-1 divide-x divide-border/40">
           <StatChip
+            icon={<FileText className="h-3.5 w-3.5" />}
+            value={sheetsValue}
+            label={sheetsLabel}
+          />
+          <StatChip
+            icon={<Layers className="h-3.5 w-3.5" />}
+            value={dueValue}
+            label={dueLabel}
+          />
+          <StatChip
             icon={<Flame className="h-3.5 w-3.5" />}
             value={streakValue}
             label={streakLabel}
             accent
-          />
-          <StatChip
-            icon={<TrendingUp className="h-3.5 w-3.5" />}
-            value={retentionValue}
-            label="retention"
-          />
-          <StatChip
-            icon={<CalendarDays className="h-3.5 w-3.5" />}
-            value={cardsValue}
-            label="this week"
           />
         </div>
         {isAnonymous && (

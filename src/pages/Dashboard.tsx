@@ -1,187 +1,177 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
-import { ArrowRight, Play, Repeat } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { FileText, Layers, FlaskConical, Stethoscope } from "lucide-react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import StatsStrip from "@/components/dashboard/StatsStrip";
-import WelcomeCard from "@/components/dashboard/WelcomeCard";
-import FirstDeckBanner from "@/components/dashboard/FirstDeckBanner";
 import GoProNudgeBanner from "@/components/dashboard/GoProNudgeBanner";
 import WelcomeModal from "@/components/WelcomeModal";
-import DeckList from "@/components/DeckList";
-import FlashcardsGenerator from "@/components/FlashcardsGenerator";
-import SheetGenerator from "@/components/SheetGenerator";
-import StudyMode from "@/components/StudyMode";
-import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { useFlashcardDeck } from "@/hooks/use-flashcard-deck";
-import { useToast } from "@/hooks/use-toast";
+import { useSheetsStats } from "@/hooks/use-sheets-stats";
 
-const RECENT_DECK_LIMIT = 5;
-
-type StudyFilter = { topic?: string; mode: "due" | "all-cards" | "deck" };
-
-interface DueCardsReminderStripProps {
-  dueCount: number;
-  onStartReview: () => void;
+interface ActiveToolCardProps {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  stat: React.ReactNode;
+  ctaLabel: string;
+  onClick: () => void;
 }
 
-const DueCardsReminderStrip = ({ dueCount, onStartReview }: DueCardsReminderStripProps) => (
-  <div className="flex items-center justify-between rounded-xl border border-primary/20 bg-primary/5 px-4 py-2.5 animate-fade-in">
-    <div className="flex items-center gap-2">
-      <Repeat className="h-3.5 w-3.5 text-primary" />
-      <span className="text-sm font-medium text-foreground">
-        <span className="font-bold text-primary">{dueCount}</span>{" "}
-        {dueCount === 1 ? "card" : "cards"} due for review today
+interface ComingSoonCardProps {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+}
+
+const ActiveToolCard = ({
+  icon,
+  title,
+  description,
+  stat,
+  ctaLabel,
+  onClick,
+}: ActiveToolCardProps) => (
+  <div
+    onClick={onClick}
+    className="group relative flex flex-col justify-between rounded-2xl border border-border/60 bg-card p-6 cursor-pointer transition-all duration-200 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-0.5 animate-fade-in"
+  >
+    <div className="space-y-4">
+      <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 transition-colors group-hover:bg-primary/15">
+        <span className="text-primary">{icon}</span>
+      </div>
+      <div className="space-y-1">
+        <h3 className="text-base font-extrabold tracking-tight text-foreground">
+          {title}
+        </h3>
+        <p className="text-sm text-muted-foreground leading-relaxed">
+          {description}
+        </p>
+      </div>
+    </div>
+
+    <div className="mt-6 flex items-end justify-between gap-3">
+      <div className="text-sm text-muted-foreground">{stat}</div>
+      <span className="inline-flex items-center rounded-xl bg-primary/10 px-4 py-2 text-xs font-bold text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+        {ctaLabel} →
       </span>
     </div>
-    <Button
-      onClick={onStartReview}
-      size="sm"
-      className="btn-gradient h-7 rounded-lg px-3 text-xs font-semibold"
-    >
-      <Play className="h-3 w-3 mr-1" />
-      Review
-    </Button>
+  </div>
+);
+
+const ComingSoonCard = ({ icon, title, description }: ComingSoonCardProps) => (
+  <div className="group relative flex flex-col justify-between rounded-2xl border border-border/40 bg-card/50 p-6 opacity-80 cursor-default transition-all duration-300 hover:opacity-70 overflow-hidden">
+    <div className="pointer-events-none absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out bg-gradient-to-r from-transparent via-white/5 to-transparent" />
+
+    <div className="space-y-4">
+      <div className="flex items-start justify-between">
+        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-muted/50">
+          <span className="text-muted-foreground">{icon}</span>
+        </div>
+        <span className="inline-flex items-center rounded-full border border-border/70 bg-muted/50 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/90">
+          Coming Soon
+        </span>
+      </div>
+      <div className="space-y-1">
+        <h3 className="text-base font-extrabold tracking-tight text-foreground/75">
+          {title}
+        </h3>
+        <p className="text-sm text-muted-foreground/85 leading-relaxed">
+          {description}
+        </p>
+      </div>
+    </div>
+
+    <div className="mt-6 h-8" />
   </div>
 );
 
 const Dashboard = () => {
-  const { toast } = useToast();
+  const navigate = useNavigate();
   const { isAnonymous } = useAuth();
-  const { allCards, dueCards, reviewCard, deleteCard, stats } = useFlashcardDeck();
-  const [studyOpen, setStudyOpen] = useState(false);
-  const [studyFilter, setStudyFilter] = useState<StudyFilter>({ mode: "due" });
+  const { stats } = useFlashcardDeck();
+  const { sheetsThisWeek, isAnonymous: sheetsAnon } = useSheetsStats();
 
-  const generatorRef = useRef<HTMLDivElement>(null);
-  const deckListRef = useRef<HTMLDivElement>(null);
+  const sheetStat = sheetsAnon ? (
+    <span className="text-[11px] text-muted-foreground/70 italic">
+      Sign in to track your stats
+    </span>
+  ) : sheetsThisWeek === null ? (
+    <span className="text-[11px] text-muted-foreground/50">Loading…</span>
+  ) : (
+    <span>
+      <span className="text-lg font-extrabold text-foreground">
+        {sheetsThisWeek}
+      </span>
+      <span className="text-xs text-muted-foreground ml-1.5">
+        sheet{sheetsThisWeek !== 1 ? "s" : ""} this week
+      </span>
+    </span>
+  );
 
-  const handleGoToFlashcards = () => {
-    generatorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
-
-  useEffect(() => {
-    const handler = () => {
-      setTimeout(() => {
-        deckListRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 150);
-    };
-    window.addEventListener("studybuddy:deck-saved", handler);
-    return () => window.removeEventListener("studybuddy:deck-saved", handler);
-  }, []);
-
-  const { totalDecks, recentDeckCards } = useMemo(() => {
-    const latestByTopic = new Map<string, number>();
-    for (const c of allCards) {
-      const topic = c.topic || "Untitled";
-      const cur = latestByTopic.get(topic) ?? 0;
-      if (c.createdAt > cur) latestByTopic.set(topic, c.createdAt);
-    }
-    const recentTopics = new Set(
-      Array.from(latestByTopic.entries())
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, RECENT_DECK_LIMIT)
-        .map(([topic]) => topic)
-    );
-    const recent = allCards.filter((c) =>
-      recentTopics.has(c.topic || "Untitled")
-    );
-    return { totalDecks: latestByTopic.size, recentDeckCards: recent };
-  }, [allCards]);
-
-  const handleStartDue = () => {
-    setStudyFilter({ mode: "due" });
-    setStudyOpen(true);
-  };
-  const handleReviewAny = () => {
-    setStudyFilter({ mode: "all-cards" });
-    setStudyOpen(true);
-  };
-  const handleStudyDeck = (topic: string) => {
-    setStudyFilter({ mode: "deck", topic });
-    setStudyOpen(true);
-  };
-  const handleDeleteDeck = (topic: string) => {
-    const toDelete = allCards.filter((c) => c.topic === topic);
-    toDelete.forEach((c) => deleteCard(c.id));
-    toast({ title: `Deleted ${toDelete.length} cards from "${topic}"` });
-  };
-
-  const studySessionCards = useMemo(() => {
-    if (studyFilter.mode === "due") return dueCards;
-    if (studyFilter.mode === "all-cards") return allCards;
-    if (studyFilter.mode === "deck" && studyFilter.topic) {
-      return allCards.filter((c) => c.topic === studyFilter.topic);
-    }
-    return dueCards;
-  }, [studyFilter, dueCards, allCards]);
+  const flashcardStat = isAnonymous ? (
+    <span className="text-[11px] text-muted-foreground/70 italic">
+      Sign in to track your stats
+    </span>
+  ) : (
+    <span>
+      <span className="text-lg font-extrabold text-foreground">
+        {stats.due}
+      </span>
+      <span className="text-xs text-muted-foreground ml-1.5">
+        card{stats.due !== 1 ? "s" : ""} due today
+      </span>
+    </span>
+  );
 
   return (
     <DashboardLayout>
       <WelcomeModal />
-      {studyOpen && (
-        <StudyMode
-          dueCards={studySessionCards}
-          onReview={reviewCard}
-          onClose={() => setStudyOpen(false)}
-        />
-      )}
 
       <div className="space-y-8">
         <GoProNudgeBanner isRealUser={!isAnonymous} />
 
-        {stats.due > 0 && totalDecks > 0 && (
-          <DueCardsReminderStrip
-            dueCount={stats.due}
-            onStartReview={handleStartDue}
-          />
-        )}
-
         <StatsStrip />
 
-        {totalDecks === 0 && <WelcomeCard />}
-
-        <div className="space-y-2">
+        <div className="space-y-1">
           <p className="text-[11px] font-bold tracking-[0.15em] text-primary uppercase pl-1">
-            Study Sheet
+            Tools
           </p>
-          <div className="glass-card rounded-2xl p-4">
-            <SheetGenerator />
-          </div>
+          <p className="text-xs text-muted-foreground pl-1">
+            Everything you need to study smarter
+          </p>
         </div>
 
-        <div ref={generatorRef} className="space-y-2">
-          <p className="text-[11px] font-bold tracking-[0.15em] text-primary uppercase pl-1">
-            Flashcards
-          </p>
-          <FlashcardsGenerator />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <ActiveToolCard
+            icon={<FileText className="h-5 w-5" />}
+            title="Study Sheet"
+            description="Generate a high-yield, exam-ready study sheet on any medical topic in seconds."
+            stat={sheetStat}
+            ctaLabel="Open"
+            onClick={() => navigate("/sheets")}
+          />
+
+          <ActiveToolCard
+            icon={<Layers className="h-5 w-5" />}
+            title="Flashcards"
+            description="Build a spaced-repetition deck on any topic and drill until it sticks."
+            stat={flashcardStat}
+            ctaLabel="Open"
+            onClick={() => navigate("/flashcards")}
+          />
+
+          <ComingSoonCard
+            icon={<FlaskConical className="h-5 w-5" />}
+            title="QBank"
+            description="USMLE-style questions for Step 1 and Step 2 — built on NBME blueprints and clinical guidelines. Generated using Anthropic's latest AI models, then human-verified before publishing."
+          />
+
+          <ComingSoonCard
+            icon={<Stethoscope className="h-5 w-5" />}
+            title="Clinical Cases"
+            description="Train for OSCE exams with AI-generated clinical cases — history, examination, investigations, and management in one flow."
+          />
         </div>
-
-        {totalDecks > 0 && (
-          <div ref={deckListRef} className="space-y-3">
-            <h3 className="text-sm font-bold tracking-tight text-foreground pl-1">
-              My decks
-            </h3>
-            <DeckList
-              cards={recentDeckCards}
-              onStudyDeck={handleStudyDeck}
-              onDeleteDeck={handleDeleteDeck}
-              onReviewAll={handleReviewAny}
-            />
-            {totalDecks > RECENT_DECK_LIMIT && (
-              <div className="pl-1">
-                <Link
-                  to="/library"
-                  className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-primary transition-colors"
-                >
-                  View all in Library
-                  <ArrowRight className="h-3 w-3" />
-                </Link>
-              </div>
-            )}
-          </div>
-        )}
-
-        <FirstDeckBanner onGoToFlashcards={handleGoToFlashcards} />
       </div>
     </DashboardLayout>
   );
