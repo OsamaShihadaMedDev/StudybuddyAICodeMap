@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Outlet, Route, Routes } from "react-router-dom";
+import { QBankProvider } from "./contexts/QBankContext";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -10,6 +11,9 @@ import NotFound from "./pages/NotFound.tsx";
 import ResetPassword from "./pages/ResetPassword.tsx";
 import Sheets from "./pages/Sheets.tsx";
 import Flashcards from "./pages/Flashcards.tsx";
+import QBank from "./pages/QBank.tsx";
+import QBankSession from "./pages/QBankSession.tsx";
+import QBankSummary from "./pages/QBankSummary.tsx";
 
 const queryClient = new QueryClient();
 
@@ -24,6 +28,11 @@ const App = () => (
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/sheets" element={<Sheets />} />
           <Route path="/flashcards" element={<Flashcards />} />
+          <Route element={<QBankProvider><Outlet /></QBankProvider>}>
+            <Route path="/qbank" element={<QBank />} />
+            <Route path="/qbank/session" element={<QBankSession />} />
+            <Route path="/qbank/summary" element={<QBankSummary />} />
+          </Route>
           <Route path="/library" element={<Library />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

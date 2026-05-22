@@ -5,6 +5,7 @@ import {
   Library as LibraryIcon,
   FileText,
   Layers,
+  FlaskConical,
   Settings,
   LogOut,
   LogIn,
@@ -77,6 +78,7 @@ const DashboardSidebar = ({
     { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { to: "/sheets", label: "Study Sheet", icon: FileText },
     { to: "/flashcards", label: "Flashcards", icon: Layers },
+    { to: "/qbank", label: "QBank", icon: FlaskConical },
     { to: "/library", label: "Library", icon: LibraryIcon },
   ];
 

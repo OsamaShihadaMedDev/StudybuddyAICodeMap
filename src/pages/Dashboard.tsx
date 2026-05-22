@@ -160,10 +160,18 @@ const Dashboard = () => {
             onClick={() => navigate("/flashcards")}
           />
 
-          <ComingSoonCard
+          <ActiveToolCard
             icon={<FlaskConical className="h-5 w-5" />}
             title="QBank"
-            description="USMLE-style questions for Step 1 and Step 2 — built on NBME blueprints and clinical guidelines. Generated using Anthropic's latest AI models, then human-verified before publishing."
+            description="USMLE-style questions for Step 1 and Step 2 — built on NBME blueprints and clinical guidelines. Human-verified."
+            stat={
+              <span>
+                <span className="text-lg font-extrabold text-foreground">10</span>
+                <span className="text-xs text-muted-foreground ml-1.5">questions ready</span>
+              </span>
+            }
+            ctaLabel="Open"
+            onClick={() => navigate("/qbank")}
           />
 
           <ComingSoonCard

@@ -9,9 +9,10 @@ import AccountDashboard from "@/components/AccountDashboard";
 
 interface DashboardLayoutProps {
   children: ReactNode;
+  wide?: boolean;
 }
 
-const DashboardLayout = ({ children }: DashboardLayoutProps) => {
+const DashboardLayout = ({ children, wide = false }: DashboardLayoutProps) => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [accountModalOpen, setAccountModalOpen] = useState(false);
@@ -67,7 +68,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
           </header>
 
           <div className="flex-1 min-w-0 px-4 py-6 md:px-8 md:py-10">
-            <div className="mx-auto max-w-2xl">{children}</div>
+            <div className={wide ? "w-full" : "mx-auto max-w-2xl"}>{children}</div>
           </div>
         </main>
       </div>

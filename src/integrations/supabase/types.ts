@@ -273,6 +273,185 @@ export type Database = {
         }
         Relationships: []
       }
+      questions: {
+        Row: {
+          id: string
+          subject: string
+          domain: string
+          topic: string
+          difficulty: 'Easy' | 'Medium' | 'Hard'
+          reasoning_order: '1st' | '2nd' | '3rd'
+          competency: string
+          question_text: string
+          option_a: string
+          option_b: string
+          option_c: string
+          option_d: string
+          option_e: string
+          correct_option: 'a' | 'b' | 'c' | 'd' | 'e'
+          explanation: string
+          teaching_point: string
+          is_active: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          subject: string
+          domain: string
+          topic: string
+          difficulty: 'Easy' | 'Medium' | 'Hard'
+          reasoning_order: '1st' | '2nd' | '3rd'
+          competency: string
+          question_text: string
+          option_a: string
+          option_b: string
+          option_c: string
+          option_d: string
+          option_e: string
+          correct_option: 'a' | 'b' | 'c' | 'd' | 'e'
+          explanation: string
+          teaching_point: string
+          is_active?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          subject?: string
+          domain?: string
+          topic?: string
+          difficulty?: 'Easy' | 'Medium' | 'Hard'
+          reasoning_order?: '1st' | '2nd' | '3rd'
+          competency?: string
+          question_text?: string
+          option_a?: string
+          option_b?: string
+          option_c?: string
+          option_d?: string
+          option_e?: string
+          correct_option?: 'a' | 'b' | 'c' | 'd' | 'e'
+          explanation?: string
+          teaching_point?: string
+          is_active?: boolean
+          created_at?: string
+        }
+        Relationships: []
+      }
+      media: {
+        Row: {
+          id: string
+          file_url: string
+          media_type: 'ecg' | 'histology_slide' | 'chest_xray' | 'anatomical_diagram' | 'action_potential_diagram' | 'pressure_volume_diagram'
+          tags: string[]
+          description: string
+          source_url: string
+          license: 'CC0' | 'CC-BY' | 'public_domain' | 'ODC-BY'
+          attribution: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          file_url: string
+          media_type: 'ecg' | 'histology_slide' | 'chest_xray' | 'anatomical_diagram' | 'action_potential_diagram' | 'pressure_volume_diagram'
+          tags?: string[]
+          description: string
+          source_url: string
+          license: 'CC0' | 'CC-BY' | 'public_domain' | 'ODC-BY'
+          attribution?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          file_url?: string
+          media_type?: 'ecg' | 'histology_slide' | 'chest_xray' | 'anatomical_diagram' | 'action_potential_diagram' | 'pressure_volume_diagram'
+          tags?: string[]
+          description?: string
+          source_url?: string
+          license?: 'CC0' | 'CC-BY' | 'public_domain' | 'ODC-BY'
+          attribution?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      question_media: {
+        Row: {
+          id: string
+          question_id: string
+          media_id: string
+          display_order: number
+          caption: string | null
+        }
+        Insert: {
+          id?: string
+          question_id: string
+          media_id: string
+          display_order?: number
+          caption?: string | null
+        }
+        Update: {
+          id?: string
+          question_id?: string
+          media_id?: string
+          display_order?: number
+          caption?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "question_media_question_id_fkey"
+            columns: ["question_id"]
+            referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "question_media_media_id_fkey"
+            columns: ["media_id"]
+            referencedRelation: "media"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      user_attempts: {
+        Row: {
+          id: string
+          user_id: string
+          question_id: string
+          selected_option: 'a' | 'b' | 'c' | 'd' | 'e'
+          is_correct: boolean
+          time_taken_ms: number | null
+          attempted_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          question_id: string
+          selected_option: 'a' | 'b' | 'c' | 'd' | 'e'
+          is_correct: boolean
+          time_taken_ms?: number | null
+          attempted_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          question_id?: string
+          selected_option?: 'a' | 'b' | 'c' | 'd' | 'e'
+          is_correct?: boolean
+          time_taken_ms?: number | null
+          attempted_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_attempts_user_id_fkey"
+            columns: ["user_id"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_attempts_question_id_fkey"
+            columns: ["question_id"]
+            referencedRelation: "questions"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
     }
     Views: {
       [_ in never]: never
