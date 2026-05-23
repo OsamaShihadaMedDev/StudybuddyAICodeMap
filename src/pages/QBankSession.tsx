@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   FlaskConical,
   ArrowRight,
@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { useQBankContext } from "@/contexts/QBankContext";
-import type { OptionKey } from "@/hooks/use-qbank";
+import type { OptionKey, QuestionMedia } from "@/hooks/use-qbank";
 
 type AnswerState =
   | { status: "unanswered" }
@@ -23,6 +23,72 @@ type AnswerState =
     };
 
 type Difficulty = "Easy" | "Medium" | "Hard";
+
+interface QuestionCounterProps {
+  total: number;
+  currentIndex: number;
+  answers: { question_id: string; is_correct: boolean }[];
+  questions: { id: string }[];
+  reviewIndex: number | null;
+  onReview: (index: number) => void;
+}
+
+const QuestionCounter = ({
+  total,
+  currentIndex,
+  answers,
+  questions,
+  reviewIndex,
+  onReview,
+}: QuestionCounterProps) => {
+  return (
+    <div className="hidden lg:flex flex-col items-center gap-1.5 w-8 shrink-0 pt-1">
+      <div className="flex flex-col gap-1.5 overflow-y-auto max-h-[calc(100vh-160px)] scrollbar-none">
+        {Array.from({ length: total }, (_, i) => {
+          const q = questions[i];
+          const answer = q ? answers.find((a) => a.question_id === q.id) : undefined;
+          const isAnswered = !!answer;
+          const isCurrent = i === currentIndex && reviewIndex === null;
+          const isReviewing = i === reviewIndex;
+          const isCorrect = answer?.is_correct;
+
+          let bg = "bg-muted/30 text-muted-foreground/40";
+          let border = "border-border/20";
+          let cursor = "cursor-default";
+
+          if (isCurrent) {
+            bg = "bg-primary/20 text-primary";
+            border = "border-primary/50";
+          } else if (isReviewing) {
+            bg = "bg-primary/30 text-primary";
+            border = "border-primary";
+          } else if (isAnswered) {
+            if (isCorrect) {
+              bg = "bg-green-500/20 text-green-400";
+              border = "border-green-500/40";
+            } else {
+              bg = "bg-red-500/20 text-red-400";
+              border = "border-red-500/40";
+            }
+            cursor = "cursor-pointer hover:opacity-80 transition-opacity";
+          }
+
+          return (
+            <button
+              key={i}
+              disabled={!isAnswered && !isCurrent}
+              onClick={() => (isAnswered ? onReview(i) : undefined)}
+              className={`w-7 h-7 rounded-lg border text-[10px] font-bold flex items-center justify-center shrink-0 ${bg} ${border} ${cursor}`}
+              title={isAnswered ? `Q${i + 1} — click to review` : `Q${i + 1}`}
+            >
+              {i + 1}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
 
 const PULSE_CONFIG: Record<Difficulty, { bars: number; color: string; label: string }> = {
   Easy:   { bars: 1, color: "#22c55e", label: "Easy"   },
@@ -74,6 +140,7 @@ interface ExplanationContentProps {
   teachingPoint: string;
   difficulty: Difficulty;
   isCorrect: boolean;
+  media?: QuestionMedia[];
 }
 
 const ExplanationContent = ({
@@ -81,6 +148,7 @@ const ExplanationContent = ({
   teachingPoint,
   difficulty,
   isCorrect,
+  media,
 }: ExplanationContentProps) => (
   <div className="flex flex-col gap-4">
     <div className="flex items-center justify-between">
@@ -102,6 +170,10 @@ const ExplanationContent = ({
     </div>
 
     <div className="h-px bg-border/40" />
+
+    {media && media.length > 0 && (
+      <MediaBlock media={media} context="explanation" />
+    )}
 
     <div>
       <p className="text-[10px] font-bold tracking-[0.12em] text-primary uppercase mb-2">
@@ -171,14 +243,43 @@ const OptionTile = ({ letter, text, answerState, onSelect }: OptionTileProps) =>
   );
 };
 
-const ProgressBar = ({ current, total }: { current: number; total: number }) => {
-  const pct = total > 0 ? (current / total) * 100 : 0;
+interface MediaBlockProps {
+  media: QuestionMedia[];
+  context: 'stem' | 'explanation';
+}
+
+const MediaBlock = ({ media, context }: MediaBlockProps) => {
+  const items = media.filter(
+    (m) => m.display_context === context || m.display_context === 'both'
+  );
+
+  if (items.length === 0) return null;
+
   return (
-    <div className="w-full h-1 bg-muted/30 rounded-full overflow-hidden">
-      <div
-        className="h-full bg-primary transition-all duration-500 ease-out rounded-full"
-        style={{ width: `${pct}%` }}
-      />
+    <div className="space-y-3">
+      {items.map((m, i) => (
+        <div key={i} className="rounded-xl overflow-hidden border border-border/40 bg-muted/20">
+          <img
+            src={m.file_url}
+            alt={m.caption ?? m.media_type}
+            className="w-full h-auto block"
+          />
+          {(m.caption || (m.license === 'CC-BY' && m.attribution)) && (
+            <div className="px-3 py-2 space-y-0.5">
+              {m.caption && (
+                <p className="text-[11px] text-muted-foreground leading-relaxed">
+                  {m.caption}
+                </p>
+              )}
+              {m.license === 'CC-BY' && m.attribution && (
+                <p className="text-[10px] text-muted-foreground/50 leading-relaxed">
+                  {m.attribution}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      ))}
     </div>
   );
 };
@@ -187,21 +288,40 @@ const QBankSession = () => {
   const navigate = useNavigate();
   const {
     session,
-    currentQuestion,
     currentIndex,
     totalQuestions,
     isLastQuestion,
     submitAnswer,
     nextQuestion,
     endSession,
+    reviewIndex,
+    setReviewIndex,
+    displayQuestion,
+    displayAnswer,
+    isReviewing,
+    lastSummary,
   } = useQBankContext();
+
+  const [searchParams] = useSearchParams();
+  const sessionIdParam = searchParams.get("session");
+  const reviewParam = searchParams.get("review");
 
   const [answerState, setAnswerState] = useState<AnswerState>({ status: "unanswered" });
   const [drawerOpen, setDrawerOpen] = useState(false);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    if (!session) navigate("/qbank");
-  }, [session, navigate]);
+    if (reviewParam !== null) {
+      const idx = parseInt(reviewParam, 10);
+      if (!isNaN(idx)) setReviewIndex(idx);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!session && !sessionIdParam && !lastSummary) {
+      navigate("/qbank");
+    }
+  }, [session, sessionIdParam, lastSummary, navigate]);
 
   useEffect(() => {
     setAnswerState({ status: "unanswered" });
@@ -210,6 +330,7 @@ const QBankSession = () => {
 
   const handleSelect = useCallback(
     (key: OptionKey) => {
+      if (isReviewing) return;
       if (answerState.status === "answered") return;
       const result = submitAnswer(key);
       if (!result) return;
@@ -221,58 +342,85 @@ const QBankSession = () => {
       });
       setTimeout(() => setDrawerOpen(true), 300);
     },
-    [answerState, submitAnswer]
+    [isReviewing, answerState, submitAnswer]
   );
 
   const handleNext = useCallback(async () => {
     setDrawerOpen(false);
     if (isLastQuestion) {
       await endSession();
-      navigate("/qbank/summary");
     } else {
       nextQuestion();
     }
-  }, [isLastQuestion, endSession, nextQuestion, navigate]);
+  }, [isLastQuestion, endSession, nextQuestion]);
 
-  if (!currentQuestion) return null;
+  const sessionQuestions = session?.questions ?? lastSummary?.questions ?? [];
+  const sessionAnswers = session?.answers ?? lastSummary?.answers ?? [];
+  const effectiveTotalQuestions = session ? totalQuestions : lastSummary?.total ?? 0;
 
-  const isAnswered = answerState.status === "answered";
-  const questionNumber = currentIndex + 1;
+  if (!displayQuestion) return null;
+
+  const effectiveAnswerState: AnswerState =
+    isReviewing && displayAnswer && displayQuestion
+      ? {
+          status: "answered",
+          selected: displayAnswer.selected_option as OptionKey,
+          correct: displayQuestion.correct_option,
+          isCorrect: displayAnswer.is_correct,
+        }
+      : answerState;
+
+  const isAnsweredEffective = effectiveAnswerState.status === "answered";
 
   const options: { key: OptionKey; text: string }[] = [
-    { key: "a", text: currentQuestion.option_a },
-    { key: "b", text: currentQuestion.option_b },
-    { key: "c", text: currentQuestion.option_c },
-    { key: "d", text: currentQuestion.option_d },
-    { key: "e", text: currentQuestion.option_e },
+    { key: "a", text: displayQuestion!.option_a },
+    { key: "b", text: displayQuestion!.option_b },
+    { key: "c", text: displayQuestion!.option_c },
+    { key: "d", text: displayQuestion!.option_d },
+    { key: "e", text: displayQuestion!.option_e },
   ];
+
+  const displayedNumber = (isReviewing ? reviewIndex! : currentIndex) + 1;
 
   return (
     <DashboardLayout wide>
-      <div className="flex flex-col gap-6">
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <FlaskConical className="h-4 w-4 text-primary" />
-              <span className="text-xs font-semibold text-muted-foreground hidden md:inline">
-                Question {questionNumber} of {totalQuestions}
-              </span>
-              <span className="text-xs font-bold text-muted-foreground md:hidden">
-                {questionNumber} / {totalQuestions}
-              </span>
-            </div>
-          </div>
-          <ProgressBar current={currentIndex} total={totalQuestions} />
+      {isReviewing && (
+        <div className="flex items-center justify-between mb-4 px-3 py-2 rounded-xl bg-primary/5 border border-primary/20">
+          <span className="text-xs font-semibold text-primary">
+            Reviewing Q{reviewIndex! + 1} — read only
+          </span>
+          <button
+            onClick={() => setReviewIndex(null)}
+            className="text-xs font-semibold text-primary hover:text-primary/80 transition-colors"
+          >
+            ← Back to current question
+          </button>
         </div>
+      )}
 
-        <div className="flex gap-6 items-start">
+      <div className="flex gap-3 items-start">
+        {effectiveTotalQuestions > 0 && (
+          <QuestionCounter
+            total={effectiveTotalQuestions}
+            currentIndex={currentIndex}
+            answers={sessionAnswers}
+            questions={sessionQuestions}
+            reviewIndex={reviewIndex}
+            onReview={(i) => setReviewIndex(i)}
+          />
+        )}
+
+        <div className="flex-1 min-w-0 flex gap-6 items-start">
           <div className="flex-1 min-w-0 space-y-5">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[11px] font-semibold text-primary">
-                {currentQuestion.subject}
+                {displayQuestion!.subject}
               </span>
               <span className="inline-flex items-center rounded-full border border-border/40 bg-muted/30 px-3 py-1 text-[11px] font-medium text-muted-foreground">
-                {currentQuestion.domain}
+                {displayQuestion!.domain}
+              </span>
+              <span className="inline-flex items-center rounded-full border border-border/40 bg-muted/20 px-3 py-1 text-[11px] font-medium text-muted-foreground">
+                Q{displayedNumber} of {totalQuestions}
               </span>
             </div>
 
@@ -281,9 +429,13 @@ const QBankSession = () => {
                 Clinical vignette
               </p>
               <p className="text-sm leading-[1.9] text-foreground whitespace-pre-line">
-                {currentQuestion.question_text}
+                {displayQuestion!.question_text}
               </p>
             </div>
+
+            {displayQuestion!.media && displayQuestion!.media.length > 0 && (
+              <MediaBlock media={displayQuestion!.media} context="stem" />
+            )}
 
             <div className="flex items-center gap-3">
               <div className="h-px flex-1 bg-border/40" />
@@ -299,13 +451,13 @@ const QBankSession = () => {
                   key={key}
                   letter={key}
                   text={text}
-                  answerState={answerState}
+                  answerState={effectiveAnswerState}
                   onSelect={handleSelect}
                 />
               ))}
             </div>
 
-            {isAnswered && (
+            {isAnsweredEffective && !isReviewing && (
               <div className="flex justify-end pt-1 animate-fade-in">
                 <Button
                   onClick={handleNext}
@@ -323,16 +475,17 @@ const QBankSession = () => {
 
           <div
             className={`hidden lg:flex flex-col w-80 xl:w-96 shrink-0 transition-all duration-300 ${
-              isAnswered ? "opacity-100 translate-x-0" : "opacity-0 pointer-events-none translate-x-4"
+              isAnsweredEffective ? "opacity-100 translate-x-0" : "opacity-0 pointer-events-none translate-x-4"
             }`}
           >
-            {isAnswered && answerState.status === "answered" && (
+            {isAnsweredEffective && effectiveAnswerState.status === "answered" && (
               <div className="glass-card rounded-2xl p-5 border border-border/50 animate-fade-in sticky top-6">
                 <ExplanationContent
-                  explanation={currentQuestion.explanation}
-                  teachingPoint={currentQuestion.teaching_point}
-                  difficulty={currentQuestion.difficulty as Difficulty}
-                  isCorrect={answerState.isCorrect}
+                  explanation={displayQuestion!.explanation}
+                  teachingPoint={displayQuestion!.teaching_point}
+                  difficulty={displayQuestion!.difficulty as Difficulty}
+                  isCorrect={effectiveAnswerState.status === "answered" && effectiveAnswerState.isCorrect}
+                  media={displayQuestion!.media}
                 />
               </div>
             )}
@@ -340,7 +493,7 @@ const QBankSession = () => {
         </div>
       </div>
 
-      {isAnswered && answerState.status === "answered" && (
+      {isAnsweredEffective && effectiveAnswerState.status === "answered" && !isReviewing && (
         <div className="lg:hidden fixed inset-x-0 bottom-0 z-50">
           <div
             className={`fixed inset-0 bg-black/40 transition-opacity duration-300 ${
@@ -373,10 +526,11 @@ const QBankSession = () => {
 
             <div className="px-4 pb-6 max-h-[60vh] overflow-y-auto">
               <ExplanationContent
-                explanation={currentQuestion.explanation}
-                teachingPoint={currentQuestion.teaching_point}
-                difficulty={currentQuestion.difficulty as Difficulty}
-                isCorrect={answerState.isCorrect}
+                explanation={displayQuestion!.explanation}
+                teachingPoint={displayQuestion!.teaching_point}
+                difficulty={displayQuestion!.difficulty as Difficulty}
+                isCorrect={effectiveAnswerState.status === "answered" && effectiveAnswerState.isCorrect}
+                media={displayQuestion!.media}
               />
 
               <div className="pt-4">

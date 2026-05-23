@@ -6,6 +6,16 @@ import { useAuth } from "@/hooks/use-auth";
 export type Difficulty = "Easy" | "Medium" | "Hard";
 export type OptionKey = "a" | "b" | "c" | "d" | "e";
 
+export interface QuestionMedia {
+  file_url: string;
+  media_type: string;
+  caption: string | null;
+  attribution: string | null;
+  license: string;
+  display_context: 'stem' | 'explanation' | 'both';
+  display_order: number;
+}
+
 export interface Question {
   id: string;
   subject: string;
@@ -22,6 +32,7 @@ export interface Question {
   correct_option: OptionKey;
   explanation: string;
   teaching_point: string;
+  media?: QuestionMedia[];
 }
 
 export interface SessionAnswer {

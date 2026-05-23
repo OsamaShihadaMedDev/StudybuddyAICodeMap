@@ -379,6 +379,7 @@ export type Database = {
           media_id: string
           display_order: number
           caption: string | null
+          display_context: string
         }
         Insert: {
           id?: string
@@ -386,6 +387,7 @@ export type Database = {
           media_id: string
           display_order?: number
           caption?: string | null
+          display_context?: string
         }
         Update: {
           id?: string
@@ -393,6 +395,7 @@ export type Database = {
           media_id?: string
           display_order?: number
           caption?: string | null
+          display_context?: string
         }
         Relationships: [
           {
@@ -418,6 +421,7 @@ export type Database = {
           is_correct: boolean
           time_taken_ms: number | null
           attempted_at: string
+          session_id: string | null
         }
         Insert: {
           id?: string
@@ -427,6 +431,7 @@ export type Database = {
           is_correct: boolean
           time_taken_ms?: number | null
           attempted_at?: string
+          session_id?: string | null
         }
         Update: {
           id?: string
@@ -436,6 +441,7 @@ export type Database = {
           is_correct?: boolean
           time_taken_ms?: number | null
           attempted_at?: string
+          session_id?: string | null
         }
         Relationships: [
           {
@@ -448,6 +454,49 @@ export type Database = {
             foreignKeyName: "user_attempts_question_id_fkey"
             columns: ["question_id"]
             referencedRelation: "questions"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      qbank_sessions: {
+        Row: {
+          id: string
+          user_id: string
+          started_at: string
+          ended_at: string
+          score: number
+          total: number
+          total_time_ms: number
+          system: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          started_at: string
+          ended_at: string
+          score: number
+          total: number
+          total_time_ms: number
+          system?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          started_at?: string
+          ended_at?: string
+          score?: number
+          total?: number
+          total_time_ms?: number
+          system?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "qbank_sessions_user_id_fkey"
+            columns: ["user_id"]
+            referencedRelation: "users"
             referencedColumns: ["id"]
           }
         ]
