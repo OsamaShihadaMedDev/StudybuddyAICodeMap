@@ -3,9 +3,10 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { FlaskConical, CheckCircle, XCircle, Clock, RotateCcw, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
+import StudyBuddyLoader from "@/components/StudyBuddyLoader";
 import { useQBankContext } from "@/contexts/QBankContext";
 import { supabase } from "@/integrations/supabase/client";
-import type { Question, SessionAnswer } from "@/hooks/use-qbank";
+import type { Question, QuestionMedia, SessionAnswer } from "@/hooks/use-qbank";
 
 interface SummaryData {
   questions: Question[];
@@ -58,7 +59,7 @@ const QBankSummary = () => {
   const [searchParams] = useSearchParams();
   const sessionId = searchParams.get("session");
 
-  const { lastSummary, startSession, enterSummaryReview, setReviewIndex } = useQBankContext();
+  const { lastSummary, startSession, enterSummaryReview, setReviewIndex, loadSummary } = useQBankContext();
 
   const [summaryData, setSummaryData] = useState<SummaryData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -77,7 +78,19 @@ const QBankSummary = () => {
               questions (
                 id, subject, domain, topic, difficulty, competency,
                 question_text, option_a, option_b, option_c, option_d, option_e,
-                correct_option, explanation, teaching_point
+                correct_option, explanation, teaching_point,
+                question_media (
+                  display_context,
+                  display_order,
+                  caption,
+                  media (
+                    id,
+                    file_url,
+                    media_type,
+                    license,
+                    attribution
+                  )
+                )
               )
             `)
             .eq("session_id", sessionId)
@@ -91,8 +104,36 @@ const QBankSummary = () => {
 
           if (!error && attempts && sessionRow) {
             const questions = attempts
-              .map((a) => a.questions as unknown as Question)
-              .filter(Boolean);
+              .map((a) => {
+                const q = a.questions as unknown as any;
+                if (!q) return null;
+
+                const media: QuestionMedia[] = (q.question_media ?? [])
+                  .sort(
+                    (x: any, y: any) =>
+                      (x.display_order ?? 0) - (y.display_order ?? 0)
+                  )
+                  .map((qm: any) => {
+                    const m = qm.media;
+                    if (!m) return null;
+                    return {
+                      file_url: m.file_url,
+                      media_type: m.media_type,
+                      caption: qm.caption ?? null,
+                      license: m.license ?? null,
+                      attribution: m.attribution ?? null,
+                      display_context: qm.display_context as
+                        | "stem"
+                        | "explanation"
+                        | "both",
+                      display_order: qm.display_order ?? 0,
+                    };
+                  })
+                  .filter(Boolean);
+
+                return { ...q, media } as Question;
+              })
+              .filter(Boolean) as Question[];
 
             const answers: SessionAnswer[] = attempts.map((a) => ({
               question_id: a.question_id,
@@ -101,13 +142,15 @@ const QBankSummary = () => {
               time_taken_ms: a.time_taken_ms ?? 0,
             }));
 
-            setSummaryData({
+            const loaded = {
               questions,
               answers,
               totalTime: sessionRow.total_time_ms,
               score: sessionRow.score,
               total: sessionRow.total,
-            });
+            };
+            setSummaryData(loaded);
+            loadSummary(loaded);
             setLoading(false);
             return;
           }
@@ -126,14 +169,12 @@ const QBankSummary = () => {
     };
 
     load();
-  }, [sessionId, lastSummary, navigate]);
+  }, [sessionId, lastSummary, navigate, loadSummary]);
 
   if (loading) {
     return (
       <DashboardLayout>
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <div className="text-sm text-muted-foreground">Loading session...</div>
-        </div>
+        <StudyBuddyLoader message="Loading session..." />
       </DashboardLayout>
     );
   }

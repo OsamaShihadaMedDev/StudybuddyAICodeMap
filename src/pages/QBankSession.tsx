@@ -10,8 +10,15 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
+import StudyBuddyLoader from "@/components/StudyBuddyLoader";
 import { useQBankContext } from "@/contexts/QBankContext";
 import type { OptionKey, QuestionMedia } from "@/hooks/use-qbank";
+
+function renderMarkdown(text: string): string {
+  return text
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>');
+}
 
 type AnswerState =
   | { status: "unanswered" }
@@ -42,7 +49,7 @@ const QuestionCounter = ({
   onReview,
 }: QuestionCounterProps) => {
   return (
-    <div className="hidden lg:flex flex-col items-center gap-1.5 w-8 shrink-0 pt-1">
+    <div className="hidden md:flex flex-col items-center gap-1.5 w-8 shrink-0 pt-1">
       <div className="flex flex-col gap-1.5 overflow-y-auto max-h-[calc(100vh-160px)] scrollbar-none">
         {Array.from({ length: total }, (_, i) => {
           const q = questions[i];
@@ -141,6 +148,8 @@ interface ExplanationContentProps {
   difficulty: Difficulty;
   isCorrect: boolean;
   media?: QuestionMedia[];
+  onOpenLightbox: (items: QuestionMedia[], index: number) => void;
+  domain: string;
 }
 
 const ExplanationContent = ({
@@ -149,6 +158,8 @@ const ExplanationContent = ({
   difficulty,
   isCorrect,
   media,
+  onOpenLightbox,
+  domain,
 }: ExplanationContentProps) => (
   <div className="flex flex-col gap-4">
     <div className="flex items-center justify-between">
@@ -172,25 +183,36 @@ const ExplanationContent = ({
     <div className="h-px bg-border/40" />
 
     {media && media.length > 0 && (
-      <MediaBlock media={media} context="explanation" />
+      <MediaBlock media={media} context="explanation" onOpen={onOpenLightbox} />
     )}
 
     <div>
       <p className="text-[10px] font-bold tracking-[0.12em] text-primary uppercase mb-2">
         Explanation
       </p>
-      <p className="text-xs leading-[1.8] text-muted-foreground whitespace-pre-line">
-        {explanation}
-      </p>
+      <p
+        className="text-xs leading-[1.8] text-muted-foreground whitespace-pre-line [&_strong]:text-foreground [&_strong]:font-bold"
+        dangerouslySetInnerHTML={{ __html: renderMarkdown(explanation) }}
+      />
     </div>
 
     <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 space-y-1">
       <p className="text-[10px] font-bold tracking-[0.12em] text-primary uppercase">
         Key teaching point
       </p>
-      <p className="text-xs leading-relaxed text-foreground/80">
-        {teachingPoint}
-      </p>
+      <p
+        className="text-xs leading-relaxed text-foreground/80"
+        dangerouslySetInnerHTML={{ __html: renderMarkdown(teachingPoint) }}
+      />
+    </div>
+
+    <div className="flex items-center gap-2 pt-1">
+      <span className="text-[10px] font-bold tracking-[0.12em] text-muted-foreground/50 uppercase">
+        Domain
+      </span>
+      <span className="inline-flex items-center rounded-full border border-border/40 bg-muted/30 px-3 py-1 text-[11px] font-medium text-muted-foreground">
+        {domain}
+      </span>
     </div>
   </div>
 );
@@ -246,9 +268,10 @@ const OptionTile = ({ letter, text, answerState, onSelect }: OptionTileProps) =>
 interface MediaBlockProps {
   media: QuestionMedia[];
   context: 'stem' | 'explanation';
+  onOpen: (items: QuestionMedia[], index: number) => void;
 }
 
-const MediaBlock = ({ media, context }: MediaBlockProps) => {
+const MediaBlock = ({ media, context, onOpen }: MediaBlockProps) => {
   const items = media.filter(
     (m) => m.display_context === context || m.display_context === 'both'
   );
@@ -258,11 +281,12 @@ const MediaBlock = ({ media, context }: MediaBlockProps) => {
   return (
     <div className="space-y-3">
       {items.map((m, i) => (
-        <div key={i} className="rounded-xl overflow-hidden border border-border/40 bg-muted/20">
+        <div key={i} className="rounded-xl overflow-hidden border border-border/40 bg-white">
           <img
             src={m.file_url}
             alt={m.caption ?? m.media_type}
-            className="w-full h-auto block"
+            className="mx-auto block max-h-[380px] w-auto max-w-full object-contain cursor-zoom-in"
+            onClick={() => onOpen(items, i)}
           />
           {(m.caption || (m.license === 'CC-BY' && m.attribution)) && (
             <div className="px-3 py-2 space-y-0.5">
@@ -280,6 +304,191 @@ const MediaBlock = ({ media, context }: MediaBlockProps) => {
           )}
         </div>
       ))}
+    </div>
+  );
+};
+
+interface QuestionNavigatorProps {
+  total: number;
+  currentIndex: number;
+  answers: { question_id: string; is_correct: boolean }[];
+  questions: { id: string }[];
+  reviewIndex: number | null;
+  onReview: (index: number) => void;
+  displayedNumber: number;
+}
+
+const QuestionNavigator = ({
+  total,
+  currentIndex,
+  answers,
+  questions,
+  reviewIndex,
+  onReview,
+  displayedNumber,
+}: QuestionNavigatorProps) => {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <>
+      <button
+        onClick={() => setOpen(true)}
+        className="md:hidden inline-flex items-center gap-1.5 rounded-full border border-border/40 bg-muted/20 px-3 py-1 text-[11px] font-medium text-muted-foreground hover:bg-muted/40 transition-colors"
+      >
+        Q{displayedNumber} of {total}
+        <ChevronDown className="h-3 w-3" />
+      </button>
+
+      {open && (
+        <div
+          className="md:hidden fixed inset-0 bg-black/40 z-40"
+          onClick={() => setOpen(false)}
+        />
+      )}
+
+      <div
+        className={`md:hidden fixed inset-x-0 bottom-0 z-50 bg-card border-t border-border/60 rounded-t-2xl transition-transform duration-300 ease-out ${
+          open ? "translate-y-0" : "translate-y-full"
+        }`}
+      >
+        <div className="flex flex-col items-center pt-3 pb-2 px-4">
+          <div className="w-10 h-1 rounded-full bg-border/60 mb-3" />
+          <div className="flex items-center justify-between w-full">
+            <span className="text-xs font-bold text-foreground">
+              Questions ({total})
+            </span>
+            <button
+              onClick={() => setOpen(false)}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-4 px-4 pb-3">
+          <div className="flex items-center gap-1.5">
+            <div className="w-3 h-3 rounded-sm bg-green-500/20 border border-green-500/40" />
+            <span className="text-[10px] text-muted-foreground">Correct</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-3 h-3 rounded-sm bg-red-500/20 border border-red-500/40" />
+            <span className="text-[10px] text-muted-foreground">Incorrect</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-3 h-3 rounded-sm bg-muted/30 border border-border/20" />
+            <span className="text-[10px] text-muted-foreground">Unanswered</span>
+          </div>
+        </div>
+
+        <div className="px-4 pb-8 max-h-[50vh] overflow-y-auto">
+          <div className="grid grid-cols-8 gap-2">
+            {Array.from({ length: total }, (_, i) => {
+              const q = questions[i];
+              const answer = q ? answers.find((a) => a.question_id === q.id) : undefined;
+              const isAnswered = !!answer;
+              const isCurrent = i === currentIndex && reviewIndex === null;
+              const isReviewingThis = i === reviewIndex;
+              const isCorrect = answer?.is_correct;
+
+              let bg = "bg-muted/30 text-muted-foreground/40 border-border/20";
+              if (isCurrent || isReviewingThis) {
+                bg = "bg-primary/20 text-primary border-primary/50";
+              } else if (isAnswered) {
+                bg = isCorrect
+                  ? "bg-green-500/20 text-green-400 border-green-500/40"
+                  : "bg-red-500/20 text-red-400 border-red-500/40";
+              }
+
+              return (
+                <button
+                  key={i}
+                  disabled={!isAnswered && !isCurrent}
+                  onClick={() => {
+                    if (isAnswered) {
+                      onReview(i);
+                      setOpen(false);
+                    }
+                  }}
+                  className={`aspect-square rounded-lg border text-[10px] font-bold flex items-center justify-center transition-opacity ${bg} ${
+                    isAnswered ? "cursor-pointer hover:opacity-80" : "cursor-default"
+                  }`}
+                >
+                  {i + 1}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+};
+
+interface ReviewExplanationDrawerProps {
+  explanation: string;
+  teachingPoint: string;
+  difficulty: Difficulty;
+  isCorrect: boolean;
+  media?: QuestionMedia[];
+  onOpenLightbox: (items: QuestionMedia[], index: number) => void;
+  domain: string;
+}
+
+const ReviewExplanationDrawer = ({
+  explanation,
+  teachingPoint,
+  difficulty,
+  isCorrect,
+  media,
+  onOpenLightbox,
+  domain,
+}: ReviewExplanationDrawerProps) => {
+  const [open, setOpen] = useState(true);
+
+  return (
+    <div
+      className={`relative bg-card border-t border-border/60 rounded-t-2xl transition-transform duration-300 ease-out ${
+        open ? "translate-y-0" : "translate-y-[calc(100%-48px)]"
+      }`}
+    >
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex flex-col items-center gap-1 pt-3 pb-2 px-4"
+      >
+        <div className="w-10 h-1 rounded-full bg-border/60" />
+        <div className="flex items-center justify-between w-full mt-1">
+          <span className="text-[11px] font-bold tracking-[0.1em] text-primary uppercase">
+            Explanation
+          </span>
+          <div className="flex items-center gap-2">
+            <span
+              className={`text-[10px] font-bold ${
+                isCorrect ? "text-green-400" : "text-red-400"
+              }`}
+            >
+              {isCorrect ? "✓ Correct" : "✗ Incorrect"}
+            </span>
+            <ChevronDown
+              className={`h-4 w-4 text-muted-foreground transition-transform ${
+                open ? "rotate-0" : "rotate-180"
+              }`}
+            />
+          </div>
+        </div>
+      </button>
+
+      <div className="px-4 pb-8 max-h-[55vh] overflow-y-auto">
+        <ExplanationContent
+          explanation={explanation}
+          teachingPoint={teachingPoint}
+          difficulty={difficulty}
+          isCorrect={isCorrect}
+          media={media}
+          onOpenLightbox={onOpenLightbox}
+          domain={domain}
+        />
+      </div>
     </div>
   );
 };
@@ -308,6 +517,28 @@ const QBankSession = () => {
 
   const [answerState, setAnswerState] = useState<AnswerState>({ status: "unanswered" });
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [lightboxItems, setLightboxItems] = useState<QuestionMedia[]>([]);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [zoomScale, setZoomScale] = useState(1);
+  const [zoomOffset, setZoomOffset] = useState({ x: 0, y: 0 });
+  const lightboxOpen = lightboxItems.length > 0;
+  const currentLightboxItem = lightboxItems[lightboxIndex] ?? null;
+
+  useEffect(() => {
+    if (!lightboxOpen) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { setLightboxItems([]); setZoomScale(1); setZoomOffset({ x: 0, y: 0 }); }
+      if (e.key === 'ArrowRight') { setLightboxIndex((i) => Math.min(i + 1, lightboxItems.length - 1)); setZoomScale(1); setZoomOffset({ x: 0, y: 0 }); }
+      if (e.key === 'ArrowLeft') { setLightboxIndex((i) => Math.max(i - 1, 0)); setZoomScale(1); setZoomOffset({ x: 0, y: 0 }); }
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [lightboxOpen, lightboxItems.length]);
+
+  const openLightbox = useCallback((items: QuestionMedia[], idx: number) => {
+    setLightboxItems(items);
+    setLightboxIndex(idx);
+  }, []);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
@@ -358,7 +589,13 @@ const QBankSession = () => {
   const sessionAnswers = session?.answers ?? lastSummary?.answers ?? [];
   const effectiveTotalQuestions = session ? totalQuestions : lastSummary?.total ?? 0;
 
-  if (!displayQuestion) return null;
+  if (!displayQuestion) {
+    return (
+      <DashboardLayout wide>
+        <StudyBuddyLoader message="Loading question..." />
+      </DashboardLayout>
+    );
+  }
 
   const effectiveAnswerState: AnswerState =
     isReviewing && displayAnswer && displayQuestion
@@ -384,19 +621,45 @@ const QBankSession = () => {
 
   return (
     <DashboardLayout wide>
-      {isReviewing && (
-        <div className="flex items-center justify-between mb-4 px-3 py-2 rounded-xl bg-primary/5 border border-primary/20">
-          <span className="text-xs font-semibold text-primary">
-            Reviewing Q{reviewIndex! + 1} — read only
-          </span>
-          <button
-            onClick={() => setReviewIndex(null)}
-            className="text-xs font-semibold text-primary hover:text-primary/80 transition-colors"
-          >
-            ← Back to current question
-          </button>
-        </div>
-      )}
+      {isReviewing && (() => {
+        const fromSummary = !session && !!lastSummary;
+        const hasNext = reviewIndex! + 1 < effectiveTotalQuestions;
+        return (
+          <div className="flex items-center justify-between mb-4 px-3 py-2 rounded-xl bg-primary/5 border border-primary/20">
+            <button
+              onClick={() => {
+                if (fromSummary) {
+                  setReviewIndex(null);
+                  navigate("/qbank/summary");
+                } else {
+                  setReviewIndex(null);
+                }
+              }}
+              className="text-xs font-semibold text-primary hover:text-primary/80 transition-colors"
+            >
+              {fromSummary ? "← Back to Summary" : "← Back to current question"}
+            </button>
+            <span className="text-xs font-semibold text-primary">
+              Reviewing Q{reviewIndex! + 1} of {effectiveTotalQuestions} — read only
+            </span>
+            <button
+              onClick={() => {
+                if (hasNext) {
+                  setReviewIndex(reviewIndex! + 1);
+                } else if (fromSummary) {
+                  setReviewIndex(null);
+                  navigate("/qbank/summary");
+                } else {
+                  setReviewIndex(null);
+                }
+              }}
+              className="text-xs font-semibold text-primary hover:text-primary/80 transition-colors"
+            >
+              {hasNext ? "Next →" : fromSummary ? "← Back to Summary" : "← Back to current question"}
+            </button>
+          </div>
+        );
+      })()}
 
       <div className="flex gap-3 items-start">
         {effectiveTotalQuestions > 0 && (
@@ -416,12 +679,21 @@ const QBankSession = () => {
               <span className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[11px] font-semibold text-primary">
                 {displayQuestion!.subject}
               </span>
-              <span className="inline-flex items-center rounded-full border border-border/40 bg-muted/30 px-3 py-1 text-[11px] font-medium text-muted-foreground">
-                {displayQuestion!.domain}
+              <span className="hidden md:inline-flex items-center rounded-full border border-border/40 bg-muted/20 px-3 py-1 text-[11px] font-medium text-muted-foreground">
+                Q{displayedNumber} of {effectiveTotalQuestions}
               </span>
-              <span className="inline-flex items-center rounded-full border border-border/40 bg-muted/20 px-3 py-1 text-[11px] font-medium text-muted-foreground">
-                Q{displayedNumber} of {totalQuestions}
-              </span>
+
+              {effectiveTotalQuestions > 0 && (
+                <QuestionNavigator
+                  total={effectiveTotalQuestions}
+                  currentIndex={currentIndex}
+                  answers={sessionAnswers}
+                  questions={sessionQuestions}
+                  reviewIndex={reviewIndex}
+                  onReview={(i) => setReviewIndex(i)}
+                  displayedNumber={displayedNumber}
+                />
+              )}
             </div>
 
             <div className="glass-card rounded-2xl p-5">
@@ -434,7 +706,7 @@ const QBankSession = () => {
             </div>
 
             {displayQuestion!.media && displayQuestion!.media.length > 0 && (
-              <MediaBlock media={displayQuestion!.media} context="stem" />
+              <MediaBlock media={displayQuestion!.media} context="stem" onOpen={openLightbox} />
             )}
 
             <div className="flex items-center gap-3">
@@ -486,6 +758,8 @@ const QBankSession = () => {
                   difficulty={displayQuestion!.difficulty as Difficulty}
                   isCorrect={effectiveAnswerState.status === "answered" && effectiveAnswerState.isCorrect}
                   media={displayQuestion!.media}
+                  onOpenLightbox={openLightbox}
+                  domain={displayQuestion!.domain}
                 />
               </div>
             )}
@@ -531,6 +805,8 @@ const QBankSession = () => {
                 difficulty={displayQuestion!.difficulty as Difficulty}
                 isCorrect={effectiveAnswerState.status === "answered" && effectiveAnswerState.isCorrect}
                 media={displayQuestion!.media}
+                onOpenLightbox={openLightbox}
+                domain={displayQuestion!.domain}
               />
 
               <div className="pt-4">
@@ -547,6 +823,187 @@ const QBankSession = () => {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {isReviewing && effectiveAnswerState.status === "answered" && (
+        <div className="md:hidden fixed inset-x-0 bottom-0 z-40">
+          <ReviewExplanationDrawer
+            explanation={displayQuestion!.explanation}
+            teachingPoint={displayQuestion!.teaching_point}
+            difficulty={displayQuestion!.difficulty as Difficulty}
+            isCorrect={effectiveAnswerState.isCorrect}
+            media={displayQuestion!.media}
+            onOpenLightbox={openLightbox}
+            domain={displayQuestion!.domain}
+          />
+        </div>
+      )}
+
+      {lightboxOpen && currentLightboxItem && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85"
+          onClick={() => { setLightboxItems([]); setZoomScale(1); setZoomOffset({ x: 0, y: 0 }); }}
+        >
+          <button
+            className="absolute top-4 right-4 text-white/70 hover:text-white text-3xl font-light leading-none z-10"
+            onClick={() => { setLightboxItems([]); setZoomScale(1); setZoomOffset({ x: 0, y: 0 }); }}
+            aria-label="Close"
+          >
+            ×
+          </button>
+
+          {lightboxItems.length > 1 && lightboxIndex > 0 && (
+            <button
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-white/70 hover:text-white text-4xl font-light z-10 px-3 py-2"
+              onClick={(e) => {
+                e.stopPropagation();
+                setLightboxIndex((i) => i - 1);
+                setZoomScale(1);
+                setZoomOffset({ x: 0, y: 0 });
+              }}
+              aria-label="Previous"
+            >
+              ‹
+            </button>
+          )}
+
+          <div
+            className="flex flex-row items-stretch gap-3 px-16"
+            style={{ maxWidth: '95vw', maxHeight: '88vh' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {currentLightboxItem.caption && (
+              <div
+                className="w-48 shrink-0 bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20 flex flex-col justify-center"
+                style={{ alignSelf: 'stretch' }}
+              >
+                <p className="text-[10px] font-bold tracking-[0.12em] text-white/50 uppercase mb-2">
+                  Description
+                </p>
+                <p className="text-white/90 text-xs leading-relaxed">
+                  {currentLightboxItem.caption}
+                </p>
+                {currentLightboxItem.license === 'CC-BY' && currentLightboxItem.attribution && (
+                  <p className="mt-3 text-white/40 text-[10px] leading-relaxed border-t border-white/10 pt-2">
+                    {currentLightboxItem.attribution}
+                  </p>
+                )}
+              </div>
+            )}
+
+            <div className="flex flex-col items-center gap-3 min-w-0">
+              <div
+                className="relative overflow-hidden rounded-lg flex items-center justify-center bg-white"
+                style={{
+                  width: currentLightboxItem.caption ? 'min(65vw, 900px)' : 'min(85vw, 1100px)',
+                  height: 'min(72vh, 700px)',
+                  cursor: zoomScale > 1 ? 'grab' : 'default',
+                }}
+                onMouseDown={(e) => {
+                  if (zoomScale <= 1) return;
+                  e.preventDefault();
+                  const startX = e.clientX - zoomOffset.x;
+                  const startY = e.clientY - zoomOffset.y;
+                  const el = e.currentTarget;
+                  el.style.cursor = 'grabbing';
+                  const onMove = (ev: MouseEvent) => {
+                    setZoomOffset({ x: ev.clientX - startX, y: ev.clientY - startY });
+                  };
+                  const onUp = () => {
+                    el.style.cursor = zoomScale > 1 ? 'grab' : 'default';
+                    window.removeEventListener('mousemove', onMove);
+                    window.removeEventListener('mouseup', onUp);
+                  };
+                  window.addEventListener('mousemove', onMove);
+                  window.addEventListener('mouseup', onUp);
+                }}
+              >
+                <img
+                  src={currentLightboxItem.file_url}
+                  alt={currentLightboxItem.caption ?? currentLightboxItem.media_type}
+                  className="select-none rounded-lg shadow-2xl"
+                  style={{
+                    maxWidth: '100%',
+                    maxHeight: '100%',
+                    objectFit: 'contain',
+                    transform: `scale(${zoomScale}) translate(${zoomOffset.x / zoomScale}px, ${zoomOffset.y / zoomScale}px)`,
+                    transformOrigin: 'center center',
+                    transition: 'transform 0.15s ease',
+                    pointerEvents: 'none',
+                    userSelect: 'none',
+                  }}
+                  draggable={false}
+                />
+              </div>
+
+              <div
+                className="flex items-center gap-3 bg-white/10 backdrop-blur-sm rounded-full px-4 py-2 border border-white/20"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <span className="text-white/50 text-xs select-none">−</span>
+                <input
+                  type="range"
+                  min={1}
+                  max={4}
+                  step={0.1}
+                  value={zoomScale}
+                  onChange={(e) => {
+                    const next = parseFloat(e.target.value);
+                    setZoomScale(next);
+                    if (next === 1) setZoomOffset({ x: 0, y: 0 });
+                  }}
+                  className="w-32 accent-white cursor-pointer"
+                />
+                <span className="text-white/50 text-xs select-none">+</span>
+                <span className="text-white/40 text-[10px] w-8 text-center select-none">
+                  {zoomScale.toFixed(1)}×
+                </span>
+                {zoomScale > 1 && (
+                  <button
+                    className="text-white/50 hover:text-white text-[10px] underline ml-1"
+                    onClick={() => { setZoomScale(1); setZoomOffset({ x: 0, y: 0 }); }}
+                  >
+                    reset
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {lightboxItems.length > 1 && lightboxIndex < lightboxItems.length - 1 && (
+            <button
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-white/70 hover:text-white text-4xl font-light z-10 px-3 py-2"
+              onClick={(e) => {
+                e.stopPropagation();
+                setLightboxIndex((i) => i + 1);
+                setZoomScale(1);
+                setZoomOffset({ x: 0, y: 0 });
+              }}
+              aria-label="Next"
+            >
+              ›
+            </button>
+          )}
+
+          {lightboxItems.length > 1 && (
+            <div className="absolute bottom-4 flex gap-2">
+              {lightboxItems.map((_, i) => (
+                <button
+                  key={i}
+                  className={`w-2 h-2 rounded-full transition-colors ${
+                    i === lightboxIndex ? 'bg-white' : 'bg-white/30'
+                  }`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setLightboxIndex(i);
+                    setZoomScale(1);
+                    setZoomOffset({ x: 0, y: 0 });
+                  }}
+                />
+              ))}
+            </div>
+          )}
         </div>
       )}
     </DashboardLayout>

@@ -293,6 +293,7 @@ export type Database = {
           teaching_point: string
           is_active: boolean
           created_at: string
+          external_id: string | null
         }
         Insert: {
           id?: string
@@ -313,6 +314,7 @@ export type Database = {
           teaching_point: string
           is_active?: boolean
           created_at?: string
+          external_id?: string | null
         }
         Update: {
           id?: string
@@ -333,6 +335,7 @@ export type Database = {
           teaching_point?: string
           is_active?: boolean
           created_at?: string
+          external_id?: string | null
         }
         Relationships: []
       }
@@ -344,7 +347,7 @@ export type Database = {
           tags: string[]
           description: string
           source_url: string
-          license: 'CC0' | 'CC-BY' | 'public_domain' | 'ODC-BY'
+          license: 'CC0' | 'CC-BY' | 'public_domain' | 'ODC-BY' | 'proprietary'
           attribution: string | null
           created_at: string
         }
@@ -355,7 +358,7 @@ export type Database = {
           tags?: string[]
           description: string
           source_url: string
-          license: 'CC0' | 'CC-BY' | 'public_domain' | 'ODC-BY'
+          license: 'CC0' | 'CC-BY' | 'public_domain' | 'ODC-BY' | 'proprietary'
           attribution?: string | null
           created_at?: string
         }
@@ -366,7 +369,7 @@ export type Database = {
           tags?: string[]
           description?: string
           source_url?: string
-          license?: 'CC0' | 'CC-BY' | 'public_domain' | 'ODC-BY'
+          license?: 'CC0' | 'CC-BY' | 'public_domain' | 'ODC-BY' | 'proprietary'
           attribution?: string | null
           created_at?: string
         }

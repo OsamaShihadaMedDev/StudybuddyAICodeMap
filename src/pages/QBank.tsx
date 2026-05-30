@@ -1,14 +1,83 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FlaskConical, LogIn, Zap, BookOpen, CheckCircle } from "lucide-react";
+import { FlaskConical, LogIn, Zap, BookOpen, CheckCircle, History, ChevronRight, Clock } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { useQBankContext } from "@/contexts/QBankContext";
+import { supabase } from "@/integrations/supabase/client";
+
+interface SessionRow {
+  id: string;
+  score: number;
+  total: number;
+  total_time_ms: number;
+  system: string;
+  ended_at: string;
+}
+
+const formatSessionDate = (iso: string) => {
+  const d = new Date(iso);
+  return d.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+};
+
+const formatSessionTime = (ms: number) => {
+  const totalSec = Math.round(ms / 1000);
+  const mins = Math.floor(totalSec / 60);
+  const secs = totalSec % 60;
+  if (mins === 0) return `${secs}s`;
+  return `${mins}m ${secs}s`;
+};
+
+const getScoreColor = (score: number, total: number) => {
+  const pct = total > 0 ? score / total : 0;
+  if (pct >= 0.8) return "text-green-400";
+  if (pct >= 0.6) return "text-amber-400";
+  return "text-red-400";
+};
+
+const getScoreBg = (score: number, total: number) => {
+  const pct = total > 0 ? score / total : 0;
+  if (pct >= 0.8) return "bg-green-500/10 border-green-500/20";
+  if (pct >= 0.6) return "bg-amber-500/10 border-amber-500/20";
+  return "bg-red-500/10 border-red-500/20";
+};
+
+const PAGE_SIZE = 5;
 
 const QBank = () => {
   const navigate = useNavigate();
   const { user, isAnonymous } = useAuth();
   const { questionCount, startSession } = useQBankContext();
+
+  const [page, setPage] = useState(0);
+
+  const { data: sessionHistory, isLoading: historyLoading } = useQuery({
+    queryKey: ["qbank-sessions", user?.id, page],
+    enabled: !!user && !isAnonymous,
+    queryFn: async (): Promise<{ rows: SessionRow[]; hasMore: boolean }> => {
+      const { data, error } = await supabase
+        .from("qbank_sessions")
+        .select("id, score, total, total_time_ms, system, ended_at")
+        .eq("user_id", user!.id)
+        .order("ended_at", { ascending: false })
+        .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE);
+
+      if (error) throw error;
+
+      const rows = (data ?? []) as SessionRow[];
+      const hasMore = rows.length > PAGE_SIZE;
+      return {
+        rows: rows.slice(0, PAGE_SIZE),
+        hasMore,
+      };
+    },
+  });
 
   const handleStart = async () => {
     await startSession();
@@ -109,6 +178,97 @@ const QBank = () => {
           <p className="text-center text-[11px] text-muted-foreground/60">
             Cardiovascular System pilot · More systems coming soon
           </p>
+
+          {!isAnonymous && user && (
+            <div className="w-full space-y-3 pt-2">
+              <div className="flex items-center gap-2">
+                <History className="h-4 w-4 text-muted-foreground/60" />
+                <p className="text-xs font-semibold text-muted-foreground/60 uppercase tracking-wider">
+                  Session History
+                </p>
+              </div>
+
+              {historyLoading ? (
+                <div className="space-y-2">
+                  {[1, 2, 3].map((i) => (
+                    <div
+                      key={i}
+                      className="h-16 rounded-xl bg-muted/20 animate-pulse border border-border/20"
+                    />
+                  ))}
+                </div>
+              ) : !sessionHistory || sessionHistory.rows.length === 0 ? (
+                <div className="glass-card rounded-xl p-4 text-center space-y-1 border border-border/20">
+                  <p className="text-xs text-muted-foreground/60">
+                    No sessions yet — complete your first session to see your history here.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-2">
+                    {sessionHistory.rows.map((s) => {
+                      const pct = s.total > 0 ? Math.round((s.score / s.total) * 100) : 0;
+                      return (
+                        <button
+                          key={s.id}
+                          onClick={() => navigate(`/qbank/summary?session=${s.id}`)}
+                          className="w-full glass-card rounded-xl px-4 py-3 flex items-center gap-4 border border-border/30 hover:border-primary/30 hover:bg-primary/5 transition-all duration-150 text-left group"
+                        >
+                          <div
+                            className={`flex flex-col items-center justify-center rounded-lg border px-3 py-1.5 shrink-0 ${getScoreBg(s.score, s.total)}`}
+                          >
+                            <span className={`text-base font-extrabold leading-none ${getScoreColor(s.score, s.total)}`}>
+                              {pct}%
+                            </span>
+                            <span className="text-[10px] text-muted-foreground/60 mt-0.5">
+                              {s.score}/{s.total}
+                            </span>
+                          </div>
+
+                          <div className="flex-1 min-w-0 space-y-0.5">
+                            <p className="text-sm font-semibold text-foreground truncate">
+                              {s.system}
+                            </p>
+                            <div className="flex items-center gap-3">
+                              <span className="flex items-center gap-1 text-[11px] text-muted-foreground/60">
+                                <Clock className="h-3 w-3" />
+                                {formatSessionTime(s.total_time_ms)}
+                              </span>
+                              <span className="text-[11px] text-muted-foreground/40">
+                                {formatSessionDate(s.ended_at)}
+                              </span>
+                            </div>
+                          </div>
+
+                          <ChevronRight className="h-4 w-4 text-muted-foreground/30 group-hover:text-primary/60 transition-colors shrink-0" />
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="flex items-center justify-between pt-1">
+                    <button
+                      onClick={() => setPage((p) => Math.max(0, p - 1))}
+                      disabled={page === 0}
+                      className="text-xs font-medium text-muted-foreground/60 hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    >
+                      ← Previous
+                    </button>
+                    <span className="text-[11px] text-muted-foreground/40">
+                      Page {page + 1}
+                    </span>
+                    <button
+                      onClick={() => setPage((p) => p + 1)}
+                      disabled={!sessionHistory.hasMore}
+                      className="text-xs font-medium text-muted-foreground/60 hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Next →
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </DashboardLayout>

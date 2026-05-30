@@ -6,6 +6,7 @@ import GradientBackground from "@/components/GradientBackground";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import AuthModal from "@/components/AuthModal";
 import AccountDashboard from "@/components/AccountDashboard";
+import { useSidebar } from "@/contexts/SidebarContext";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -16,6 +17,7 @@ const DashboardLayout = ({ children, wide = false }: DashboardLayoutProps) => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [accountModalOpen, setAccountModalOpen] = useState(false);
+  const { collapsed: sidebarCollapsed, toggleCollapsed: setSidebarCollapsed } = useSidebar();
 
   const handleOpenAuth = () => {
     setAuthModalOpen(true);
@@ -32,10 +34,16 @@ const DashboardLayout = ({ children, wide = false }: DashboardLayoutProps) => {
       <GradientBackground />
       <div className="relative z-10 flex min-h-screen">
         {/* Desktop sidebar */}
-        <div className="hidden lg:flex lg:w-[260px] lg:shrink-0 lg:border-r lg:border-border/40">
+        <div
+          className={`hidden lg:flex lg:shrink-0 lg:border-r lg:border-border/40 transition-all duration-300 ease-in-out ${
+            sidebarCollapsed ? "lg:w-[60px]" : "lg:w-[260px]"
+          }`}
+        >
           <DashboardSidebar
             onOpenAuth={handleOpenAuth}
             onOpenAccount={handleOpenAccount}
+            collapsed={sidebarCollapsed}
+            onToggleCollapse={setSidebarCollapsed}
           />
         </div>
 
@@ -51,7 +59,7 @@ const DashboardLayout = ({ children, wide = false }: DashboardLayoutProps) => {
         </Sheet>
 
         {/* Main content */}
-        <main className="flex-1 min-w-0 flex flex-col">
+        <main className="flex-1 min-w-0 flex flex-col transition-all duration-300 ease-in-out">
           <header className="lg:hidden sticky top-0 z-20 flex items-center justify-between border-b border-border/40 bg-background/80 backdrop-blur px-4 py-3">
             <Button
               variant="ghost"

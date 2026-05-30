@@ -33,6 +33,7 @@ interface QBankContextValue {
   displayQuestion: Question | null;
   displayAnswer: SessionAnswer | null;
   isReviewing: boolean;
+  loadSummary: (data: SessionSummary) => void;
 }
 
 const QBankContext = createContext<QBankContextValue | null>(null);
@@ -192,6 +193,7 @@ export const QBankProvider = ({ children }: { children: ReactNode }) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["qbank-count"] });
+      queryClient.invalidateQueries({ queryKey: ["qbank-sessions"] });
     },
   });
 
@@ -223,6 +225,7 @@ export const QBankProvider = ({ children }: { children: ReactNode }) => {
 
         if (!sessionError && sessionData) {
           sessionId = sessionData.id;
+          queryClient.invalidateQueries({ queryKey: ["qbank-sessions"] });
 
           const rows = session.answers.map((a) => ({
             user_id: user.id,
@@ -278,6 +281,10 @@ export const QBankProvider = ({ children }: { children: ReactNode }) => {
     setReviewIndex(index);
   }, []);
 
+  const loadSummary = useCallback((data: SessionSummary) => {
+    setLastSummary(data);
+  }, []);
+
   const currentQuestion = session ? session.questions[session.currentIndex] : null;
   const isLastQuestion = session
     ? session.currentIndex === session.questions.length - 1
@@ -328,6 +335,7 @@ export const QBankProvider = ({ children }: { children: ReactNode }) => {
         displayQuestion,
         displayAnswer,
         isReviewing,
+        loadSummary,
       }}
     >
       {children}
