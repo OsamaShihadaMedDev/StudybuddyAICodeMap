@@ -5,6 +5,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import type { Question, QuestionMedia, OptionKey, SessionAnswer, SessionState } from "@/hooks/use-qbank";
 
+const STORAGE_KEY = "sb_qbank_session";
+
+export interface SessionConfig {
+  domains: string[];
+  limit: number;
+}
+
 interface SessionSummary {
   questions: Question[];
   answers: SessionAnswer[];
@@ -15,13 +22,15 @@ interface SessionSummary {
 
 interface QBankContextValue {
   questionCount: number;
+  availableDomains: string[];
+  allQuestionMeta: { id: string; domain: string }[];
   session: SessionState | null;
   currentQuestion: Question | null;
   currentIndex: number;
   totalQuestions: number;
   isLastQuestion: boolean;
   progress: number;
-  startSession: () => Promise<void>;
+  startSession: (config?: SessionConfig) => Promise<void>;
   submitAnswer: (key: OptionKey) => { is_correct: boolean; correct_option: OptionKey } | undefined;
   nextQuestion: () => void;
   endSession: () => Promise<SessionSummary | null>;
@@ -34,6 +43,7 @@ interface QBankContextValue {
   displayAnswer: SessionAnswer | null;
   isReviewing: boolean;
   loadSummary: (data: SessionSummary) => void;
+  restoreSession: () => boolean;
 }
 
 const QBankContext = createContext<QBankContextValue | null>(null);
@@ -58,13 +68,44 @@ export const QBankProvider = ({ children }: { children: ReactNode }) => {
     },
   });
 
-  const fetchQuestions = useCallback(async (): Promise<Question[]> => {
-    const { data, error } = await supabase
+  const { data: availableDomains = [] } = useQuery({
+    queryKey: ["qbank-domains"],
+    queryFn: async (): Promise<string[]> => {
+      const { data, error } = await supabase
+        .from("questions")
+        .select("domain")
+        .eq("is_active", true);
+      if (error) throw error;
+      const unique = [...new Set((data ?? []).map((r: { domain: string }) => r.domain))].sort();
+      return unique;
+    },
+  });
+
+  const { data: allQuestionMeta = [] } = useQuery({
+    queryKey: ["qbank-meta"],
+    queryFn: async (): Promise<{ id: string; domain: string }[]> => {
+      const { data, error } = await supabase
+        .from("questions")
+        .select("id, domain")
+        .eq("is_active", true);
+      if (error) throw error;
+      return (data ?? []) as { id: string; domain: string }[];
+    },
+  });
+
+  const fetchQuestions = useCallback(async (config?: SessionConfig): Promise<Question[]> => {
+    let query = supabase
       .from("questions")
       .select(
         "id, subject, domain, topic, difficulty, competency, question_text, option_a, option_b, option_c, option_d, option_e, correct_option, explanation, teaching_point"
       )
       .eq("is_active", true);
+
+    if (config?.domains && config.domains.length > 0) {
+      query = query.in("domain", config.domains);
+    }
+
+    const { data, error } = await query;
     if (error) throw error;
 
     const questions = [...(data ?? [])] as Question[];
@@ -134,20 +175,92 @@ export const QBankProvider = ({ children }: { children: ReactNode }) => {
       [questions[i], questions[j]] = [questions[j], questions[i]];
     }
 
-    return questions;
+    const limit = config?.limit ?? 40;
+    return questions.slice(0, Math.min(limit, 40));
   }, []);
 
-  const startSession = useCallback(async () => {
+  const saveSessionToStorage = useCallback((s: SessionState) => {
+    const firstUnanswered = s.questions.findIndex(
+      (q) => !s.answers.some((a) => a.question_id === q.id)
+    );
+    const persistIndex = firstUnanswered === -1 ? s.currentIndex : firstUnanswered;
+
+    const payload = {
+      questions: s.questions,
+      currentIndex: persistIndex,
+      answers: s.answers,
+      startedAt: s.startedAt,
+      savedAt: Date.now(),
+    };
+
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+    } catch {
+      // localStorage full or unavailable — fail silently
+    }
+  }, []);
+
+  const clearSessionStorage = useCallback(() => {
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch {
+      // fail silently
+    }
+  }, []);
+
+  const restoreSession = useCallback((): boolean => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return false;
+
+      const parsed = JSON.parse(raw);
+
+      const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
+      if (!parsed.savedAt || Date.now() - parsed.savedAt > TWENTY_FOUR_HOURS) {
+        localStorage.removeItem(STORAGE_KEY);
+        return false;
+      }
+
+      if (
+        !Array.isArray(parsed.questions) ||
+        parsed.questions.length === 0 ||
+        typeof parsed.currentIndex !== "number" ||
+        !Array.isArray(parsed.answers) ||
+        typeof parsed.startedAt !== "number"
+      ) {
+        localStorage.removeItem(STORAGE_KEY);
+        return false;
+      }
+
+      setReviewIndex(null);
+      setSession({
+        questions: parsed.questions,
+        currentIndex: parsed.currentIndex,
+        answers: parsed.answers,
+        startedAt: parsed.startedAt,
+        questionStartedAt: Date.now(),
+      });
+
+      return true;
+    } catch {
+      try { localStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
+      return false;
+    }
+  }, []);
+
+  const startSession = useCallback(async (config?: SessionConfig) => {
     setReviewIndex(null);
-    const questions = await fetchQuestions();
-    setSession({
+    const questions = await fetchQuestions(config);
+    const newSession: SessionState = {
       questions,
       currentIndex: 0,
       answers: [],
       startedAt: Date.now(),
       questionStartedAt: Date.now(),
-    });
-  }, [fetchQuestions]);
+    };
+    setSession(newSession);
+    saveSessionToStorage(newSession);
+  }, [fetchQuestions, saveSessionToStorage]);
 
   const submitAnswer = useCallback(
     (selectedOption: OptionKey) => {
@@ -161,9 +274,25 @@ export const QBankProvider = ({ children }: { children: ReactNode }) => {
         is_correct,
         time_taken_ms,
       };
+      const updatedAnswers = [...session.answers, answer];
       setSession((prev) =>
-        prev ? { ...prev, answers: [...prev.answers, answer] } : null
+        prev ? { ...prev, answers: updatedAnswers } : null
       );
+
+      const firstUnanswered = session.questions.findIndex(
+        (q) => !updatedAnswers.some((a) => a.question_id === q.id)
+      );
+      const persistIndex = firstUnanswered === -1 ? session.currentIndex : firstUnanswered;
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+          questions: session.questions,
+          currentIndex: persistIndex,
+          answers: updatedAnswers,
+          startedAt: session.startedAt,
+          savedAt: Date.now(),
+        }));
+      } catch { /* fail silently */ }
+
       return { is_correct, correct_option: question.correct_option };
     },
     [session]
@@ -176,7 +305,15 @@ export const QBankProvider = ({ children }: { children: ReactNode }) => {
         ? { ...prev, currentIndex: prev.currentIndex + 1, questionStartedAt: Date.now() }
         : null
     );
-  }, []);
+    if (session) {
+      const nextIndex = session.currentIndex + 1;
+      saveSessionToStorage({
+        ...session,
+        currentIndex: nextIndex,
+        questionStartedAt: Date.now(),
+      });
+    }
+  }, [session, saveSessionToStorage]);
 
   const saveAttemptsMutation = useMutation({
     mutationFn: async (answers: SessionAnswer[]) => {
@@ -261,6 +398,7 @@ export const QBankProvider = ({ children }: { children: ReactNode }) => {
     };
 
     setLastSummary(summary);
+    clearSessionStorage();
     setSession(null);
     setReviewIndex(null);
 
@@ -271,11 +409,12 @@ export const QBankProvider = ({ children }: { children: ReactNode }) => {
     }
 
     return summary;
-  }, [session, user, saveAttemptsMutation, navigate]);
+  }, [session, user, saveAttemptsMutation, navigate, clearSessionStorage]);
 
   const resetSession = useCallback(() => {
+    clearSessionStorage();
     setSession(null);
-  }, []);
+  }, [clearSessionStorage]);
 
   const enterSummaryReview = useCallback((index: number) => {
     setReviewIndex(index);
@@ -317,6 +456,8 @@ export const QBankProvider = ({ children }: { children: ReactNode }) => {
     <QBankContext.Provider
       value={{
         questionCount,
+        availableDomains,
+        allQuestionMeta,
         session,
         currentQuestion,
         currentIndex: session?.currentIndex ?? 0,
@@ -336,6 +477,7 @@ export const QBankProvider = ({ children }: { children: ReactNode }) => {
         displayAnswer,
         isReviewing,
         loadSummary,
+        restoreSession,
       }}
     >
       {children}

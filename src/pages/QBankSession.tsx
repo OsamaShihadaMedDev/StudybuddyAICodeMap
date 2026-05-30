@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   FlaskConical,
@@ -509,7 +509,10 @@ const QBankSession = () => {
     displayAnswer,
     isReviewing,
     lastSummary,
+    restoreSession,
   } = useQBankContext();
+
+  const restoredRef = useRef(false);
 
   const [searchParams] = useSearchParams();
   const sessionIdParam = searchParams.get("session");
@@ -549,10 +552,24 @@ const QBankSession = () => {
   }, []);
 
   useEffect(() => {
+    if (!restoredRef.current) {
+      restoredRef.current = true;
+
+      if (session) return;
+
+      const didRestore = restoreSession();
+
+      if (!didRestore && !sessionIdParam && !lastSummary) {
+        navigate("/qbank");
+      }
+
+      return;
+    }
+
     if (!session && !sessionIdParam && !lastSummary) {
       navigate("/qbank");
     }
-  }, [session, sessionIdParam, lastSummary, navigate]);
+  }, [session, sessionIdParam, lastSummary, navigate, restoreSession]);
 
   useEffect(() => {
     setAnswerState({ status: "unanswered" });

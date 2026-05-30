@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { FlaskConical, LogIn, Zap, BookOpen, CheckCircle, History, ChevronRight, Clock } from "lucide-react";
+import { FlaskConical, LogIn, Zap, BookOpen, CheckCircle, History, ChevronRight, Clock, Lock } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -53,9 +53,38 @@ const PAGE_SIZE = 5;
 const QBank = () => {
   const navigate = useNavigate();
   const { user, isAnonymous } = useAuth();
-  const { questionCount, startSession } = useQBankContext();
+  const { questionCount, startSession, availableDomains, allQuestionMeta } = useQBankContext();
+
+  const MAX_SESSION_CAP = 40;
 
   const [page, setPage] = useState(0);
+  const [selectedDomains, setSelectedDomains] = useState<string[]>([]);
+  const [questionLimit, setQuestionLimit] = useState<number>(MAX_SESSION_CAP);
+
+  const availableForSelection = selectedDomains.length === 0
+    ? allQuestionMeta.length
+    : allQuestionMeta.filter((q) => selectedDomains.includes(q.domain)).length;
+
+  const sliderMax = Math.min(availableForSelection, MAX_SESSION_CAP);
+  const effectiveSliderMax = sliderMax > 0 ? sliderMax : MAX_SESSION_CAP;
+
+  useEffect(() => {
+    if (sliderMax > 0) {
+      setQuestionLimit((prev) => Math.min(prev, sliderMax));
+    }
+  }, [sliderMax]);
+
+  const toggleDomain = (domain: string) => {
+    setSelectedDomains((prev) => {
+      if (prev.includes(domain)) {
+        if (prev.length === 1) return [];
+        return prev.filter((d) => d !== domain);
+      }
+      return [...prev, domain];
+    });
+  };
+
+  const selectAll = () => setSelectedDomains([]);
 
   const { data: sessionHistory, isLoading: historyLoading } = useQuery({
     queryKey: ["qbank-sessions", user?.id, page],
@@ -80,7 +109,10 @@ const QBank = () => {
   });
 
   const handleStart = async () => {
-    await startSession();
+    await startSession({
+      domains: selectedDomains,
+      limit: questionLimit,
+    });
     navigate("/qbank/session");
   };
 
@@ -166,18 +198,109 @@ const QBank = () => {
               </Button>
             </div>
           ) : (
-            <Button
-              onClick={handleStart}
-              className="btn-gradient w-full h-14 text-base font-bold rounded-xl"
-            >
-              <FlaskConical className="h-5 w-5 mr-2" />
-              Start Session · {questionCount} Questions
-            </Button>
-          )}
+            <>
+              <div className="glass-card rounded-2xl p-5 space-y-5 border border-border/30">
+                <div className="space-y-2">
+                  <p className="text-[10px] font-semibold tracking-widest text-muted-foreground/50 uppercase">
+                    System
+                  </p>
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/15 px-3 py-1.5 text-xs font-semibold text-primary cursor-default">
+                    <Lock className="h-3 w-3" />
+                    Cardiovascular
+                  </span>
+                  <p className="text-[11px] text-muted-foreground/40 mt-1.5">
+                    More systems coming soon
+                  </p>
+                </div>
 
-          <p className="text-center text-[11px] text-muted-foreground/60">
-            Cardiovascular System pilot · More systems coming soon
-          </p>
+                <div className="space-y-2">
+                  <p className="text-[10px] font-semibold tracking-widest text-muted-foreground/50 uppercase">
+                    Domain
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {availableDomains.length === 0 ? (
+                      [80, 96, 72, 88].map((w) => (
+                        <div
+                          key={w}
+                          style={{ width: `${w}px` }}
+                          className="h-7 rounded-full bg-muted/20 animate-pulse"
+                        />
+                      ))
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          onClick={selectAll}
+                          className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors cursor-pointer ${
+                            selectedDomains.length === 0
+                              ? "bg-primary/15 border-primary/40 text-primary"
+                              : "bg-secondary/30 border-border/50 text-muted-foreground hover:border-primary/30 hover:text-foreground"
+                          }`}
+                        >
+                          All
+                        </button>
+                        {availableDomains.map((domain) => {
+                          const isSelected = selectedDomains.includes(domain);
+                          return (
+                            <button
+                              key={domain}
+                              type="button"
+                              onClick={() => toggleDomain(domain)}
+                              className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors cursor-pointer ${
+                                isSelected
+                                  ? "bg-primary/15 border-primary/40 text-primary"
+                                  : "bg-secondary/30 border-border/50 text-muted-foreground hover:border-primary/30 hover:text-foreground"
+                              }`}
+                            >
+                              {domain}
+                            </button>
+                          );
+                        })}
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] font-semibold tracking-widest text-muted-foreground/50 uppercase">
+                      Questions
+                    </p>
+                    <span className="text-xs font-bold tabular-nums px-2 py-0.5 rounded-full bg-primary/15 text-primary">
+                      {questionLimit}
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min={5}
+                    max={effectiveSliderMax}
+                    step={5}
+                    value={questionLimit}
+                    onChange={(e) => setQuestionLimit(Number(e.target.value))}
+                    className="w-full h-1.5 rounded-full appearance-none cursor-pointer accent-primary bg-muted/30"
+                  />
+                  <div className="flex justify-between text-[11px] text-muted-foreground/40">
+                    <span>5</span>
+                    <span>{effectiveSliderMax}</span>
+                  </div>
+                  {selectedDomains.length > 0 && (
+                    <p className="text-[11px] text-muted-foreground/50 text-center mt-1">
+                      {availableForSelection} question{availableForSelection !== 1 ? "s" : ""} available in selected domains
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <Button
+                onClick={handleStart}
+                disabled={questionCount === 0 || effectiveSliderMax === 0}
+                className="btn-gradient w-full h-14 text-base font-bold rounded-xl"
+              >
+                <FlaskConical className="h-5 w-5 mr-2" />
+                Start Session · {questionLimit} Questions
+              </Button>
+            </>
+          )}
 
           {!isAnonymous && user && (
             <div className="w-full space-y-3 pt-2">
