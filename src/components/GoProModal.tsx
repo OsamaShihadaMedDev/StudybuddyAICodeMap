@@ -30,15 +30,16 @@ const GoProModal = ({ open, onOpenChange }: GoProModalProps) => {
             </p>
           </div>
           <DialogDescription className="text-sm text-muted-foreground pt-2">
-            Everything in StudyBuddy, unlocked. Pro access is granted manually —
-            reach out on WhatsApp or Email and we'll activate your account within
-            a few hours.
+            Everything in StudyBuddy, unlocked — including access to Claude, Anthropic's
+            AI. Pro access is granted manually — reach out on WhatsApp or Email and
+            we'll activate your account within a few hours.
           </DialogDescription>
         </DialogHeader>
 
         <ul className="space-y-2 text-left pt-1">
           {[
             "Unlimited sheets & flashcard generations",
+            "Claude Haiku 4.5 — Anthropic's fastest model, medically tuned for USMLE",
             "Publication-backed sources on every generation — cited directly from PubMed",
             "Priority access to new features",
           ].map((benefit) => (

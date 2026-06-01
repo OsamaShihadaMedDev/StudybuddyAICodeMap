@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { FlaskConical, LogIn, Zap, BookOpen, CheckCircle, History, ChevronRight, Clock, Lock } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
@@ -53,13 +53,64 @@ const PAGE_SIZE = 5;
 const QBank = () => {
   const navigate = useNavigate();
   const { user, isAnonymous } = useAuth();
-  const { questionCount, startSession, availableDomains, allQuestionMeta } = useQBankContext();
+  const { questionCount, startSession, availableDomains, allQuestionMeta, restoreSession, resetSession } = useQBankContext();
 
   const MAX_SESSION_CAP = 40;
 
   const [page, setPage] = useState(0);
   const [selectedDomains, setSelectedDomains] = useState<string[]>([]);
   const [questionLimit, setQuestionLimit] = useState<number>(MAX_SESSION_CAP);
+  const [hasSavedSession, setHasSavedSession] = useState(false);
+
+  useEffect(() => {
+    if (!user || isAnonymous) return;
+
+    try {
+      const raw = localStorage.getItem("sb_qbank_session");
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
+      if (
+        parsed.savedAt &&
+        Date.now() - parsed.savedAt < TWENTY_FOUR_HOURS &&
+        Array.isArray(parsed.questions) &&
+        parsed.questions.length > 0 &&
+        typeof parsed.currentIndex === "number" &&
+        Array.isArray(parsed.answers)
+      ) {
+        setHasSavedSession(true);
+      }
+    } catch {
+      // ignore
+    }
+  }, [user, isAnonymous]);
+
+  const savedSessionMeta = useMemo(() => {
+    try {
+      const raw = localStorage.getItem("sb_qbank_session");
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      return {
+        answered: Array.isArray(parsed.answers) ? parsed.answers.length : 0,
+        total: Array.isArray(parsed.questions) ? parsed.questions.length : 0,
+        system: parsed.questions?.[0]?.subject ?? "Cardiovascular",
+      };
+    } catch {
+      return null;
+    }
+  }, [hasSavedSession]);
+
+  const handleResume = () => {
+    const restored = restoreSession();
+    if (restored) {
+      navigate("/qbank/session");
+    }
+  };
+
+  const handleDiscard = () => {
+    resetSession();
+    setHasSavedSession(false);
+  };
 
   const availableForSelection = selectedDomains.length === 0
     ? allQuestionMeta.length
@@ -199,6 +250,52 @@ const QBank = () => {
             </div>
           ) : (
             <>
+              {hasSavedSession && savedSessionMeta && (
+                <div className="glass-card rounded-2xl p-4 border border-primary/30 bg-primary/5 space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/15 border border-primary/20 shrink-0">
+                        <History className="h-4 w-4 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-foreground">
+                          Resume previous session
+                        </p>
+                        <p className="text-[11px] text-muted-foreground/70 mt-0.5">
+                          {savedSessionMeta.system} · {savedSessionMeta.answered}/{savedSessionMeta.total} questions answered
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="w-full h-1 rounded-full bg-muted/30 overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-primary transition-all"
+                      style={{
+                        width: `${savedSessionMeta.total > 0 ? (savedSessionMeta.answered / savedSessionMeta.total) * 100 : 0}%`,
+                      }}
+                    />
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={handleResume}
+                      className="btn-gradient flex-1 h-9 text-sm font-semibold rounded-xl"
+                    >
+                      <ChevronRight className="h-4 w-4 mr-1" />
+                      Continue
+                    </Button>
+                    <Button
+                      onClick={handleDiscard}
+                      variant="ghost"
+                      className="h-9 px-4 text-sm text-muted-foreground/70 hover:text-foreground rounded-xl border border-border/40 hover:border-border/70"
+                    >
+                      Discard
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               <div className="glass-card rounded-2xl p-5 space-y-5 border border-border/30">
                 <div className="space-y-2">
                   <p className="text-[10px] font-semibold tracking-widest text-muted-foreground/50 uppercase">

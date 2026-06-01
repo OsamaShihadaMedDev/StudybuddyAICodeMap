@@ -42,7 +42,7 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
   const [length, setLength] = useState(prefill?.modeInfo?.length ?? "Concise");
   const [examMode, setExamMode] = useState(prefill?.modeInfo?.examMode ?? "General");
   const [output, setOutput] = useState(prefill?.output ?? "");
-  const [modelUsed, setModelUsed] = useState<"flash" | "gpt-oss" | undefined>(undefined);
+  const [modelUsed, setModelUsed] = useState<"flash" | "gpt-oss" | "claude" | undefined>(undefined);
   const [loading, setLoading] = useState(false);
   const [deckSaved, setDeckSaved] = useState(false);
   const [loadingMsg, setLoadingMsg] = useState("");
@@ -114,7 +114,12 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
       );
 
       const xModel = response.headers.get("X-Model-Used") ?? "";
-      setModelUsed(xModel.includes("gpt-oss") ? "gpt-oss" : "flash");
+      const resolvedModel = xModel.includes("gpt-oss")
+        ? "gpt-oss"
+        : xModel.includes("claude-haiku")
+        ? "claude"
+        : "flash";
+      setModelUsed(resolvedModel);
 
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));
@@ -395,20 +400,27 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
             <div className="text-center text-xs text-muted-foreground space-y-1">
               {isSheetLimited ? (
                 <span className="text-amber-500 dark:text-amber-400 font-medium block">
-                  Daily limit reached · Resets at midnight
+                  Daily limit reached ·{" "}
+                  <button
+                    type="button"
+                    className="underline hover:text-amber-400 transition-colors"
+                    onClick={() => setGoProOpen(true)}
+                  >
+                    Go Pro for Claude + unlimited
+                  </button>
                 </span>
               ) : (
                 <span>{sheetCount} / {MAX_DAILY_SHEETS} uses today · Resets at midnight</span>
               )}
               {isPremiumHookActive ? (
                 <span className="text-violet-400 font-medium block">
-                  ✦ {premiumRemaining} premium generation{premiumRemaining !== 1 ? "s" : ""} left ·{" "}
+                  ✦ {premiumRemaining} Claude generation{premiumRemaining !== 1 ? "s" : ""} left ·{" "}
                   <button
                     type="button"
                     className="underline hover:text-violet-300 transition-colors"
                     onClick={() => setGoProOpen(true)}
                   >
-                    Go Pro for unlimited
+                    Go Pro for unlimited Claude
                   </button>
                 </span>
               ) : !isSheetLimited ? (
@@ -419,19 +431,39 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
             </div>
           )}
           {pro && (
-            <div className="text-center text-xs text-muted-foreground">
-              <span className="text-primary font-medium">
-                ✦ Powered by {preferredModel === "gpt-oss" ? "GPT-OSS 20B" : "Gemini Flash"}
-              </span>
-              <span className="mx-2 opacity-40">·</span>
-              <button
-                type="button"
-                className="underline hover:text-foreground transition-colors"
-                onClick={() => setPreferredModel(preferredModel === "gpt-oss" ? "flash" : "gpt-oss")}
-                disabled={modelSaving}
-              >
-                Switch to {preferredModel === "gpt-oss" ? "Gemini Flash" : "GPT-OSS 20B"}
-              </button>
+            <div className="rounded-lg border border-border/30 bg-background/40 px-4 py-3 space-y-2">
+              <p className="text-[10px] font-semibold tracking-widest text-muted-foreground/50 uppercase text-center">
+                AI Model
+              </p>
+              <div className="flex items-center justify-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPreferredModel("gpt-oss")}
+                  disabled={modelSaving}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition-all ${
+                    preferredModel !== "claude"
+                      ? "bg-primary/15 border-primary/40 text-primary"
+                      : "bg-secondary/30 border-border/50 text-muted-foreground hover:border-primary/30 hover:text-foreground"
+                  }`}
+                >
+                  GPT-OSS 20B
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreferredModel("claude")}
+                  disabled={modelSaving}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition-all ${
+                    preferredModel === "claude"
+                      ? "bg-primary/15 border-primary/40 text-primary"
+                      : "bg-secondary/30 border-border/50 text-muted-foreground hover:border-primary/30 hover:text-foreground"
+                  }`}
+                >
+                  ✦ Claude Haiku 4.5
+                </button>
+              </div>
+              {modelSaving && (
+                <p className="text-[11px] text-muted-foreground/50 text-center">Saving preference…</p>
+              )}
             </div>
           )}
 

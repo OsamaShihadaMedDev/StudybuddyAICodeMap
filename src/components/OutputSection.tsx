@@ -23,7 +23,7 @@ interface OutputSectionProps {
   citationState?: CitationState;
   onCitationLockedClick?: () => void;
   citationIsLoggedIn?: boolean;
-  modelUsed?: "flash" | "gpt-oss";
+  modelUsed?: "flash" | "gpt-oss" | "claude";
   isPro?: boolean;
 }
 
@@ -33,16 +33,24 @@ const EVIDENCE_SECTIONS: ReadonlyArray<SectionKey> = [
   "KEY POINTS",
 ];
 
-function ModelBadge({ model, isPro }: { model: "flash" | "gpt-oss"; isPro: boolean }) {
-  if (isPro) {
+function ModelBadge({ model, isPro }: { model: "flash" | "gpt-oss" | "claude"; isPro: boolean }) {
+  if (isPro && model === "claude") {
     return (
       <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-primary/10 text-primary border border-primary/20 ml-2">
         <Zap className="h-3 w-3" />
-        Powered by {model === "flash" ? "Gemini Flash" : "GPT-OSS 20B"}
+        Powered by Claude Haiku 4.5
       </span>
     );
   }
-  if (model === "flash") {
+  if (isPro && model === "gpt-oss") {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-primary/10 text-primary border border-primary/20 ml-2">
+        <Zap className="h-3 w-3" />
+        Powered by GPT-OSS 20B
+      </span>
+    );
+  }
+  if (model === "claude") {
     return (
       <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-violet-500/15 text-violet-400 border border-violet-500/30 ml-2">
         <Zap className="h-3 w-3" />

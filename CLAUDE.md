@@ -35,7 +35,7 @@ Playwright is configured via `lovable-agent-playwright-config` — used by Lovab
 - `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `GEMINI_API_KEY` — edge functions + `scripts/rag-spike`
 - `VITE_NCBI_API_KEY` — PubMed citations
 
-⚠️ Two Supabase project IDs exist in this repo (`wgcjkoulknrnrtacrjgs` in config.toml vs `ebjfzdslgixhudswxeaz` in `.env`). Always confirm which is current before pushing any migration.
+⚠️ Canonical Supabase project ID: `ebjfzdslgixhudswxeaz` (confirmed live — serves studyybuddyai.com). config.toml has been updated to match. Always use this ID.
 
 ---
 

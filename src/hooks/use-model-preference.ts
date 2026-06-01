@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 
-export type ModelPreference = "flash" | "gpt-oss";
+export type ModelPreference = "claude" | "gpt-oss";
 
 export function useModelPreference() {
   const { user, isAnonymous } = useAuth();
@@ -22,11 +22,11 @@ export function useModelPreference() {
         .eq("id", userId!)
         .maybeSingle();
       if (error) throw error;
-      return (data?.preferred_model as ModelPreference) ?? "flash";
+      return (data?.preferred_model as ModelPreference) ?? "gpt-oss";
     },
   });
 
-  const preferredModel: ModelPreference = prefQuery.data ?? "flash";
+  const preferredModel: ModelPreference = prefQuery.data ?? "gpt-oss";
 
   const setPreferredModel = async (model: ModelPreference) => {
     if (!userId || saving) return;

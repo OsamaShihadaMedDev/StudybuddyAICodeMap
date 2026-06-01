@@ -391,20 +391,27 @@ const FlashcardsGenerator = () => {
           <div className="text-center text-xs text-muted-foreground space-y-1">
             {isCardsLimited ? (
               <span className="text-amber-500 dark:text-amber-400 font-medium block">
-                Daily limit reached · Resets at midnight
+                Daily limit reached ·{" "}
+                <button
+                  type="button"
+                  className="underline hover:text-amber-400 transition-colors"
+                  onClick={() => setGoProOpen(true)}
+                >
+                  Go Pro for Claude + unlimited
+                </button>
               </span>
             ) : (
               <span className="block">{remaining} / {MAX_DAILY_CARDS} cards generations today · Resets at midnight</span>
             )}
             {isPremiumHookActive ? (
               <span className="text-violet-400 font-medium block">
-                ✦ {premiumRemaining} premium generation{premiumRemaining !== 1 ? "s" : ""} left ·{" "}
+                ✦ {premiumRemaining} Claude generation{premiumRemaining !== 1 ? "s" : ""} left ·{" "}
                 <button
                   type="button"
                   className="underline hover:text-violet-300 transition-colors"
                   onClick={() => setGoProOpen(true)}
                 >
-                  Go Pro for unlimited
+                  Go Pro for unlimited Claude
                 </button>
               </span>
             ) : !isCardsLimited ? (
@@ -415,16 +422,16 @@ const FlashcardsGenerator = () => {
         {pro && (
           <div className="text-center text-xs text-muted-foreground">
             <span className="text-primary font-medium">
-              ✦ Powered by {preferredModel === "gpt-oss" ? "GPT-OSS 20B" : "Gemini Flash"}
+              ✦ Powered by {preferredModel === "claude" ? "Claude Haiku 4.5" : "GPT-OSS 20B"}
             </span>
             <span className="mx-2 opacity-40">·</span>
             <button
               type="button"
               className="underline hover:text-foreground transition-colors"
-              onClick={() => setPreferredModel(preferredModel === "gpt-oss" ? "flash" : "gpt-oss")}
+              onClick={() => setPreferredModel(preferredModel === "claude" ? "gpt-oss" : "claude")}
               disabled={modelSaving}
             >
-              Switch to {preferredModel === "gpt-oss" ? "Gemini Flash" : "GPT-OSS 20B"}
+              Switch to {preferredModel === "claude" ? "GPT-OSS 20B" : "Claude Haiku 4.5"}
             </button>
           </div>
         )}
