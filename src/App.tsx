@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Outlet, Route, Routes } from "react-router-dom";
+import { Analytics } from "@vercel/analytics/react";
 import { QBankProvider } from "./contexts/QBankContext";
 import { SidebarProvider } from "@/contexts/SidebarContext";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -41,6 +42,7 @@ const App = () => (
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
+      <Analytics />
       </SidebarProvider>
     </TooltipProvider>
   </QueryClientProvider>
