@@ -32,7 +32,9 @@ Playwright is configured via `lovable-agent-playwright-config` — used by Lovab
 
 `.env` is gitignored. Keys in use:
 - `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` — read by `src/integrations/supabase/client.ts`
-- `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `GEMINI_API_KEY` — edge functions + `scripts/rag-spike`
+- `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` — edge functions
+- `OPENROUTER_API_KEY` — all AI model calls from `medical-notes` edge function
+- `GEMINI_API_KEY` — `scripts/rag-spike` only (Gemini embeddings for the isolated RAG experiment)
 - `VITE_NCBI_API_KEY` — PubMed citations
 
 ⚠️ Canonical Supabase project ID: `ebjfzdslgixhudswxeaz` (confirmed live — serves studyybuddyai.com). config.toml has been updated to match. Always use this ID.
@@ -59,13 +61,22 @@ Single-page React 18 + TypeScript app, Vite, Tailwind + shadcn/ui (Radix primiti
 
 ### AI model routing
 
-Model routing is controlled by a single `ACTIVE_MODEL` constant. Two tiers:
-- **Free users** → GPT-OSS 20B via Groq/Cerebras (via OpenRouter)
-- **Pro users** → Gemini 2.5 Flash (via OpenRouter)
+All routing lives in `supabase/functions/medical-notes/index.ts`. Two models, all via OpenRouter:
 
-Pro user preference is stored in `profiles.preferred_model` (`"flash"` | `"gpt-oss"`). The `medical-notes` edge function honors `isPro` + `preferredModel`. Response headers `x-model-used` and `x-is-premium` tell the client which model ran (declared in `Access-Control-Expose-Headers`).
+- **Default for everyone** (anon, free, Pro-default) → **GPT-OSS 20B** (`openai/gpt-oss-20b`, routed to Cerebras → Groq)
+- **Premium** → **Claude Haiku 4.5** (`anthropic/claude-haiku-4.5`, routed to Anthropic)
 
-⚠️ Do NOT add direct Gemini API calls or any new model provider. All AI routing goes through OpenRouter.
+**When Claude is used:**
+1. **Pro user + toggle:** `isPro && preferredModel === "claude"` → Claude (chip-style toggle in `SheetGenerator.tsx` / `FlashcardsGenerator.tsx`).
+2. **Premium hook for free/anon:** first 1 generation (anon) or 3 generations (free signed-in) get Claude as a conversion hook, tracked by `profiles.premium_used` (lifetime counter, incremented inside the edge function via service-role client). After the hook is exhausted → GPT-OSS.
+
+Pro toggle preference is stored in `profiles.preferred_model` (`"claude"` | `"gpt-oss"`, default `"gpt-oss"`). Type lives in `src/hooks/use-model-preference.ts`.
+
+Response headers `x-model-used` and `x-is-premium` tell the client which model ran (declared in `Access-Control-Expose-Headers`). Client-side `modelUsed` state in both generators detects the model from `x-model-used` (`gpt-oss` / `claude-haiku` substring match).
+
+The edge function has two prompt families: `gptOss*Prompt` (default) and `haiku*Prompt` (when model === claude). `ModelBadge` in `OutputSection.tsx` renders three variants: Pro+cyan ("Powered by …"), free+violet ("✦ Premium AI" — hook-triggered Claude), grey ("GPT-OSS 20B").
+
+⚠️ Do NOT add direct API clients for Anthropic, OpenAI, or Gemini. All AI routing goes through OpenRouter. Gemini is no longer used by the main app (only `scripts/rag-spike`).
 
 ### Three study tools
 
@@ -75,11 +86,13 @@ Pro user preference is stored in `profiles.preferred_model` (`"flash"` | `"gpt-o
 
 **QBank** (`src/pages/QBank.tsx` + `QBankSession.tsx` + `QBankSummary.tsx`, `contexts/QBankContext.tsx`, `use-qbank.ts`) — MCQ engine. Pulls from `questions` + `question_media` + `media` tables. Sessions persisted to `sb_qbank_session` localStorage on every answer/navigation (24h TTL, `restoreSession()` validates and rehydrates). On `endSession`, summary → `qbank_sessions`, answers → `user_attempts`; navigation to `/qbank/summary?session=<id>` only after DB write succeeds.
 
+`/qbank` landing page shows a resume banner when a valid saved session exists (peeks at localStorage on mount; Continue calls `restoreSession()` → navigates to `/qbank/session`; Discard calls `resetSession()` → clears storage).
+
 React Query keys to invalidate when mutating QBank data: `["qbank-count"]`, `["qbank-domains"]`, `["qbank-meta"]`, `["qbank-sessions"]`.
 
 ### Edge functions (`supabase/functions/`)
 
-- `medical-notes` — Gemini-backed generator for sheets and flashcards. Modes: `cardsOnly`/`cardCount`, `explainMode` + `focusCard`.
+- `medical-notes` — generator for sheets, flashcards, and explain mode. Models: GPT-OSS 20B (default) or Claude Haiku 4.5 (Pro toggle + free/anon hook). Modes: `cardsOnly`/`cardCount`, `explainMode` + `focusCard`. Reads/writes `profiles.premium_used` via service-role client for hook tracking.
 - `get-citations` — PubMed lookups via NCBI E-utilities API (`src/lib/citation*.ts`, `src/hooks/use-citation-usage.ts`). Specialty-aware journal filtering. Three-tier entitlement matrix.
 
 ### Usage / quota model
@@ -99,8 +112,9 @@ React Query keys to invalidate when mutating QBank data: `["qbank-count"]`, `["q
 
 Current work on this branch:
 - Session creator UI: domain toggle chips, dynamic question count slider
-- localStorage-based session resume flow
+- Session resume banner on `/qbank` (reads `sb_qbank_session` localStorage, Continue/Discard actions)
 - QBank question pipeline: `scripts/planBlock.ts` → `scripts/generateBlock.ts`
+- Migrated Pro model from Gemini Flash → Claude Haiku 4.5 (see AI model routing section)
 
 **QBank question pipeline:**
 - Questions generated in versioned batches grounded in First Aid 2025 screenshots

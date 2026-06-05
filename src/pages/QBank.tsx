@@ -1,12 +1,13 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { FlaskConical, LogIn, Zap, BookOpen, CheckCircle, History, ChevronRight, Clock, Lock } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { FlaskConical, LogIn, Zap, BookOpen, CheckCircle, History, ChevronRight, Clock, Trash2, Flag } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { useQBankContext } from "@/contexts/QBankContext";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface SessionRow {
   id: string;
@@ -53,14 +54,52 @@ const PAGE_SIZE = 5;
 const QBank = () => {
   const navigate = useNavigate();
   const { user, isAnonymous } = useAuth();
-  const { questionCount, startSession, availableDomains, allQuestionMeta, restoreSession, resetSession } = useQBankContext();
+  const {
+    questionCount,
+    startSession,
+    allDomainMeta,
+    allQuestionMeta,
+    availableSystems,
+    restoreSession,
+    resetSession,
+    flaggedIds,
+  } = useQBankContext();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const MAX_SESSION_CAP = 40;
+  const flaggedCount = flaggedIds.size;
 
   const [page, setPage] = useState(0);
+  const [selectedSystem, setSelectedSystem] = useState<string>("");
   const [selectedDomains, setSelectedDomains] = useState<string[]>([]);
   const [questionLimit, setQuestionLimit] = useState<number>(MAX_SESSION_CAP);
   const [hasSavedSession, setHasSavedSession] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [flaggedOnly, setFlaggedOnly] = useState(false);
+
+  useEffect(() => {
+    if (availableSystems.length > 0 && selectedSystem === "") {
+      setSelectedSystem(availableSystems[0]);
+    }
+  }, [availableSystems, selectedSystem]);
+
+  const availableDomains = useMemo(() => {
+    if (!selectedSystem) return [];
+    return [
+      ...new Set(
+        allDomainMeta
+          .filter((r) => r.subject === selectedSystem)
+          .map((r) => r.domain)
+      ),
+    ].sort();
+  }, [allDomainMeta, selectedSystem]);
+
+  const handleSystemChange = (system: string) => {
+    setSelectedSystem(system);
+    setSelectedDomains([]);
+  };
 
   useEffect(() => {
     if (!user || isAnonymous) return;
@@ -112,9 +151,13 @@ const QBank = () => {
     setHasSavedSession(false);
   };
 
-  const availableForSelection = selectedDomains.length === 0
-    ? allQuestionMeta.length
-    : allQuestionMeta.filter((q) => selectedDomains.includes(q.domain)).length;
+  const availableForSelection = useMemo(() => {
+    const systemFiltered = selectedSystem
+      ? allQuestionMeta.filter((q) => q.subject === selectedSystem)
+      : allQuestionMeta;
+    if (selectedDomains.length === 0) return systemFiltered.length;
+    return systemFiltered.filter((q) => selectedDomains.includes(q.domain)).length;
+  }, [allQuestionMeta, selectedSystem, selectedDomains]);
 
   const sliderMax = Math.min(availableForSelection, MAX_SESSION_CAP);
   const effectiveSliderMax = sliderMax > 0 ? sliderMax : MAX_SESSION_CAP;
@@ -162,9 +205,42 @@ const QBank = () => {
   const handleStart = async () => {
     await startSession({
       domains: selectedDomains,
-      limit: questionLimit,
+      system: selectedSystem,
+      limit: flaggedOnly ? flaggedCount : questionLimit,
+      questionIds: flaggedOnly ? [...flaggedIds] : undefined,
     });
     navigate("/qbank/session");
+  };
+
+  const handleDeleteSession = async (sessionId: string) => {
+    setIsDeleting(true);
+    try {
+      const { error: attemptsError } = await supabase
+        .from("user_attempts")
+        .delete()
+        .eq("session_id", sessionId);
+
+      if (attemptsError) throw attemptsError;
+
+      const { error: sessionError } = await supabase
+        .from("qbank_sessions")
+        .delete()
+        .eq("id", sessionId);
+
+      if (sessionError) throw sessionError;
+
+      setPendingDeleteId(null);
+      queryClient.invalidateQueries({ queryKey: ["qbank-sessions"] });
+    } catch (err) {
+      toast({
+        title: "Failed to delete session",
+        description: "Please try again.",
+        variant: "destructive",
+      });
+      setPendingDeleteId(null);
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   return (
@@ -202,9 +278,11 @@ const QBank = () => {
             </div>
             <div className="glass-card rounded-xl p-3 text-center space-y-1">
               <p className="text-2xl font-extrabold text-foreground">
-                Cardio
+                {availableSystems.length > 0 ? availableSystems.length : "—"}
               </p>
-              <p className="text-[11px] text-muted-foreground">pilot block</p>
+              <p className="text-[11px] text-muted-foreground">
+                {availableSystems.length === 1 ? "system" : "systems"}
+              </p>
             </div>
           </div>
 
@@ -301,16 +379,58 @@ const QBank = () => {
                   <p className="text-[10px] font-semibold tracking-widest text-muted-foreground/50 uppercase">
                     System
                   </p>
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/15 px-3 py-1.5 text-xs font-semibold text-primary cursor-default">
-                    <Lock className="h-3 w-3" />
-                    Cardiovascular
-                  </span>
-                  <p className="text-[11px] text-muted-foreground/40 mt-1.5">
-                    More systems coming soon
-                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {availableSystems.length === 0 ? (
+                      [100, 88].map((w) => (
+                        <div
+                          key={w}
+                          style={{ width: `${w}px` }}
+                          className="h-7 rounded-full bg-muted/20 animate-pulse"
+                        />
+                      ))
+                    ) : (
+                      availableSystems.map((system) => {
+                        const isSelected = selectedSystem === system;
+                        return (
+                          <button
+                            key={system}
+                            type="button"
+                            onClick={() => handleSystemChange(system)}
+                            className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
+                              isSelected
+                                ? "bg-primary/15 border-primary/40 text-primary"
+                                : "bg-secondary/30 border-border/50 text-muted-foreground hover:border-primary/30 hover:text-foreground"
+                            }`}
+                          >
+                            {system}
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
                 </div>
 
-                <div className="space-y-2">
+                {flaggedCount > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-[10px] font-semibold tracking-widest text-muted-foreground/50 uppercase">
+                      Filter
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setFlaggedOnly((v) => !v)}
+                      className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer ${
+                        flaggedOnly
+                          ? "bg-amber-500/15 border-amber-500/40 text-amber-400"
+                          : "bg-secondary/30 border-border/50 text-muted-foreground hover:border-amber-500/30 hover:text-amber-400"
+                      }`}
+                    >
+                      <Flag className="h-3 w-3" fill={flaggedOnly ? "currentColor" : "none"} />
+                      Flagged only ({flaggedCount})
+                    </button>
+                  </div>
+                )}
+
+                <div className={`space-y-2 ${flaggedOnly ? "opacity-50 pointer-events-none" : ""}`}>
                   <p className="text-[10px] font-semibold tracking-widest text-muted-foreground/50 uppercase">
                     Domain
                   </p>
@@ -358,7 +478,7 @@ const QBank = () => {
                   </div>
                 </div>
 
-                <div className="space-y-2">
+                <div className={`space-y-2 ${flaggedOnly ? "opacity-50 pointer-events-none" : ""}`}>
                   <div className="flex items-center justify-between">
                     <p className="text-[10px] font-semibold tracking-widest text-muted-foreground/50 uppercase">
                       Questions
@@ -390,11 +510,11 @@ const QBank = () => {
 
               <Button
                 onClick={handleStart}
-                disabled={questionCount === 0 || effectiveSliderMax === 0}
+                disabled={questionCount === 0 || (flaggedOnly ? flaggedCount === 0 : effectiveSliderMax === 0)}
                 className="btn-gradient w-full h-14 text-base font-bold rounded-xl"
               >
                 <FlaskConical className="h-5 w-5 mr-2" />
-                Start Session · {questionLimit} Questions
+                Start Session · {flaggedOnly ? flaggedCount : questionLimit} Questions
               </Button>
             </>
           )}
@@ -428,6 +548,38 @@ const QBank = () => {
                   <div className="space-y-2">
                     {sessionHistory.rows.map((s) => {
                       const pct = s.total > 0 ? Math.round((s.score / s.total) * 100) : 0;
+
+                      if (pendingDeleteId === s.id) {
+                        return (
+                          <div
+                            key={s.id}
+                            className="w-full glass-card rounded-xl px-4 py-3 flex items-center justify-between gap-3 border border-red-500/30 bg-red-500/5"
+                          >
+                            <p className="text-xs font-medium text-foreground">Delete this session?</p>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <button
+                                onClick={() => setPendingDeleteId(null)}
+                                className="text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-1"
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                onClick={() => handleDeleteSession(s.id)}
+                                disabled={isDeleting}
+                                className="flex items-center gap-1.5 rounded-lg bg-red-500/20 border border-red-500/40 text-red-400 hover:bg-red-500/30 text-xs font-semibold px-3 py-1.5 transition-colors disabled:opacity-50"
+                              >
+                                {isDeleting ? (
+                                  <span className="h-3 w-3 rounded-full border-2 border-red-400/40 border-t-red-400 animate-spin" />
+                                ) : (
+                                  <Trash2 className="h-3 w-3" />
+                                )}
+                                Delete
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      }
+
                       return (
                         <button
                           key={s.id}
@@ -459,6 +611,26 @@ const QBank = () => {
                               </span>
                             </div>
                           </div>
+
+                          <span
+                            role="button"
+                            tabIndex={0}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPendingDeleteId(s.id);
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.stopPropagation();
+                                e.preventDefault();
+                                setPendingDeleteId(s.id);
+                              }
+                            }}
+                            className="shrink-0 p-1.5 rounded-lg text-muted-foreground/40 hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
+                            aria-label="Delete session"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </span>
 
                           <ChevronRight className="h-4 w-4 text-muted-foreground/30 group-hover:text-primary/60 transition-colors shrink-0" />
                         </button>

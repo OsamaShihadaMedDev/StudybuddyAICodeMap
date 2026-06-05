@@ -48,6 +48,10 @@ export interface SessionState {
   answers: SessionAnswer[];
   startedAt: number;
   questionStartedAt: number;
+  accumulatedMs: number;
+  resumedAt: number;
+  skippedIds: string[];
+  flaggedIds: string[];
 }
 
 export function useQBank() {
@@ -86,12 +90,17 @@ export function useQBank() {
 
   const startSession = useCallback(async () => {
     const questions = await fetchQuestions();
+    const now = Date.now();
     setSession({
       questions,
       currentIndex: 0,
       answers: [],
-      startedAt: Date.now(),
-      questionStartedAt: Date.now(),
+      startedAt: now,
+      questionStartedAt: now,
+      accumulatedMs: 0,
+      resumedAt: now,
+      skippedIds: [],
+      flaggedIds: [],
     });
   }, [fetchQuestions]);
 

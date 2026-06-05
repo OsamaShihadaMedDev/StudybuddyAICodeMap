@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useMemo, ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,6 +10,8 @@ const STORAGE_KEY = "sb_qbank_session";
 export interface SessionConfig {
   domains: string[];
   limit: number;
+  system?: string;
+  questionIds?: string[];
 }
 
 interface SessionSummary {
@@ -18,12 +20,14 @@ interface SessionSummary {
   totalTime: number;
   score: number;
   total: number;
+  flaggedIds: string[];
 }
 
 interface QBankContextValue {
   questionCount: number;
-  availableDomains: string[];
-  allQuestionMeta: { id: string; domain: string }[];
+  availableSystems: string[];
+  allDomainMeta: { subject: string; domain: string }[];
+  allQuestionMeta: { id: string; domain: string; subject: string }[];
   session: SessionState | null;
   currentQuestion: Question | null;
   currentIndex: number;
@@ -44,6 +48,14 @@ interface QBankContextValue {
   isReviewing: boolean;
   loadSummary: (data: SessionSummary) => void;
   restoreSession: () => boolean;
+  snapshotTimer: () => void;
+  elapsedMs: number;
+  flaggedIds: Set<string>;
+  toggleFlag: (questionId: string) => Promise<void>;
+  isFlagLoading: boolean;
+  skipQuestion: () => void;
+  goToQuestion: (index: number) => void;
+  unansweredCount: number;
 }
 
 const QBankContext = createContext<QBankContextValue | null>(null);
@@ -68,30 +80,49 @@ export const QBankProvider = ({ children }: { children: ReactNode }) => {
     },
   });
 
-  const { data: availableDomains = [] } = useQuery({
-    queryKey: ["qbank-domains"],
+  const { data: availableSystems = [] } = useQuery({
+    queryKey: ["qbank-systems"],
     queryFn: async (): Promise<string[]> => {
       const { data, error } = await supabase
         .from("questions")
-        .select("domain")
+        .select("subject")
         .eq("is_active", true);
       if (error) throw error;
-      const unique = [...new Set((data ?? []).map((r: { domain: string }) => r.domain))].sort();
+      const unique = [...new Set((data ?? []).map((r: { subject: string }) => r.subject))].sort();
       return unique;
+    },
+  });
+
+  const { data: allDomainMeta = [] } = useQuery({
+    queryKey: ["qbank-domain-meta"],
+    queryFn: async (): Promise<{ subject: string; domain: string }[]> => {
+      const { data, error } = await supabase
+        .from("questions")
+        .select("subject, domain")
+        .eq("is_active", true);
+      if (error) throw error;
+      return (data ?? []) as { subject: string; domain: string }[];
     },
   });
 
   const { data: allQuestionMeta = [] } = useQuery({
     queryKey: ["qbank-meta"],
-    queryFn: async (): Promise<{ id: string; domain: string }[]> => {
+    queryFn: async (): Promise<{ id: string; domain: string; subject: string }[]> => {
       const { data, error } = await supabase
         .from("questions")
-        .select("id, domain")
+        .select("id, domain, subject")
         .eq("is_active", true);
       if (error) throw error;
-      return (data ?? []) as { id: string; domain: string }[];
+      return (data ?? []) as { id: string; domain: string; subject: string }[];
     },
   });
+
+  const flaggedIds: Set<string> = useMemo(
+    () => new Set(session?.flaggedIds ?? []),
+    [session?.flaggedIds]
+  );
+
+  const isFlagLoading = false;
 
   const fetchQuestions = useCallback(async (config?: SessionConfig): Promise<Question[]> => {
     let query = supabase
@@ -101,8 +132,15 @@ export const QBankProvider = ({ children }: { children: ReactNode }) => {
       )
       .eq("is_active", true);
 
-    if (config?.domains && config.domains.length > 0) {
-      query = query.in("domain", config.domains);
+    if (config?.questionIds && config.questionIds.length > 0) {
+      query = query.in("id", config.questionIds);
+    } else {
+      if (config?.system) {
+        query = query.eq("subject", config.system);
+      }
+      if (config?.domains && config.domains.length > 0) {
+        query = query.in("domain", config.domains);
+      }
     }
 
     const { data, error } = await query;
@@ -190,6 +228,9 @@ export const QBankProvider = ({ children }: { children: ReactNode }) => {
       currentIndex: persistIndex,
       answers: s.answers,
       startedAt: s.startedAt,
+      accumulatedMs: s.accumulatedMs + (Date.now() - s.resumedAt),
+      skippedIds: s.skippedIds,
+      flaggedIds: s.flaggedIds,
       savedAt: Date.now(),
     };
 
@@ -239,6 +280,10 @@ export const QBankProvider = ({ children }: { children: ReactNode }) => {
         answers: parsed.answers,
         startedAt: parsed.startedAt,
         questionStartedAt: Date.now(),
+        accumulatedMs: typeof parsed.accumulatedMs === "number" ? parsed.accumulatedMs : 0,
+        resumedAt: Date.now(),
+        skippedIds: Array.isArray(parsed.skippedIds) ? parsed.skippedIds : [],
+        flaggedIds: Array.isArray(parsed.flaggedIds) ? parsed.flaggedIds : [],
       });
 
       return true;
@@ -251,12 +296,17 @@ export const QBankProvider = ({ children }: { children: ReactNode }) => {
   const startSession = useCallback(async (config?: SessionConfig) => {
     setReviewIndex(null);
     const questions = await fetchQuestions(config);
+    const now = Date.now();
     const newSession: SessionState = {
       questions,
       currentIndex: 0,
       answers: [],
-      startedAt: Date.now(),
-      questionStartedAt: Date.now(),
+      startedAt: now,
+      questionStartedAt: now,
+      accumulatedMs: 0,
+      resumedAt: now,
+      skippedIds: [],
+      flaggedIds: [],
     };
     setSession(newSession);
     saveSessionToStorage(newSession);
@@ -289,6 +339,9 @@ export const QBankProvider = ({ children }: { children: ReactNode }) => {
           currentIndex: persistIndex,
           answers: updatedAnswers,
           startedAt: session.startedAt,
+          accumulatedMs: session.accumulatedMs + (Date.now() - session.resumedAt),
+          skippedIds: session.skippedIds,
+          flaggedIds: session.flaggedIds,
           savedAt: Date.now(),
         }));
       } catch { /* fail silently */ }
@@ -340,7 +393,7 @@ export const QBankProvider = ({ children }: { children: ReactNode }) => {
     const endedAt = Date.now();
     const score = session.answers.filter((a) => a.is_correct).length;
     const total = session.answers.length;
-    const totalTime = endedAt - session.startedAt;
+    const totalTime = session.accumulatedMs + (endedAt - session.resumedAt);
 
     let sessionId: string | null = null;
 
@@ -374,6 +427,15 @@ export const QBankProvider = ({ children }: { children: ReactNode }) => {
           }));
 
           await supabase.from("user_attempts").insert(rows);
+
+          if (sessionId && session.flaggedIds.length > 0) {
+            const flagRows = session.flaggedIds.map((questionId) => ({
+              user_id: user.id,
+              question_id: questionId,
+              session_id: sessionId,
+            }));
+            await supabase.from("flagged_questions").insert(flagRows);
+          }
         } else if (session.answers.length > 0) {
           await saveAttemptsMutation.mutateAsync(session.answers);
         }
@@ -395,6 +457,7 @@ export const QBankProvider = ({ children }: { children: ReactNode }) => {
       totalTime,
       score,
       total,
+      flaggedIds: session.flaggedIds,
     };
 
     setLastSummary(summary);
@@ -416,6 +479,111 @@ export const QBankProvider = ({ children }: { children: ReactNode }) => {
     setSession(null);
   }, [clearSessionStorage]);
 
+  const toggleFlag = useCallback(async (questionId: string) => {
+    setSession((prev) => {
+      if (!prev) return prev;
+      const alreadyFlagged = prev.flaggedIds.includes(questionId);
+      const updated: SessionState = {
+        ...prev,
+        flaggedIds: alreadyFlagged
+          ? prev.flaggedIds.filter((id) => id !== questionId)
+          : [...prev.flaggedIds, questionId],
+      };
+
+      const firstUnanswered = updated.questions.findIndex(
+        (q) => !updated.answers.some((a) => a.question_id === q.id)
+      );
+      const persistIndex = firstUnanswered === -1 ? updated.currentIndex : firstUnanswered;
+
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+          questions: updated.questions,
+          currentIndex: persistIndex,
+          answers: updated.answers,
+          startedAt: updated.startedAt,
+          accumulatedMs: updated.accumulatedMs + (Date.now() - updated.resumedAt),
+          skippedIds: updated.skippedIds,
+          flaggedIds: updated.flaggedIds,
+          savedAt: Date.now(),
+        }));
+      } catch { /* fail silently */ }
+
+      return updated;
+    });
+  }, []);
+
+  const skipQuestion = useCallback(() => {
+    setSession((prev) => {
+      if (!prev) return prev;
+      const currentQ = prev.questions[prev.currentIndex];
+      if (!currentQ) return prev;
+      if (prev.currentIndex >= prev.questions.length - 1) return prev;
+
+      const updated: SessionState = {
+        ...prev,
+        currentIndex: prev.currentIndex + 1,
+        questionStartedAt: Date.now(),
+        skippedIds: prev.skippedIds.includes(currentQ.id)
+          ? prev.skippedIds
+          : [...prev.skippedIds, currentQ.id],
+      };
+
+      saveSessionToStorage(updated);
+      return updated;
+    });
+  }, [saveSessionToStorage]);
+
+  const goToQuestion = useCallback((index: number) => {
+    setReviewIndex(null);
+    setSession((prev) => {
+      if (!prev) return prev;
+      if (index < 0 || index >= prev.questions.length) return prev;
+      if (index === prev.currentIndex) return prev;
+
+      const updated: SessionState = {
+        ...prev,
+        currentIndex: index,
+        questionStartedAt: Date.now(),
+      };
+
+      saveSessionToStorage(updated);
+      return updated;
+    });
+  }, [saveSessionToStorage]);
+
+  const snapshotTimer = useCallback(() => {
+    setSession((prev) => {
+      if (!prev) return prev;
+      const now = Date.now();
+      const banked = prev.accumulatedMs + (now - prev.resumedAt);
+      const updated: SessionState = {
+        ...prev,
+        accumulatedMs: banked,
+        resumedAt: now,
+      };
+
+      const firstUnanswered = updated.questions.findIndex(
+        (q) => !updated.answers.some((a) => a.question_id === q.id)
+      );
+      const persistIndex = firstUnanswered === -1 ? updated.currentIndex : firstUnanswered;
+
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+          questions: updated.questions,
+          currentIndex: persistIndex,
+          answers: updated.answers,
+          startedAt: updated.startedAt,
+          accumulatedMs: banked,
+          skippedIds: updated.skippedIds,
+          flaggedIds: updated.flaggedIds,
+          savedAt: now,
+        }));
+      } catch { /* fail silently */ }
+
+      return updated;
+    });
+  }, []);
+
   const enterSummaryReview = useCallback((index: number) => {
     setReviewIndex(index);
   }, []);
@@ -423,6 +591,14 @@ export const QBankProvider = ({ children }: { children: ReactNode }) => {
   const loadSummary = useCallback((data: SessionSummary) => {
     setLastSummary(data);
   }, []);
+
+  const elapsedMs = session ? session.accumulatedMs + (Date.now() - session.resumedAt) : 0;
+
+  const unansweredCount = session
+    ? session.questions.filter(
+        (q) => !session.answers.find((a) => a.question_id === q.id)
+      ).length
+    : 0;
 
   const currentQuestion = session ? session.questions[session.currentIndex] : null;
   const isLastQuestion = session
@@ -456,7 +632,8 @@ export const QBankProvider = ({ children }: { children: ReactNode }) => {
     <QBankContext.Provider
       value={{
         questionCount,
-        availableDomains,
+        availableSystems,
+        allDomainMeta,
         allQuestionMeta,
         session,
         currentQuestion,
@@ -478,6 +655,14 @@ export const QBankProvider = ({ children }: { children: ReactNode }) => {
         isReviewing,
         loadSummary,
         restoreSession,
+        snapshotTimer,
+        elapsedMs,
+        flaggedIds,
+        toggleFlag,
+        isFlagLoading,
+        skipQuestion,
+        goToQuestion,
+        unansweredCount,
       }}
     >
       {children}

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { FlaskConical, CheckCircle, XCircle, Clock, RotateCcw, ChevronRight } from "lucide-react";
+import { FlaskConical, CheckCircle, XCircle, Clock, RotateCcw, ChevronRight, Flag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import StudyBuddyLoader from "@/components/StudyBuddyLoader";
@@ -14,6 +14,7 @@ interface SummaryData {
   totalTime: number;
   score: number;
   total: number;
+  flaggedIds: string[];
 }
 
 const ScoreRing = ({ score, total }: { score: number; total: number }) => {
@@ -62,6 +63,7 @@ const QBankSummary = () => {
   const { lastSummary, startSession, enterSummaryReview, setReviewIndex, loadSummary } = useQBankContext();
 
   const [summaryData, setSummaryData] = useState<SummaryData | null>(null);
+  const [summaryFlaggedIds, setSummaryFlaggedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -142,14 +144,25 @@ const QBankSummary = () => {
               time_taken_ms: a.time_taken_ms ?? 0,
             }));
 
+            const { data: flagData } = await supabase
+              .from("flagged_questions")
+              .select("question_id")
+              .eq("session_id", sessionId);
+
+            const flagSet = new Set(
+              (flagData ?? []).map((r: { question_id: string }) => r.question_id)
+            );
+
             const loaded = {
               questions,
               answers,
               totalTime: sessionRow.total_time_ms,
               score: sessionRow.score,
               total: sessionRow.total,
+              flaggedIds: [...flagSet],
             };
             setSummaryData(loaded);
+            setSummaryFlaggedIds(flagSet);
             loadSummary(loaded);
             setLoading(false);
             return;
@@ -161,6 +174,7 @@ const QBankSummary = () => {
 
       if (lastSummary) {
         setSummaryData(lastSummary);
+        setSummaryFlaggedIds(new Set(lastSummary.flaggedIds ?? []));
         setLoading(false);
         return;
       }
@@ -267,6 +281,12 @@ const QBankSummary = () => {
           <p className="text-[10px] font-bold tracking-[0.15em] text-muted-foreground/60 uppercase pl-1">
             Question breakdown
           </p>
+          {questions.some((q) => summaryFlaggedIds.has(q.id)) && (
+            <div className="flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-[11px] font-medium text-amber-400 w-fit">
+              <Flag className="h-3 w-3" fill="currentColor" />
+              {questions.filter((q) => summaryFlaggedIds.has(q.id)).length} flagged for review
+            </div>
+          )}
           <div className="space-y-1.5">
             {questions.map((q, i) => {
               const ans = answers.find((a) => a.question_id === q.id);
@@ -291,6 +311,9 @@ const QBankSummary = () => {
                   <div className="flex-1 min-w-0 space-y-0.5">
                     <div className="flex items-center gap-2">
                       <span className="text-[11px] font-bold text-muted-foreground shrink-0">Q{i + 1}</span>
+                      {summaryFlaggedIds.has(q.id) && (
+                        <Flag className="h-3 w-3 text-amber-400 shrink-0" fill="currentColor" />
+                      )}
                       <span className="text-[11px] text-muted-foreground">{q.domain}</span>
                       <span className="text-[11px] font-semibold shrink-0" style={{ color: diffColor }}>{q.difficulty}</span>
                     </div>

@@ -7,6 +7,9 @@ import {
   CheckCircle,
   XCircle,
   ChevronDown,
+  Clock,
+  Flag,
+  SkipForward,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
@@ -22,12 +25,22 @@ function renderMarkdown(text: string): string {
 
 type AnswerState =
   | { status: "unanswered" }
+  | { status: "selected"; pending: OptionKey }
   | {
       status: "answered";
       selected: OptionKey;
       correct: OptionKey;
       isCorrect: boolean;
     };
+
+const formatElapsed = (ms: number): string => {
+  const totalSec = Math.floor(ms / 1000);
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+};
 
 type Difficulty = "Easy" | "Medium" | "Hard";
 
@@ -38,6 +51,9 @@ interface QuestionCounterProps {
   questions: { id: string }[];
   reviewIndex: number | null;
   onReview: (index: number) => void;
+  onNavigate: (index: number) => void;
+  flaggedIds: Set<string>;
+  skippedIds: string[];
 }
 
 const QuestionCounter = ({
@@ -47,6 +63,9 @@ const QuestionCounter = ({
   questions,
   reviewIndex,
   onReview,
+  onNavigate,
+  flaggedIds,
+  skippedIds,
 }: QuestionCounterProps) => {
   return (
     <div className="hidden md:flex flex-col items-center gap-1.5 w-8 shrink-0 pt-1">
@@ -58,6 +77,8 @@ const QuestionCounter = ({
           const isCurrent = i === currentIndex && reviewIndex === null;
           const isReviewing = i === reviewIndex;
           const isCorrect = answer?.is_correct;
+          const isSkipped = q ? skippedIds.includes(q.id) : false;
+          const isFlaggedQ = q ? flaggedIds.has(q.id) : false;
 
           let bg = "bg-muted/30 text-muted-foreground/40";
           let border = "border-border/20";
@@ -78,17 +99,37 @@ const QuestionCounter = ({
               border = "border-red-500/40";
             }
             cursor = "cursor-pointer hover:opacity-80 transition-opacity";
+          } else if (isSkipped) {
+            bg = "bg-amber-500/20 text-amber-400";
+            border = "border-amber-500/40";
+            cursor = "cursor-pointer hover:opacity-80 transition-opacity";
           }
+
+          const canClick = isAnswered || (isSkipped && !isCurrent);
 
           return (
             <button
               key={i}
-              disabled={!isAnswered && !isCurrent}
-              onClick={() => (isAnswered ? onReview(i) : undefined)}
-              className={`w-7 h-7 rounded-lg border text-[10px] font-bold flex items-center justify-center shrink-0 ${bg} ${border} ${cursor}`}
-              title={isAnswered ? `Q${i + 1} — click to review` : `Q${i + 1}`}
+              disabled={!canClick && !isCurrent}
+              onClick={() => {
+                if (isAnswered) onReview(i);
+                else if (isSkipped && !isCurrent) onNavigate(i);
+              }}
+              className={`relative w-7 h-7 rounded-lg border text-[10px] font-bold flex items-center justify-center shrink-0 ${bg} ${border} ${cursor}`}
+              title={
+                isAnswered
+                  ? `Q${i + 1} — click to review`
+                  : isSkipped && !isCurrent
+                  ? `Q${i + 1} — skipped, click to answer`
+                  : `Q${i + 1}`
+              }
             >
               {i + 1}
+              {isFlaggedQ && (
+                <span className="absolute -top-1 -right-1 flex h-3 w-3 items-center justify-center rounded-full bg-amber-500 border border-background">
+                  <Flag className="h-1.5 w-1.5 text-white" fill="currentColor" />
+                </span>
+              )}
             </button>
           );
         })}
@@ -221,6 +262,7 @@ interface OptionTileProps {
   letter: OptionKey;
   text: string;
   answerState: AnswerState;
+  pendingKey: OptionKey | null;
   onSelect: (key: OptionKey) => void;
 }
 
@@ -228,12 +270,15 @@ const LETTER_LABELS: Record<OptionKey, string> = {
   a: "A", b: "B", c: "C", d: "D", e: "E",
 };
 
-const OptionTile = ({ letter, text, answerState, onSelect }: OptionTileProps) => {
+const OptionTile = ({ letter, text, answerState, pendingKey, onSelect }: OptionTileProps) => {
   const isAnswered = answerState.status === "answered";
   const isSelected = isAnswered && answerState.selected === letter;
   const isCorrect  = isAnswered && answerState.correct === letter;
   const isWrong    = isSelected && !isCorrect;
   const isDimmed   = isAnswered && !isSelected && !isCorrect;
+
+  const isPending = answerState.status === "selected" && pendingKey === letter;
+  const isOtherPending = answerState.status === "selected" && pendingKey !== null && pendingKey !== letter;
 
   const tileStyle = isCorrect
     ? "border-green-500/70 bg-green-950/40 text-green-300"
@@ -241,6 +286,10 @@ const OptionTile = ({ letter, text, answerState, onSelect }: OptionTileProps) =>
     ? "border-red-500/70 bg-red-950/40 text-red-300"
     : isDimmed
     ? "border-border/20 bg-card/20 text-muted-foreground/40 cursor-default"
+    : isPending
+    ? "border-primary/70 bg-primary/15 text-primary cursor-pointer"
+    : isOtherPending
+    ? "border-border/30 bg-card/40 text-muted-foreground/60 cursor-pointer hover:border-primary/40 hover:bg-primary/5"
     : "border-border/60 bg-card hover:border-primary/50 hover:bg-primary/5 text-foreground cursor-pointer";
 
   const letterStyle = isCorrect
@@ -249,6 +298,10 @@ const OptionTile = ({ letter, text, answerState, onSelect }: OptionTileProps) =>
     ? "bg-red-500 text-white"
     : isDimmed
     ? "bg-muted/30 text-muted-foreground/40"
+    : isPending
+    ? "bg-primary/80 text-white"
+    : isOtherPending
+    ? "bg-muted/30 text-muted-foreground/50 group-hover:bg-primary/20 group-hover:text-primary"
     : "bg-muted/50 text-muted-foreground group-hover:bg-primary/20 group-hover:text-primary";
 
   return (
@@ -315,7 +368,10 @@ interface QuestionNavigatorProps {
   questions: { id: string }[];
   reviewIndex: number | null;
   onReview: (index: number) => void;
+  onNavigate: (index: number) => void;
   displayedNumber: number;
+  flaggedIds: Set<string>;
+  skippedIds: string[];
 }
 
 const QuestionNavigator = ({
@@ -325,7 +381,10 @@ const QuestionNavigator = ({
   questions,
   reviewIndex,
   onReview,
+  onNavigate,
   displayedNumber,
+  flaggedIds,
+  skippedIds,
 }: QuestionNavigatorProps) => {
   const [open, setOpen] = useState(false);
 
@@ -366,7 +425,7 @@ const QuestionNavigator = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-4 px-4 pb-3">
+        <div className="flex items-center gap-4 px-4 pb-3 flex-wrap">
           <div className="flex items-center gap-1.5">
             <div className="w-3 h-3 rounded-sm bg-green-500/20 border border-green-500/40" />
             <span className="text-[10px] text-muted-foreground">Correct</span>
@@ -379,6 +438,18 @@ const QuestionNavigator = ({
             <div className="w-3 h-3 rounded-sm bg-muted/30 border border-border/20" />
             <span className="text-[10px] text-muted-foreground">Unanswered</span>
           </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-3 h-3 rounded-sm bg-amber-500/20 border border-amber-500/40" />
+            <span className="text-[10px] text-muted-foreground">Skipped</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="relative w-3 h-3 rounded-sm bg-muted/30 border border-border/20">
+              <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2 items-center justify-center rounded-full bg-amber-500">
+                <Flag className="h-1 w-1 text-white" fill="currentColor" />
+              </span>
+            </div>
+            <span className="text-[10px] text-muted-foreground">Flagged</span>
+          </div>
         </div>
 
         <div className="px-4 pb-8 max-h-[50vh] overflow-y-auto">
@@ -390,6 +461,8 @@ const QuestionNavigator = ({
               const isCurrent = i === currentIndex && reviewIndex === null;
               const isReviewingThis = i === reviewIndex;
               const isCorrect = answer?.is_correct;
+              const isSkipped = q ? skippedIds.includes(q.id) : false;
+              const isFlaggedQ = q ? flaggedIds.has(q.id) : false;
 
               let bg = "bg-muted/30 text-muted-foreground/40 border-border/20";
               if (isCurrent || isReviewingThis) {
@@ -398,23 +471,35 @@ const QuestionNavigator = ({
                 bg = isCorrect
                   ? "bg-green-500/20 text-green-400 border-green-500/40"
                   : "bg-red-500/20 text-red-400 border-red-500/40";
+              } else if (isSkipped) {
+                bg = "bg-amber-500/20 text-amber-400 border-amber-500/40";
               }
+
+              const canClick = isAnswered || (isSkipped && !isCurrent);
 
               return (
                 <button
                   key={i}
-                  disabled={!isAnswered && !isCurrent}
+                  disabled={!canClick && !isCurrent}
                   onClick={() => {
                     if (isAnswered) {
                       onReview(i);
                       setOpen(false);
+                    } else if (isSkipped && !isCurrent) {
+                      onNavigate(i);
+                      setOpen(false);
                     }
                   }}
-                  className={`aspect-square rounded-lg border text-[10px] font-bold flex items-center justify-center transition-opacity ${bg} ${
-                    isAnswered ? "cursor-pointer hover:opacity-80" : "cursor-default"
+                  className={`relative aspect-square rounded-lg border text-[10px] font-bold flex items-center justify-center transition-opacity ${bg} ${
+                    canClick ? "cursor-pointer hover:opacity-80" : "cursor-default"
                   }`}
                 >
                   {i + 1}
+                  {isFlaggedQ && (
+                    <span className="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5 items-center justify-center rounded-full bg-amber-500 border border-background">
+                      <Flag className="h-1.5 w-1.5 text-white" fill="currentColor" />
+                    </span>
+                  )}
                 </button>
               );
             })}
@@ -510,7 +595,16 @@ const QBankSession = () => {
     isReviewing,
     lastSummary,
     restoreSession,
+    snapshotTimer,
+    flaggedIds,
+    toggleFlag,
+    isFlagLoading,
+    skipQuestion,
+    goToQuestion,
+    unansweredCount,
   } = useQBankContext();
+
+  const isFlagged = displayQuestion ? flaggedIds.has(displayQuestion.id) : false;
 
   const restoredRef = useRef(false);
 
@@ -520,6 +614,7 @@ const QBankSession = () => {
 
   const [answerState, setAnswerState] = useState<AnswerState>({ status: "unanswered" });
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [elapsedDisplay, setElapsedDisplay] = useState(0);
   const [lightboxItems, setLightboxItems] = useState<QuestionMedia[]>([]);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [zoomScale, setZoomScale] = useState(1);
@@ -571,36 +666,96 @@ const QBankSession = () => {
     }
   }, [session, sessionIdParam, lastSummary, navigate, restoreSession]);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    setAnswerState({ status: "unanswered" });
+    const q = session?.questions[currentIndex];
+    const existingAnswer = q
+      ? session?.answers.find((a) => a.question_id === q.id)
+      : undefined;
+
+    if (existingAnswer && q) {
+      setAnswerState({
+        status: "answered",
+        selected: existingAnswer.selected_option as OptionKey,
+        correct: q.correct_option as OptionKey,
+        isCorrect: existingAnswer.is_correct,
+      });
+    } else {
+      setAnswerState({ status: "unanswered" });
+    }
     setDrawerOpen(false);
   }, [currentIndex]);
+
+  useEffect(() => {
+    if (!session) return;
+    const tick = () => {
+      setElapsedDisplay(session.accumulatedMs + (Date.now() - session.resumedAt));
+    };
+    tick();
+    const id = window.setInterval(tick, 1000);
+    return () => window.clearInterval(id);
+  }, [session]);
+
+  useEffect(() => {
+    return () => {
+      snapshotTimer();
+    };
+  }, [snapshotTimer]);
 
   const handleSelect = useCallback(
     (key: OptionKey) => {
       if (isReviewing) return;
       if (answerState.status === "answered") return;
-      const result = submitAnswer(key);
-      if (!result) return;
-      setAnswerState({
-        status: "answered",
-        selected: key,
-        correct: result.correct_option,
-        isCorrect: result.is_correct,
-      });
-      setTimeout(() => setDrawerOpen(true), 300);
+      setAnswerState({ status: "selected", pending: key });
     },
-    [isReviewing, answerState, submitAnswer]
+    [isReviewing, answerState]
   );
+
+  const handleConfirm = useCallback(() => {
+    if (answerState.status !== "selected") return;
+    const result = submitAnswer(answerState.pending);
+    if (!result) return;
+    setAnswerState({
+      status: "answered",
+      selected: answerState.pending,
+      correct: result.correct_option,
+      isCorrect: result.is_correct,
+    });
+    setTimeout(() => setDrawerOpen(true), 300);
+  }, [answerState, submitAnswer]);
 
   const handleNext = useCallback(async () => {
     setDrawerOpen(false);
-    if (isLastQuestion) {
+    if (unansweredCount === 0) {
       await endSession();
     } else {
       nextQuestion();
     }
-  }, [isLastQuestion, endSession, nextQuestion]);
+  }, [unansweredCount, endSession, nextQuestion]);
+
+  useEffect(() => {
+    if (isReviewing) return;
+    if (lightboxOpen) return;
+    if (answerState.status === "answered") return;
+
+    const handleKey = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || target?.isContentEditable) return;
+
+      const k = e.key.toLowerCase();
+      if (k === "a" || k === "b" || k === "c" || k === "d" || k === "e") {
+        e.preventDefault();
+        handleSelect(k as OptionKey);
+      } else if (e.key === "Enter" && answerState.status === "selected") {
+        e.preventDefault();
+        handleConfirm();
+      }
+    };
+
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [isReviewing, lightboxOpen, answerState, handleSelect, handleConfirm]);
 
   const sessionQuestions = session?.questions ?? lastSummary?.questions ?? [];
   const sessionAnswers = session?.answers ?? lastSummary?.answers ?? [];
@@ -687,6 +842,12 @@ const QBankSession = () => {
             questions={sessionQuestions}
             reviewIndex={reviewIndex}
             onReview={(i) => setReviewIndex(i)}
+            onNavigate={(i) => {
+              setReviewIndex(null);
+              goToQuestion(i);
+            }}
+            flaggedIds={flaggedIds}
+            skippedIds={session?.skippedIds ?? []}
           />
         )}
 
@@ -708,8 +869,38 @@ const QBankSession = () => {
                   questions={sessionQuestions}
                   reviewIndex={reviewIndex}
                   onReview={(i) => setReviewIndex(i)}
+                  onNavigate={(i) => {
+                    setReviewIndex(null);
+                    goToQuestion(i);
+                  }}
                   displayedNumber={displayedNumber}
+                  flaggedIds={flaggedIds}
+                  skippedIds={session?.skippedIds ?? []}
                 />
+              )}
+
+              {session && !isReviewing && (
+                <span className="inline-flex items-center rounded-full border border-border/40 bg-muted/20 px-3 py-1 text-[11px] font-medium text-muted-foreground gap-1.5 tabular-nums">
+                  <Clock className="h-3 w-3" />
+                  {formatElapsed(elapsedDisplay)}
+                </span>
+              )}
+
+              {!isReviewing && (
+                <button
+                  type="button"
+                  onClick={() => displayQuestion && toggleFlag(displayQuestion.id)}
+                  disabled={isFlagLoading || !displayQuestion}
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-medium transition-colors ${
+                    isFlagged
+                      ? "border-amber-500/50 bg-amber-500/15 text-amber-400 hover:bg-amber-500/25"
+                      : "border-border/40 bg-muted/20 text-muted-foreground hover:border-amber-500/30 hover:text-amber-400"
+                  } disabled:opacity-50`}
+                  aria-label={isFlagged ? "Unflag question" : "Flag for review"}
+                >
+                  <Flag className="h-3 w-3" fill={isFlagged ? "currentColor" : "none"} />
+                  <span className="hidden sm:inline">{isFlagged ? "Flagged" : "Flag"}</span>
+                </button>
               )}
             </div>
 
@@ -741,24 +932,67 @@ const QBankSession = () => {
                   letter={key}
                   text={text}
                   answerState={effectiveAnswerState}
+                  pendingKey={effectiveAnswerState.status === "selected" ? effectiveAnswerState.pending : null}
                   onSelect={handleSelect}
                 />
               ))}
             </div>
 
-            {isAnsweredEffective && !isReviewing && (
+            {answerState.status === "unanswered" && !isReviewing && !isLastQuestion && (
+              <div className="flex justify-start pt-1">
+                <button
+                  onClick={skipQuestion}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-border/40 bg-muted/20 px-4 h-11 text-sm font-medium text-muted-foreground hover:border-amber-500/30 hover:text-amber-400 hover:bg-amber-500/5 transition-colors"
+                >
+                  <SkipForward className="h-4 w-4" />
+                  Skip for now
+                </button>
+              </div>
+            )}
+
+            {effectiveAnswerState.status === "selected" && !isReviewing && (
               <div className="flex justify-end pt-1 animate-fade-in">
                 <Button
-                  onClick={handleNext}
+                  onClick={handleConfirm}
                   className="btn-gradient h-11 px-6 rounded-xl font-semibold text-sm gap-2"
                 >
-                  {isLastQuestion ? (
-                    <>Finish Session <ChevronRight className="h-4 w-4" /></>
-                  ) : (
-                    <>Next Question <ArrowRight className="h-4 w-4" /></>
-                  )}
+                  <CheckCircle className="h-4 w-4" />
+                  Confirm Answer
                 </Button>
               </div>
+            )}
+
+            {isAnsweredEffective && !isReviewing && (
+              unansweredCount > 0 && isLastQuestion ? (
+                <div className="flex flex-col gap-2 pt-1 animate-fade-in">
+                  <div className="flex items-center gap-2 rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3">
+                    <SkipForward className="h-4 w-4 text-amber-400 shrink-0" />
+                    <p className="text-xs text-amber-400 font-medium">
+                      {unansweredCount === 1
+                        ? "You have 1 unanswered question — go back and answer it to finish."
+                        : `You have ${unansweredCount} unanswered questions — go back and answer them to finish.`}
+                    </p>
+                  </div>
+                </div>
+              ) : unansweredCount === 0 ? (
+                <div className="flex justify-end pt-1 animate-fade-in">
+                  <Button
+                    onClick={handleNext}
+                    className="btn-gradient h-11 px-6 rounded-xl font-semibold text-sm gap-2"
+                  >
+                    Finish Session <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex justify-end pt-1 animate-fade-in">
+                  <Button
+                    onClick={handleNext}
+                    className="btn-gradient h-11 px-6 rounded-xl font-semibold text-sm gap-2"
+                  >
+                    Next Question <ArrowRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              )
             )}
           </div>
 
@@ -827,16 +1061,30 @@ const QBankSession = () => {
               />
 
               <div className="pt-4">
-                <Button
-                  onClick={handleNext}
-                  className="btn-gradient w-full h-12 rounded-xl font-semibold text-sm gap-2"
-                >
-                  {isLastQuestion ? (
-                    <>Finish Session <ChevronRight className="h-4 w-4" /></>
-                  ) : (
-                    <>Next Question <ArrowRight className="h-4 w-4" /></>
-                  )}
-                </Button>
+                {unansweredCount > 0 && isLastQuestion ? (
+                  <div className="flex items-center gap-2 rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3">
+                    <SkipForward className="h-4 w-4 text-amber-400 shrink-0" />
+                    <p className="text-xs text-amber-400 font-medium">
+                      {unansweredCount === 1
+                        ? "You have 1 unanswered question — go back and answer it to finish."
+                        : `You have ${unansweredCount} unanswered questions — go back and answer them to finish.`}
+                    </p>
+                  </div>
+                ) : unansweredCount === 0 ? (
+                  <Button
+                    onClick={handleNext}
+                    className="btn-gradient w-full h-12 rounded-xl font-semibold text-sm gap-2"
+                  >
+                    Finish Session <ChevronRight className="h-4 w-4" />
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={handleNext}
+                    className="btn-gradient w-full h-12 rounded-xl font-semibold text-sm gap-2"
+                  >
+                    Next Question <ArrowRight className="h-4 w-4" />
+                  </Button>
+                )}
               </div>
             </div>
           </div>

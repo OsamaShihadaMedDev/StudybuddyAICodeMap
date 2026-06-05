@@ -461,6 +461,49 @@ export type Database = {
           }
         ]
       }
+      flagged_questions: {
+        Row: {
+          id: string
+          user_id: string
+          question_id: string
+          flagged_at: string
+          session_id: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          question_id: string
+          flagged_at?: string
+          session_id?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          question_id?: string
+          flagged_at?: string
+          session_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flagged_questions_user_id_fkey"
+            columns: ["user_id"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "flagged_questions_question_id_fkey"
+            columns: ["question_id"]
+            referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "flagged_questions_session_id_fkey"
+            columns: ["session_id"]
+            referencedRelation: "qbank_sessions"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       qbank_sessions: {
         Row: {
           id: string

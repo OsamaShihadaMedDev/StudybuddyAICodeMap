@@ -12,7 +12,12 @@
       "Bash(ls scripts/rag-spike/pdfs/)",
       "Bash(dir scripts *)",
       "Bash(dir scripts\\\\rag-spike)",
-      "Bash(dir scripts\\\\rag-spike\\\\pdfs)"
+      "Bash(dir scripts\\\\rag-spike\\\\pdfs)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(NODE_OPTIONS=--max-old-space-size=8192 npx tsc --noEmit -p tsconfig.app.json)",
+      "Bash(NODE_OPTIONS=--max-old-space-size=8192 npm run lint)"
     ]
   }
 }
