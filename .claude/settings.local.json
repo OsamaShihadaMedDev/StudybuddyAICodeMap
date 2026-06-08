@@ -17,7 +17,11 @@
       "Bash(git commit -m ' *)",
       "Bash(git push *)",
       "Bash(NODE_OPTIONS=--max-old-space-size=8192 npx tsc --noEmit -p tsconfig.app.json)",
-      "Bash(NODE_OPTIONS=--max-old-space-size=8192 npm run lint)"
+      "Bash(NODE_OPTIONS=--max-old-space-size=8192 npm run lint)",
+      "PowerShell(npm run build 2>&1)",
+      "PowerShell(npx supabase functions deploy medical-notes --project-ref ebjfzdslgixhudswxeaz 2>&1)",
+      "PowerShell($cmd = Get-Command supabase -ErrorAction SilentlyContinue; if \\($cmd\\) { $cmd.Source } else { \"not installed\" })",
+      "PowerShell(supabase functions deploy medical-notes --project-ref ebjfzdslgixhudswxeaz 2>&1)"
     ]
   }
 }

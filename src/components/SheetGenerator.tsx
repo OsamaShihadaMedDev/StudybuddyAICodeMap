@@ -19,6 +19,12 @@ import { useModelPreference } from "@/hooks/use-model-preference";
 import { useAuth } from "@/hooks/use-auth";
 import { useFlashcardDeck } from "@/hooks/use-flashcard-deck";
 import { parseFlashcardsFromOutput } from "@/lib/parse-flashcards";
+import { sanitizeJsonOutput } from "@/lib/sanitize-json";
+import {
+  type GeneratedSheet,
+  parseStoredSheet,
+  isJsonSheet,
+} from "@/types/generated-sheet";
 import { fetchBestCitation, type CitationResult } from "@/lib/citation";
 import CitationCTABanner from "@/components/CitationCTABanner";
 import AuthModal from "@/components/AuthModal";
@@ -41,7 +47,14 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
   const [focus, setFocus] = useState(prefill?.modeInfo?.focus ?? "Quick Revision");
   const [length, setLength] = useState(prefill?.modeInfo?.length ?? "Concise");
   const [examMode, setExamMode] = useState(prefill?.modeInfo?.examMode ?? "General");
-  const [output, setOutput] = useState(prefill?.output ?? "");
+  const [sheet, setSheet] = useState<GeneratedSheet | null>(
+    prefill?.output ? parseStoredSheet(prefill.output) : null
+  );
+  // Legacy fallback: if the prefill is an old text blob, keep it as a
+  // plain string for the OutputSection legacy renderer
+  const [legacyOutput, setLegacyOutput] = useState<string>(
+    prefill?.output && !isJsonSheet(prefill.output) ? prefill.output : ""
+  );
   const [modelUsed, setModelUsed] = useState<"flash" | "gpt-oss" | "claude" | undefined>(undefined);
   const [loading, setLoading] = useState(false);
   const [deckSaved, setDeckSaved] = useState(false);
@@ -77,7 +90,8 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
       return;
     }
     setLoading(true);
-    setOutput("");
+    setSheet(null);
+    setLegacyOutput("");
     setDeckSaved(false);
     setPendingOutput(null);
     setShowTextarea(false);
@@ -163,7 +177,8 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
         }
       }
 
-      setPendingOutput(fullText || "No response received.");
+      const rawText = fullText || "";
+      setPendingOutput(rawText);
 
       // Citation lookup — runs after stream completes
       try {
@@ -228,7 +243,16 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
         setPendingOutput((pending) => {
           if (pending !== null) {
             clearInterval(interval);
-            setOutput(pending);
+            const cleaned = sanitizeJsonOutput(pending);
+            try {
+              const parsed = JSON.parse(cleaned) as GeneratedSheet;
+              setSheet(parsed);
+              setLegacyOutput("");
+            } catch {
+              // JSON parse failed — fall back to legacy text renderer
+              setSheet(null);
+              setLegacyOutput(pending);
+            }
             setLoading(false);
             setLoadingMsg("");
             return null;
@@ -488,7 +512,7 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
       </Card>
 
       <div ref={outputRef}>
-      {loading && !output && (
+      {loading && !sheet && !legacyOutput && (
         <div className="flex flex-col items-center justify-center gap-4 py-14 animate-fade-in">
           {/* Spinner */}
           <div className="relative h-14 w-14">
@@ -525,9 +549,9 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
         </div>
       )}
 
-      {output && (
+      {(sheet || legacyOutput) && (
         <OutputSection
-          output={output}
+          output={sheet ? JSON.stringify(sheet) : legacyOutput}
           inputText={notes}
           modeInfo={{ examMode, difficulty, focus, length }}
           citations={citations}
@@ -542,7 +566,7 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
       )}
       </div>
 
-      {output && (
+      {(sheet || legacyOutput) && (
         <div className="flex justify-center pt-2">
           <Button
             variant="outline"
@@ -550,11 +574,27 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
             disabled={deckSaved}
             onClick={() => {
               try {
-                const parsed = parseFlashcardsFromOutput(output, notes);
-                if (parsed.length) {
+                if (sheet?.flashcards?.length) {
+                  const parsed = sheet.flashcards.map((c) => ({
+                    question: c.question,
+                    answer: c.answer,
+                    tag: c.tag,
+                    topic: notes.trim().slice(0, 60),
+                    topicEmoji: sheet.topicEmoji,
+                  }));
                   saveCards(parsed);
                   setDeckSaved(true);
                   toast({ title: `${parsed.length} cards saved to your library` });
+                } else if (legacyOutput) {
+                  // Legacy fallback for old text-blob sheets
+                  const parsed = parseFlashcardsFromOutput(legacyOutput, notes);
+                  if (parsed.length) {
+                    saveCards(parsed);
+                    setDeckSaved(true);
+                    toast({ title: `${parsed.length} cards saved to your library` });
+                  } else {
+                    toast({ title: "No flashcards found in this sheet", variant: "destructive" });
+                  }
                 } else {
                   toast({ title: "No flashcards found in this sheet", variant: "destructive" });
                 }

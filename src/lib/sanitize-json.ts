@@ -1,0 +1,14 @@
+/**
+ * Strip markdown fences that some models wrap around JSON output.
+ * Call this on the assembled stream text before JSON.parse().
+ */
+export function sanitizeJsonOutput(raw: string): string {
+  let cleaned = raw.trim();
+  if (cleaned.startsWith("```")) {
+    cleaned = cleaned
+      .replace(/^```(?:json)?\s*/i, "")
+      .replace(/\s*```$/, "")
+      .trim();
+  }
+  return cleaned;
+}

@@ -7,6 +7,15 @@ const corsHeaders = {
   "Access-Control-Expose-Headers": "x-model-used, x-is-premium",
 };
 
+function sanitizeJsonOutput(raw: string): string {
+  // Strip markdown code fences if the model wraps the JSON
+  let cleaned = raw.trim();
+  if (cleaned.startsWith("```")) {
+    cleaned = cleaned.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
+  }
+  return cleaned;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -94,157 +103,56 @@ Mode: ${mode} | Difficulty: ${diff} | Focus: ${foc} | Length: ${len}
 Before writing anything: identify the core medical concept from the input, reason through the highest-yield facts a student needs for exams and clinical practice, then generate the full output below.
 
 FORMATTING RULES (non-negotiable):
-- Use **double asterisks** around key terms in SUMMARY only. This is the ONLY markdown allowed.
-- Use numbered lists (1. 2. 3.) for all lists.
-- Use arrows (→) to show clinical flow and associations.
-- Plain uppercase section headers on their own line.
-- No #, *, -, bullet symbols anywhere except numbered lists.
-- No preamble. Start directly with SUMMARY.
+- Return ONLY a valid JSON object. No markdown fences, no preamble, no
+  commentary, no text before or after the JSON.
+- Use **double asterisks** inside string values to bold key terms in the
+  summary field only. The renderer handles this.
+- Use arrows (→) inside string values to show clinical flow.
+- Numbered list items inside array fields: do NOT include the leading
+  number (e.g. "1."). Each array element is already one item.
 
----
+OUTPUT — return exactly this JSON shape:
 
-SUMMARY
+{
+  "topicEmoji": "<one emoji matching the topic>",
+  "summary": "<dense clinical snapshot as a single JSON string. MANDATORY STRUCTURE: each sub-section MUST start on its own line using \\n before the label. Exact format:\\nDefinition: **Bold disease name** one sentence.\\nMechanism / Pathophysiology: 2-3 sentences on core defect. Bold **key mechanisms**.\\nKey Associations / Features:\\n1. **Buzzword** → clinical meaning\\n2. **Classic presentation** → distinguishing feature\\nDiagnosis: Gold standard → what it shows.\\nManagement: First-line → drug + rationale.\\nDo NOT merge these into one paragraph. Each label starts after a \\n.>",
+  "memoryHooks": [
+    "<mnemonic one-liner 1>",
+    "<mnemonic one-liner 2>",
+    "<mnemonic one-liner 3>"
+  ],
+  "clinicalApproach": "<clinical decision tree — Diagnosis, Workup, Management, Complications subsections — same content as before as a single string with newlines>",
+  "keyPoints": [
+    "<If X → think Y one-liner 1>",
+    "<If X → think Y one-liner 2>"
+  ],
+  "examTraps": [
+    "<trap one-liner 1>",
+    "<trap one-liner 2>"
+  ],
+  "flashcards": [
+    {
+      "tag": "Next Step",
+      "question": "<full vignette question text>",
+      "answer": "<1-2 sentence answer>"
+    }
+  ],
+  "referenceNote": "${referenceNote}"
+}
 
-Write a dense, scannable clinical snapshot. Every line should carry information a student would highlight.
+RULES FOR ARRAYS:
+- memoryHooks: 3-5 items
+- keyPoints: 6-10 items
+- examTraps: 4-6 items
+- flashcards: exactly 5 items, required mix: 2x Next Step, 1x Diagnosis,
+  1x Mechanism, 1x Complication. All clinical vignettes.
 
-Definition: **Bold the disease name**. One crisp sentence — pathophysiological definition, not a dictionary definition.
-Mechanism / Pathophysiology: 2-3 sentences max. Lead with the core defect. Bold **key mechanisms** and **mediators**. Include the cascade if it's high-yield.
-Key Associations / Features:
-1. **Buzzword/finding** → what it means clinically
-2. **Classic presentation** → key distinguishing feature
-3. **Risk factor or etiology** → mechanism if relevant
-4. (add more only if genuinely high-yield — do not pad)
-Diagnosis: Gold standard test → what it shows. Include sensitivity/specificity tradeoffs only if exam-relevant.
-Management: First-line → drug class + mechanism if high-yield. Include dose only for commonly tested drugs.
+EMOJI OPTIONS:
+🫀 cardiac, 🩸 hematology, 🧠 neuro, 🫁 pulmonary, 🦴 ortho, 🩺 general,
+💊 pharmacology, 🧬 genetics, 👁️ ophthalmology, 🤰 OB/GYN, 👶 pediatrics,
+🧫 micro, ⚗️ biochem, 🩹 trauma, 🛡️ immunology
 
-Rules:
-- Each labeled segment is its own line or short block — never a paragraph.
-- Bold liberally in this section — every buzzword, every key mechanism, every classic association.
-- If the topic is large (e.g. heart failure, sepsis), compress ruthlessly — only the most-tested facts.
-- No repetition of content that appears in Clinical Approach or Key Points.
-
-
-MEMORY HOOKS
-
-Write 3-5 mnemonic-style one-liners that a student can recall in 2 seconds during an exam. Think First Aid style.
-
-1. Mechanism chain using → arrows
-2. Classic "if you see X think Y" association
-3. Drug/treatment shortcut or mnemonic
-4. Distinguishing feature vs similar condition
-5. (add only if genuinely sticky and non-redundant)
-
-Rules: Arrow format preferred. Each line = one association. Instantly memorable. No overlap with Key Points.
-Bad example: "Heart failure is a complex syndrome" — too vague, no value.
-Good example: "HFrEF → ↓EF → ACEi + BB + spironolactone → mortality benefit"
-
-
-CLINICAL APPROACH
-
-Write this like a clinical decision tree. A student should be able to follow this in a real patient encounter.
-
-Diagnosis:
-1. Classic presentation → key finding that clinches it
-2. Confirmatory test → expected result + why it confirms
-
-Workup:
-1. First-line investigation → what it shows and why you order it
-2. Second investigation → when to order and what it rules in/out
-3. (additional only if high-yield)
-
-Management:
-1. First-line treatment → drug/intervention + brief rationale
-2. If unstable or severe → immediate action
-3. If refractory or treatment fails → escalation step
-4. Special population or exception → modification if high-yield
-
-Complications:
-1. Most common complication → mechanism if non-obvious
-2. Most dangerous complication → why it's lethal and how to recognize it
-
-Rules:
-- One line per step. Arrows show logical flow.
-- Include specific drug names, not just drug classes.
-- Include numbers where they matter (e.g. "IV furosemide 40mg", "MAP < 65", "GCS < 8 → intubate").
-- 4-8 steps total across all groups — quality over quantity.
-
-
-KEY POINTS
-
-Write 6-10 high-yield one-liners in "If X → think Y" exam-trigger format. These should be the exact associations that separate a 240 from a 220 on Step 2.
-
-1. If [classic finding/scenario] → [diagnosis/drug/next step]
-2. If [buzzword] → [association]
-3. [Condition A] vs [Condition B] → key distinguishing feature
-4. [Drug] → [mechanism] → [key side effect or indication]
-5. (continue for 6-10 total)
-
-Rules:
-- Every point = exactly 1 line. No explanations.
-- Focus on what students get wrong or what's classically tested.
-- Include at least 2 comparison points (X vs Y).
-- No overlap with Memory Hooks or Clinical Approach.
-
-
-EXAM TRAPS
-
-Write 4-6 specific, clinical pitfalls — the exact mistakes that lose points on Step 2 CK. Each trap should describe both the error and the correct thinking.
-
-1. [Wrong assumption] → [why it's wrong] → [correct approach]
-2. [Condition commonly confused with topic] → [key distinguishing feature]
-3. [Diagnostic trap] → [what to look for instead]
-4. (continue for 4-6 total)
-
-Rules: One line each. Specific and clinical — not generic advice like "don't miss the diagnosis."
-Bad: "Be careful not to confuse similar conditions."
-Good: "Cardiac tamponade vs tension pneumo → both cause obstructive shock, but tamponade has muffled heart sounds + JVD without tracheal deviation."
-
-
-FLASHCARDS
-
-[EMOJI — one emoji on its own line, matching the topic. No text around it.]
-
-Generate exactly 5 flashcards. All must be clinical vignettes — real patient scenarios, not abstract concept questions. Each vignette should read like a mini USMLE stem: age, sex, brief history, key findings, then the question.
-
-REQUIRED mix:
-- 2 x [Next Step] — what to do next in management
-- 1 x [Diagnosis] — identify the condition from a vignette
-- 1 x [Mechanism] — explain why something happens
-- 1 x [Complication] — identify or manage a complication
-
-FORMAT — copy exactly, including blank lines between cards:
-
-Q: [Next Step] A 67-year-old man with known COPD presents with worsening dyspnea, pursed-lip breathing, and ABG showing pH 7.28, PaCO2 72 mmHg, HCO3 32 mEq/L. He is alert. What is the next best step?
-A: Initiate non-invasive positive pressure ventilation (BiPAP); reserve intubation for failure of NIV or altered consciousness.
-
-Q: [Diagnosis] A 52-year-old woman presents with progressive exertional dyspnea, orthopnea, and bilateral crackles. Echo shows EF of 35%. What is the diagnosis?
-A: Heart failure with reduced ejection fraction (HFrEF).
-
-Q: [Mechanism] Why does left heart failure cause pulmonary edema?
-A: Elevated LVEDP increases pulmonary capillary hydrostatic pressure beyond oncotic pressure, forcing fluid into the alveolar space.
-
-Q: [Next Step] A 44-year-old man with hypertension presents with BP 210/130 and confusion. CT head is negative. What is the next step?
-A: IV labetalol or nicardipine to reduce MAP by no more than 25% in the first hour; avoid sudden drops that can cause ischemia.
-
-Q: [Complication] A patient on ACE inhibitor therapy develops sudden lip and tongue swelling without urticaria. What is this and how is it managed?
-A: Bradykinin-mediated angioedema; stop the ACE inhibitor immediately, administer fresh frozen plasma or icatibant for severe cases.
-
-HARD RULES — parser depends on these:
-- Tags MUST be in square brackets: [Next Step] NOT "Next Step" NOT Next Step.
-- Q: on its own line. A: on the next line. Then ONE blank line. Then next Q:.
-- Questions end with ?
-- Answers: 1-2 sentences only. Never more. Never start with "I would..."
-- No "Q:" or "A:" anywhere inside the question or answer text.
-- No numbering. No headers between cards.
-- EMOJI: 🫀 cardiac, 🩸 hematology, 🧠 neuro, 🫁 pulmonary, 🦴 ortho, 🩺 general, 💊 pharmacology, 🧬 genetics, 👁️ ophthalmology, 🤰 OB/GYN, 👶 pediatrics, 🧫 micro, ⚗️ biochem, 🩹 trauma, 🛡️ immunology
-
-
-REFERENCE NOTE
-
-${referenceNote}
-
----
-Output ONLY the sections above in order. Start directly with SUMMARY. No introduction, no conclusion, no meta-commentary.`;
+Start your response with { and end with }. Nothing else.`;
 
     // ── HAIKU 4.5 PROMPTS (Claude-native, based on GPT-OSS with input normalization) ──
 
@@ -350,157 +258,56 @@ LENGTH RULES:
 - Detailed: expand every section fully, include edge cases and nuances.
 
 FORMATTING RULES (non-negotiable):
-- Use **double asterisks** around key terms in SUMMARY only. This is the ONLY markdown allowed.
-- Use numbered lists (1. 2. 3.) for all lists.
-- Use arrows (→) to show clinical flow and associations.
-- Plain uppercase section headers on their own line.
-- No #, *, -, bullet symbols anywhere except numbered lists.
-- No preamble. Start directly with SUMMARY.
+- Return ONLY a valid JSON object. No markdown fences, no preamble, no
+  commentary, no text before or after the JSON.
+- Use **double asterisks** inside string values to bold key terms in the
+  summary field only. The renderer handles this.
+- Use arrows (→) inside string values to show clinical flow.
+- Numbered list items inside array fields: do NOT include the leading
+  number (e.g. "1."). Each array element is already one item.
 
----
+OUTPUT — return exactly this JSON shape:
 
-SUMMARY
+{
+  "topicEmoji": "<one emoji matching the topic>",
+  "summary": "<dense clinical snapshot as a single JSON string. MANDATORY STRUCTURE: each sub-section MUST start on its own line using \\n before the label. Exact format:\\nDefinition: **Bold disease name** one sentence.\\nMechanism / Pathophysiology: 2-3 sentences on core defect. Bold **key mechanisms**.\\nKey Associations / Features:\\n1. **Buzzword** → clinical meaning\\n2. **Classic presentation** → distinguishing feature\\nDiagnosis: Gold standard → what it shows.\\nManagement: First-line → drug + rationale.\\nDo NOT merge these into one paragraph. Each label starts after a \\n.>",
+  "memoryHooks": [
+    "<mnemonic one-liner 1>",
+    "<mnemonic one-liner 2>",
+    "<mnemonic one-liner 3>"
+  ],
+  "clinicalApproach": "<clinical decision tree — Diagnosis, Workup, Management, Complications subsections — same content as before as a single string with newlines>",
+  "keyPoints": [
+    "<If X → think Y one-liner 1>",
+    "<If X → think Y one-liner 2>"
+  ],
+  "examTraps": [
+    "<trap one-liner 1>",
+    "<trap one-liner 2>"
+  ],
+  "flashcards": [
+    {
+      "tag": "Next Step",
+      "question": "<full vignette question text>",
+      "answer": "<1-2 sentence answer>"
+    }
+  ],
+  "referenceNote": "${referenceNote}"
+}
 
-Write a dense, scannable clinical snapshot. Every line should carry information a student would highlight.
+RULES FOR ARRAYS:
+- memoryHooks: 3-5 items
+- keyPoints: 6-10 items
+- examTraps: 4-6 items
+- flashcards: exactly 5 items, required mix: 2x Next Step, 1x Diagnosis,
+  1x Mechanism, 1x Complication. All clinical vignettes.
 
-Definition: **Bold the disease name**. One crisp sentence — pathophysiological definition, not a dictionary definition.
-Mechanism / Pathophysiology: 2-3 sentences max. Lead with the core defect. Bold **key mechanisms** and **mediators**. Include the cascade if it's high-yield.
-Key Associations / Features:
-1. **Buzzword/finding** → what it means clinically
-2. **Classic presentation** → key distinguishing feature
-3. **Risk factor or etiology** → mechanism if relevant
-4. (add more only if genuinely high-yield — do not pad)
-Diagnosis: Gold standard test → what it shows. Include sensitivity/specificity tradeoffs only if exam-relevant.
-Management: First-line → drug class + mechanism if high-yield. Include dose only for commonly tested drugs.
+EMOJI OPTIONS:
+🫀 cardiac, 🩸 hematology, 🧠 neuro, 🫁 pulmonary, 🦴 ortho, 🩺 general,
+💊 pharmacology, 🧬 genetics, 👁️ ophthalmology, 🤰 OB/GYN, 👶 pediatrics,
+🧫 micro, ⚗️ biochem, 🩹 trauma, 🛡️ immunology
 
-Rules:
-- Each labeled segment is its own line or short block — never a paragraph.
-- Bold liberally in this section — every buzzword, every key mechanism, every classic association.
-- If the topic is large (e.g. heart failure, sepsis), compress ruthlessly — only the most-tested facts.
-- No repetition of content that appears in Clinical Approach or Key Points.
-
-
-MEMORY HOOKS
-
-Write 3-5 mnemonic-style one-liners that a student can recall in 2 seconds during an exam. Think First Aid style.
-
-1. Mechanism chain using → arrows
-2. Classic "if you see X think Y" association
-3. Drug/treatment shortcut or mnemonic
-4. Distinguishing feature vs similar condition
-5. (add only if genuinely sticky and non-redundant)
-
-Rules: Arrow format preferred. Each line = one association. Instantly memorable. No overlap with Key Points.
-Bad example: "Heart failure is a complex syndrome" — too vague, no value.
-Good example: "HFrEF → ↓EF → ACEi + BB + spironolactone → mortality benefit"
-
-
-CLINICAL APPROACH
-
-Write this like a clinical decision tree. A student should be able to follow this in a real patient encounter.
-
-Diagnosis:
-1. Classic presentation → key finding that clinches it
-2. Confirmatory test → expected result + why it confirms
-
-Workup:
-1. First-line investigation → what it shows and why you order it
-2. Second investigation → when to order and what it rules in/out
-3. (additional only if high-yield)
-
-Management:
-1. First-line treatment → drug/intervention + brief rationale
-2. If unstable or severe → immediate action
-3. If refractory or treatment fails → escalation step
-4. Special population or exception → modification if high-yield
-
-Complications:
-1. Most common complication → mechanism if non-obvious
-2. Most dangerous complication → why it's lethal and how to recognize it
-
-Rules:
-- One line per step. Arrows show logical flow.
-- Include specific drug names, not just drug classes.
-- Include numbers where they matter (e.g. "IV furosemide 40mg", "MAP < 65", "GCS < 8 → intubate").
-- 4-8 steps total across all groups — quality over quantity.
-
-
-KEY POINTS
-
-Write 6-10 high-yield one-liners in "If X → think Y" exam-trigger format. These should be the exact associations that separate a 240 from a 220 on Step 2.
-
-1. If [classic finding/scenario] → [diagnosis/drug/next step]
-2. If [buzzword] → [association]
-3. [Condition A] vs [Condition B] → key distinguishing feature
-4. [Drug] → [mechanism] → [key side effect or indication]
-5. (continue for 6-10 total)
-
-Rules:
-- Every point = exactly 1 line. No explanations.
-- Focus on what students get wrong or what's classically tested.
-- Include at least 2 comparison points (X vs Y).
-- No overlap with Memory Hooks or Clinical Approach.
-
-
-EXAM TRAPS
-
-Write 4-6 specific, clinical pitfalls — the exact mistakes that lose points on Step 2 CK. Each trap should describe both the error and the correct thinking.
-
-1. [Wrong assumption] → [why it's wrong] → [correct approach]
-2. [Condition commonly confused with topic] → [key distinguishing feature]
-3. [Diagnostic trap] → [what to look for instead]
-4. (continue for 4-6 total)
-
-Rules: One line each. Specific and clinical — not generic advice like "don't miss the diagnosis."
-Bad: "Be careful not to confuse similar conditions."
-Good: "Cardiac tamponade vs tension pneumo → both cause obstructive shock, but tamponade has muffled heart sounds + JVD without tracheal deviation."
-
-
-FLASHCARDS
-
-[EMOJI — one emoji on its own line, matching the topic. No text around it.]
-
-Generate exactly 5 flashcards. All must be clinical vignettes — real patient scenarios, not abstract concept questions. Each vignette should read like a mini USMLE stem: age, sex, brief history, key findings, then the question.
-
-REQUIRED mix:
-- 2 x [Next Step] — what to do next in management
-- 1 x [Diagnosis] — identify the condition from a vignette
-- 1 x [Mechanism] — explain why something happens
-- 1 x [Complication] — identify or manage a complication
-
-FORMAT — copy exactly, including blank lines between cards:
-
-Q: [Next Step] A 67-year-old man with known COPD presents with worsening dyspnea, pursed-lip breathing, and ABG showing pH 7.28, PaCO2 72 mmHg, HCO3 32 mEq/L. He is alert. What is the next best step?
-A: Initiate non-invasive positive pressure ventilation (BiPAP); reserve intubation for failure of NIV or altered consciousness.
-
-Q: [Diagnosis] A 52-year-old woman presents with progressive exertional dyspnea, orthopnea, and bilateral crackles. Echo shows EF of 35%. What is the diagnosis?
-A: Heart failure with reduced ejection fraction (HFrEF).
-
-Q: [Mechanism] Why does left heart failure cause pulmonary edema?
-A: Elevated LVEDP increases pulmonary capillary hydrostatic pressure beyond oncotic pressure, forcing fluid into the alveolar space.
-
-Q: [Next Step] A 44-year-old man with hypertension presents with BP 210/130 and confusion. CT head is negative. What is the next step?
-A: IV labetalol or nicardipine to reduce MAP by no more than 25% in the first hour; avoid sudden drops that can cause ischemia.
-
-Q: [Complication] A patient on ACE inhibitor therapy develops sudden lip and tongue swelling without urticaria. What is this and how is it managed?
-A: Bradykinin-mediated angioedema; stop the ACE inhibitor immediately, administer fresh frozen plasma or icatibant for severe cases.
-
-HARD RULES — parser depends on these:
-- Tags MUST be in square brackets: [Next Step] NOT "Next Step" NOT Next Step.
-- Q: on its own line. A: on the next line. Then ONE blank line. Then next Q:.
-- Questions end with ?
-- Answers: 1-2 sentences only. Never more. Never start with "I would..."
-- No "Q:" or "A:" anywhere inside the question or answer text.
-- No numbering. No headers between cards.
-- EMOJI: 🫀 cardiac, 🩸 hematology, 🧠 neuro, 🫁 pulmonary, 🦴 ortho, 🩺 general, 💊 pharmacology, 🧬 genetics, 👁️ ophthalmology, 🤰 OB/GYN, 👶 pediatrics, 🧫 micro, ⚗️ biochem, 🩹 trauma, 🛡️ immunology
-
-
-REFERENCE NOTE
-
-${referenceNote}
-
----
-Output ONLY the sections above in order. Start directly with SUMMARY. No introduction, no conclusion, no meta-commentary.`;
+Start your response with { and end with }. Nothing else.`;
 
     const userContent = focusCard && !cardsOnly
       ? `Focus specifically on this concept: ${focusCard}\n\nTopic: ${notes}`
