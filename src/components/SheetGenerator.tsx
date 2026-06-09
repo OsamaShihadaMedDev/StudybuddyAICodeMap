@@ -215,6 +215,23 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
   };
 
   useEffect(() => {
+    function handleEnhancementSaved(e: Event) {
+      const { key, result } = (e as CustomEvent).detail ?? {};
+      if (!key || !result) return;
+      setSheet((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          enhancements: { ...(prev.enhancements ?? {}), [key]: result },
+        };
+      });
+    }
+    window.addEventListener("studybuddy:enhancement-saved", handleEnhancementSaved);
+    return () =>
+      window.removeEventListener("studybuddy:enhancement-saved", handleEnhancementSaved);
+  }, []);
+
+  useEffect(() => {
     if (!loading) return;
 
     const steps = [
@@ -272,6 +289,7 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
 
   return (
     <div className="space-y-6">
+      <div className="max-w-2xl mx-auto space-y-6">
       <div className="space-y-2">
         <p className="text-[11px] font-bold tracking-[0.15em] text-muted-foreground uppercase pl-1">
           Full Study Sheet
@@ -510,6 +528,7 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
           </Button>
         </CardContent>
       </Card>
+      </div>{/* end max-w-2xl controls wrapper */}
 
       <div ref={outputRef}>
       {loading && !sheet && !legacyOutput && (
@@ -558,6 +577,9 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
           citationState={citationState}
           modelUsed={modelUsed}
           isPro={pro}
+          userId={user?.id ?? null}
+          isAnonymous={isAnonymous ?? false}
+          sheetId={notes}
           onCitationLockedClick={() =>
             isLoggedIn ? setGoProOpen(true) : setAuthModalOpen(true)
           }

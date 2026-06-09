@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   BookOpen,
@@ -14,18 +14,29 @@ import {
   ChevronDown,
   ChevronUp,
   RefreshCw,
+  Sparkles,
+  Microscope,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import CopyButton from "@/components/CopyButton";
 import FlashcardsSection from "@/components/FlashcardsSection";
 import SaveButton from "@/components/SaveButton";
 import CitationBadgeList from "@/components/CitationBadgeList";
+import EnhanceSidebar from "@/components/EnhanceSidebar";
 import type { CitationResult } from "@/lib/citation";
 import {
   type GeneratedSheet,
+  type EnhancementResult,
   parseStoredSheet,
   isJsonSheet,
+  enhancementKey,
 } from "@/types/generated-sheet";
+
+interface ActiveEnhancement {
+  sourceText: string;
+  mode: "expand" | "clinical";
+  sectionKey: string;
+}
 
 export type CitationState = "idle" | "loading" | "found" | "locked" | "hidden";
 
@@ -44,6 +55,9 @@ interface OutputSectionProps {
   citationIsLoggedIn?: boolean;
   modelUsed?: "flash" | "gpt-oss" | "claude";
   isPro?: boolean;
+  userId?: string | null;
+  isAnonymous?: boolean;
+  sheetId?: string;
 }
 
 // ─── Legacy renderer helpers (kept for old text-blob sheets) ───────────────
@@ -111,7 +125,7 @@ function renderFormattedContent(content: string) {
 // ─── JSON renderer helpers ─────────────────────────────────────────────────
 
 const JSON_SECTION_CONFIG = {
-  summary: { icon: BookOpen, label: "Summary", className: "section-summary", evidenceBacked: true },
+  overview: { icon: BookOpen, label: "Overview", className: "section-summary", evidenceBacked: true },
   memoryHooks: { icon: Lightbulb, label: "Memory Hooks", className: "section-memoryhooks", evidenceBacked: false },
   clinicalApproach: { icon: Stethoscope, label: "Clinical Approach", className: "section-clinical", evidenceBacked: true },
   keyPoints: { icon: List, label: "Key Points", className: "section-keypoints", evidenceBacked: true },
@@ -122,34 +136,70 @@ const JSON_SECTION_CONFIG = {
 
 type JsonSectionKey = keyof typeof JSON_SECTION_CONFIG;
 
-// Labels that open a named sub-section inside Summary and ClinicalApproach
-const SECTION_LABEL_RE = /^(Definition|Mechanism\s*(?:\/\s*Pathophysiology)?|Key Associations(?:\s*\/\s*Features)?|Diagnosis|Management|Prognosis|Complications?|Workup|Follow[- ]?up)(\s*[:：])/i;
+const SECTION_LABEL_RE = /^(Mechanism|Pathophysiology|Key associations|Definition|Key Associations(?:\s*\/\s*Features)?|Diagnosis|Management|Prognosis|Complications?|Workup|Avoid|Follow[- ]?up)(\s*[:：])/i;
 
-function renderJsonText(text: string) {
+function renderBoldKeyword(
+  text: string,
+  i: number,
+  onKeywordHover?: (keyword: string, rect: DOMRect) => void
+) {
+  if (!onKeywordHover) {
+    return (
+      <strong key={i} className="font-semibold text-foreground">
+        {text}
+      </strong>
+    );
+  }
+  return (
+    <span
+      key={i}
+      className="font-semibold text-foreground cursor-pointer underline-offset-2 hover:underline hover:text-primary/90 transition-colors group relative inline"
+      onMouseEnter={(e) =>
+        onKeywordHover(text, (e.currentTarget as HTMLElement).getBoundingClientRect())
+      }
+      onTouchStart={(e) => {
+        const el = e.currentTarget as HTMLElement;
+        const timer = window.setTimeout(() => {
+          onKeywordHover(text, el.getBoundingClientRect());
+        }, 500);
+        el.dataset.longpress = String(timer);
+      }}
+      onTouchEnd={(e) => {
+        const el = e.currentTarget as HTMLElement;
+        if (el.dataset.longpress) {
+          clearTimeout(Number(el.dataset.longpress));
+        }
+      }}
+    >
+      {text}
+      <span className="absolute -top-4 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity text-[9px] text-primary/60 whitespace-nowrap pointer-events-none">
+        ✨ enhance
+      </span>
+    </span>
+  );
+}
+
+function renderJsonText(
+  text: string,
+  onKeywordHover?: (keyword: string, rect: DOMRect) => void
+) {
   const lines = text.split("\n");
 
   return lines.map((line, lineIdx) => {
     const trimmed = line.trim();
     if (!trimmed) {
-      // Blank line — render as a small spacer
       return <span key={lineIdx} className="block h-2" />;
     }
 
     const labelMatch = trimmed.match(SECTION_LABEL_RE);
 
     if (labelMatch) {
-      // Line starts with a sub-section label — split at the colon
-      const labelPart = labelMatch[1] + labelMatch[2]; // e.g. "Definition:"
+      const labelPart = labelMatch[1] + labelMatch[2];
       const rest = trimmed.slice(labelPart.length);
 
-      // Render the bold parts inside `rest`
       const restParts = rest.split(/(\*\*[^*]+\*\*)/g).map((part, i) => {
         if (part.startsWith("**") && part.endsWith("**")) {
-          return (
-            <strong key={i} className="font-semibold text-foreground">
-              {part.slice(2, -2)}
-            </strong>
-          );
+          return renderBoldKeyword(part.slice(2, -2), i, onKeywordHover);
         }
         return <span key={i}>{part}</span>;
       });
@@ -165,17 +215,12 @@ function renderJsonText(text: string) {
       );
     }
 
-    // Regular line — render with bold markers preserved
     const parts = trimmed.split(/(\*\*[^*]+\*\*)/g);
     return (
       <span key={lineIdx} className="block text-sm text-muted-foreground leading-relaxed">
         {parts.map((part, i) => {
           if (part.startsWith("**") && part.endsWith("**")) {
-            return (
-              <strong key={i} className="font-semibold text-foreground">
-                {part.slice(2, -2)}
-              </strong>
-            );
+            return renderBoldKeyword(part.slice(2, -2), i, onKeywordHover);
           }
           return part;
         })}
@@ -193,7 +238,7 @@ function renderArraySection(items: string[]) {
           <span className="shrink-0 font-bold text-primary/60 tabular-nums w-5 text-right">
             {i + 1}.
           </span>
-          <span>{renderFormattedContent(item)}</span>
+          <span className="flex-1">{renderFormattedContent(item)}</span>
         </li>
       ))}
     </ol>
@@ -248,7 +293,6 @@ function EvidenceBadge({ onClick }: { onClick: () => void }) {
   );
 }
 
-// Stub regenerate button — wired up in Prompt 6
 function RegenerateButton({ sectionKey }: { sectionKey: string }) {
   return (
     <button
@@ -257,7 +301,6 @@ function RegenerateButton({ sectionKey }: { sectionKey: string }) {
       className="h-7 w-7 flex items-center justify-center rounded-lg text-muted-foreground/40 hover:text-muted-foreground hover:bg-secondary/60 transition-colors"
       onClick={(e) => {
         e.stopPropagation();
-        // TODO: wired in Prompt 6
       }}
     >
       <RefreshCw className="h-3.5 w-3.5" />
@@ -277,6 +320,9 @@ const OutputSection = ({
   citationIsLoggedIn,
   modelUsed,
   isPro = false,
+  userId,
+  isAnonymous,
+  sheetId,
 }: OutputSectionProps) => {
   const ref = useRef<HTMLDivElement>(null);
   const referenceNoteRef = useRef<HTMLDivElement>(null);
@@ -285,9 +331,138 @@ const OutputSection = ({
     sessionStorage.getItem("sb_disclaimer_collapsed") === "1"
   );
 
-  // Detect whether this is a new JSON sheet or a legacy text blob
+  // Enhance sidebar state
+  const [activeEnhancements, setActiveEnhancements] = useState<Record<string, ActiveEnhancement>>(() => {
+    // Pre-populate from saved sheet enhancements if present
+    if (!isJsonSheet(output)) return {};
+    const parsed = parseStoredSheet(output);
+    if (!parsed?.enhancements) return {};
+    return Object.fromEntries(
+      Object.entries(parsed.enhancements).map(([key, r]) => [
+        key,
+        { sourceText: r.sourceText, mode: r.mode, sectionKey: "saved" } as ActiveEnhancement,
+      ])
+    );
+  });
+  const [openTabKeys, setOpenTabKeys] = useState<Set<string>>(() => new Set());
+
   const sheet: GeneratedSheet | null = isJsonSheet(output) ? parseStoredSheet(output) : null;
+  if (sheet && sheet.overview === undefined && (sheet as { summary?: string }).summary !== undefined) {
+    sheet.overview = (sheet as { summary?: string }).summary as string;
+  }
   const isJson = sheet !== null;
+
+  // Keyword hover state — only used in JSON renderer
+  const [keywordPicker, setKeywordPicker] = useState<{ text: string; rect: DOMRect } | null>(null);
+  const keywordHoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const keywordPickerRef = useRef<HTMLDivElement>(null);
+
+  const handleKeywordHover = useCallback((keyword: string, rect: DOMRect) => {
+    if (keywordHoverTimer.current) clearTimeout(keywordHoverTimer.current);
+    keywordHoverTimer.current = setTimeout(() => {
+      setKeywordPicker({ text: keyword, rect });
+    }, 300);
+  }, []);
+
+  useEffect(() => {
+    function handleOutsideClick(e: MouseEvent) {
+      if (keywordPickerRef.current && !keywordPickerRef.current.contains(e.target as Node)) {
+        setKeywordPicker(null);
+      }
+    }
+    if (keywordPicker) {
+      document.addEventListener("mousedown", handleOutsideClick);
+      return () => document.removeEventListener("mousedown", handleOutsideClick);
+    }
+  }, [keywordPicker]);
+
+  const fireKeywordEnhance = (mode: "expand" | "clinical") => {
+    if (!keywordPicker) return;
+    const key = enhancementKey(keywordPicker.text, mode);
+    setActiveEnhancements((prev) => ({
+      ...prev,
+      [key]: { sourceText: keywordPicker.text, mode, sectionKey: "keyword" },
+    }));
+    setOpenTabKeys((prev) => new Set([...prev, key]));
+    setKeywordPicker(null);
+  };
+
+  // Selection-to-enhance state
+  const [selection, setSelection] = useState<{ text: string; rect: DOMRect } | null>(null);
+  const selectionTooltipRef = useRef<HTMLDivElement>(null);
+
+  const handleSelectionChange = useCallback(() => {
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed || !sel.toString().trim()) {
+      setSelection(null);
+      return;
+    }
+    const text = sel.toString().trim();
+    if (text.split(/\s+/).length < 3) {
+      setSelection(null);
+      return;
+    }
+    if (!ref.current) return;
+    const range = sel.getRangeAt(0);
+    if (!ref.current.contains(range.commonAncestorContainer)) {
+      setSelection(null);
+      return;
+    }
+    const rect = range.getBoundingClientRect();
+    setSelection({ text, rect });
+  }, []);
+
+  const fireSelectionEnhance = (mode: "expand" | "clinical") => {
+    if (!selection) return;
+    const key = enhancementKey(selection.text, mode);
+    setActiveEnhancements((prev) => ({
+      ...prev,
+      [key]: { sourceText: selection.text, mode, sectionKey: "selection" },
+    }));
+    setOpenTabKeys((prev) => new Set([...prev, key]));
+    setSelection(null);
+    window.getSelection()?.removeAllRanges();
+  };
+
+  useEffect(() => {
+    function handleOutsideSelectionClick(e: MouseEvent) {
+      if (
+        selectionTooltipRef.current &&
+        !selectionTooltipRef.current.contains(e.target as Node)
+      ) {
+        const sel = window.getSelection();
+        if (!sel || sel.isCollapsed) setSelection(null);
+      }
+    }
+    if (selection) {
+      document.addEventListener("mousedown", handleOutsideSelectionClick);
+      return () => document.removeEventListener("mousedown", handleOutsideSelectionClick);
+    }
+  }, [selection]);
+
+  const closeEnhancementTab = (key: string) => {
+    setActiveEnhancements((prev) => {
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+    setOpenTabKeys((prev) => {
+      const next = new Set(prev);
+      next.delete(key);
+      return next;
+    });
+  };
+
+  const handleEnhancementResult = useCallback(
+    (key: string, result: EnhancementResult) => {
+      window.dispatchEvent(
+        new CustomEvent("studybuddy:enhancement-saved", {
+          detail: { key, result },
+        })
+      );
+    },
+    []
+  );
 
   const toggleDisclaimer = () => {
     setDisclaimerCollapsed((prev) => {
@@ -437,7 +612,7 @@ const OutputSection = ({
 
   // ── JSON renderer ────────────────────────────────────────────────────────
   const JSON_SECTION_ORDER: JsonSectionKey[] = [
-    "summary",
+    "overview",
     "memoryHooks",
     "clinicalApproach",
     "keyPoints",
@@ -446,105 +621,218 @@ const OutputSection = ({
     "referenceNote",
   ];
 
+  const sidebarProps = {
+    activeEnhancements,
+    openTabKeys,
+    onTabToggle: (key: string) => {
+      setOpenTabKeys((prev) => {
+        const next = new Set(prev);
+        if (next.has(key)) next.delete(key);
+        else next.add(key);
+        return next;
+      });
+    },
+    onCloseTab: closeEnhancementTab,
+    topic: sheet.topic ?? inputText ?? "",
+    isPro,
+    userId: userId ?? null,
+    isAnonymous: isAnonymous ?? false,
+    sheetId: sheetId ?? inputText,
+    onResult: handleEnhancementResult,
+  };
+
   return (
-    <div ref={ref} className="space-y-5">
-      {/* Mode header + Save */}
-      <div className="animate-fade-in flex items-center justify-between">
-        {modeInfo && (
-          <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground bg-secondary/40 border border-border/40 rounded-lg px-4 py-2.5">
-            <Settings2 className="h-3.5 w-3.5 text-primary" />
-            <span>
-              <span className="text-foreground">{modeInfo.examMode}</span>
-              <span className="mx-1.5 opacity-40">|</span>
-              <span>{modeInfo.difficulty}</span>
-              <span className="mx-1.5 opacity-40">|</span>
-              <span>{modeInfo.focus}</span>
-              <span className="mx-1.5 opacity-40">|</span>
-              <span>{modeInfo.length}</span>
-            </span>
-          </div>
-        )}
-        <SaveButton input={inputText || ""} output={output} modeInfo={modeInfo} />
+    <div
+      className="flex gap-6 items-start"
+      onMouseUp={handleSelectionChange}
+      onTouchEnd={handleSelectionChange}
+    >
+      {/* ── Left column: sheet content ── */}
+      <div ref={ref} className="flex-1 min-w-0 space-y-5">
+        {/* Mode header + Save */}
+        <div className="animate-fade-in flex items-center justify-between">
+          {modeInfo && (
+            <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground bg-secondary/40 border border-border/40 rounded-lg px-4 py-2.5">
+              <Settings2 className="h-3.5 w-3.5 text-primary" />
+              <span>
+                <span className="text-foreground">{modeInfo.examMode}</span>
+                <span className="mx-1.5 opacity-40">|</span>
+                <span>{modeInfo.difficulty}</span>
+                <span className="mx-1.5 opacity-40">|</span>
+                <span>{modeInfo.focus}</span>
+                <span className="mx-1.5 opacity-40">|</span>
+                <span>{modeInfo.length}</span>
+              </span>
+            </div>
+          )}
+          <SaveButton input={inputText || ""} output={output} modeInfo={modeInfo} />
+        </div>
+
+        {/* CTA nudge */}
+        <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground/50 animate-fade-in px-1">
+          <Sparkles className="h-3 w-3 text-primary/40 shrink-0" />
+          <span>Highlight any text on this sheet to expand or get a clinical tie</span>
+        </div>
+
+        {JSON_SECTION_ORDER.map((key, idx) => {
+          const config = JSON_SECTION_CONFIG[key];
+          const Icon = config.icon;
+          const isReference = key === "referenceNote";
+          const showEvidenceBadge = citationState === "found" && config.evidenceBacked;
+
+          const copyText =
+            key === "flashcards"
+              ? sheet.flashcards.map((c) => `Q: [${c.tag}] ${c.question}\nA: ${c.answer}`).join("\n\n")
+              : Array.isArray(sheet[key])
+              ? (sheet[key] as string[]).map((item, i) => `${i + 1}. ${item}`).join("\n")
+              : (sheet[key] as string) ?? "";
+
+          return (
+            <Card
+              key={key}
+              ref={isReference ? referenceNoteRef : undefined}
+              className={`glass-card animate-fade-in overflow-hidden hover-lift ${config.className}`}
+              style={{ animationDelay: `${idx * 100}ms` }}
+            >
+              <div className="px-6 pt-5 pb-2 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-primary/10">
+                    <Icon className="h-4 w-4 text-primary" />
+                  </div>
+                  <h3 className="text-base font-bold tracking-wide text-foreground uppercase">
+                    {config.label}
+                    {key === "overview" && sheet.topicEmoji && (
+                      <span className="ml-2 text-base">{sheet.topicEmoji}</span>
+                    )}
+                  </h3>
+                  {showEvidenceBadge && <EvidenceBadge onClick={scrollToReference} />}
+                  {key === "overview" && modelUsed && (
+                    <ModelBadge model={modelUsed} isPro={isPro} />
+                  )}
+                </div>
+                <div className="flex items-center gap-1">
+                  {key !== "referenceNote" && key !== "flashcards" && (
+                    <RegenerateButton sectionKey={key} />
+                  )}
+                  <CopyButton text={copyText} />
+                </div>
+              </div>
+
+              <CardContent className="px-6 pb-6 pt-2">
+                {key === "flashcards" ? (
+                  <FlashcardsSection cards={sheet.flashcards} />
+                ) : key === "overview" || key === "clinicalApproach" ? (
+                  <div className="text-sm text-muted-foreground leading-relaxed">
+                    {renderJsonText(sheet[key] as string, handleKeywordHover)}
+                  </div>
+                ) : key === "referenceNote" ? (
+                  <>
+                    <div className="text-sm text-muted-foreground leading-relaxed">
+                      {sheet.referenceNote}
+                    </div>
+                    {citationState && citationState !== "idle" && citationState !== "hidden" && (
+                      <div className="mt-3">
+                        <CitationBadgeList
+                          state={citationState}
+                          citations={citations}
+                          onLockedClick={onCitationLockedClick}
+                          isLoggedIn={citationIsLoggedIn}
+                        />
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  renderArraySection(sheet[key] as string[])
+                )}
+              </CardContent>
+            </Card>
+          );
+        })}
+
+        {renderNudgeAndDisclaimer(showNudge, setShowNudge, inputText, disclaimerCollapsed, toggleDisclaimer)}
+
+        {/* Mobile: enhance panels below sheet */}
+        <div className="lg:hidden w-full">
+          <EnhanceSidebar {...sidebarProps} />
+        </div>
       </div>
 
-      {JSON_SECTION_ORDER.map((key, idx) => {
-        const config = JSON_SECTION_CONFIG[key];
-        const Icon = config.icon;
-        const isReference = key === "referenceNote";
-        const showEvidenceBadge = citationState === "found" && config.evidenceBacked;
+      {/* ── Right column: enhance sidebar ── */}
+      <div className="w-80 shrink-0 sticky top-6 hidden lg:block">
+        <EnhanceSidebar {...sidebarProps} />
+      </div>
 
-        // Build copy text for this section
-        const copyText =
-          key === "flashcards"
-            ? sheet.flashcards.map((c) => `Q: [${c.tag}] ${c.question}\nA: ${c.answer}`).join("\n\n")
-            : Array.isArray(sheet[key])
-            ? (sheet[key] as string[]).map((item, i) => `${i + 1}. ${item}`).join("\n")
-            : (sheet[key] as string) ?? "";
-
-        return (
-          <Card
-            key={key}
-            ref={isReference ? referenceNoteRef : undefined}
-            className={`glass-card animate-fade-in overflow-hidden hover-lift ${config.className}`}
-            style={{ animationDelay: `${idx * 100}ms` }}
+      {/* Selection tooltip — ephemeral floating mode picker */}
+      {selection && (
+        <div
+          ref={selectionTooltipRef}
+          style={{
+            position: "fixed",
+            top: Math.max(8, selection.rect.top - 44),
+            left: Math.min(
+              Math.max(8, selection.rect.left + selection.rect.width / 2 - 100),
+              window.innerWidth - 208
+            ),
+            zIndex: 60,
+            width: 200,
+          }}
+          className="flex items-center gap-1 bg-popover border border-border/60 rounded-lg shadow-lg px-2 py-1.5 animate-fade-in"
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          <Sparkles className="h-3 w-3 text-primary shrink-0" />
+          <span className="text-[10px] font-semibold text-foreground mr-1">Enhance:</span>
+          <button
+            type="button"
+            onClick={() => fireSelectionEnhance("expand")}
+            className="flex items-center gap-0.5 text-[10px] text-blue-400 hover:text-blue-300 font-semibold px-1.5 py-0.5 rounded hover:bg-blue-500/10 transition-colors"
           >
-            <div className="px-6 pt-5 pb-2 flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2.5 flex-wrap">
-                <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-primary/10">
-                  <Icon className="h-4 w-4 text-primary" />
-                </div>
-                <h3 className="text-base font-bold tracking-wide text-foreground uppercase">
-                  {config.label}
-                  {key === "summary" && sheet.topicEmoji && (
-                    <span className="ml-2 text-base">{sheet.topicEmoji}</span>
-                  )}
-                </h3>
-                {showEvidenceBadge && <EvidenceBadge onClick={scrollToReference} />}
-                {key === "summary" && modelUsed && (
-                  <ModelBadge model={modelUsed} isPro={isPro} />
-                )}
-              </div>
-              <div className="flex items-center gap-1">
-                {key !== "referenceNote" && key !== "flashcards" && (
-                  <RegenerateButton sectionKey={key} />
-                )}
-                <CopyButton text={copyText} />
-              </div>
-            </div>
+            <Microscope className="h-2.5 w-2.5" /> Expand
+          </button>
+          <button
+            type="button"
+            onClick={() => fireSelectionEnhance("clinical")}
+            className="flex items-center gap-0.5 text-[10px] text-teal-400 hover:text-teal-300 font-semibold px-1.5 py-0.5 rounded hover:bg-teal-500/10 transition-colors"
+          >
+            <Stethoscope className="h-2.5 w-2.5" /> Clinical
+          </button>
+        </div>
+      )}
 
-            <CardContent className="px-6 pb-6 pt-2">
-              {key === "flashcards" ? (
-                <FlashcardsSection cards={sheet.flashcards} />
-              ) : key === "summary" || key === "clinicalApproach" ? (
-                <div className="text-sm text-muted-foreground leading-relaxed">
-                  {renderJsonText(sheet[key] as string)}
-                </div>
-              ) : key === "referenceNote" ? (
-                <>
-                  <div className="text-sm text-muted-foreground leading-relaxed">
-                    {sheet.referenceNote}
-                  </div>
-                  {citationState && citationState !== "idle" && citationState !== "hidden" && (
-                    <div className="mt-3">
-                      <CitationBadgeList
-                        state={citationState}
-                        citations={citations}
-                        onLockedClick={onCitationLockedClick}
-                        isLoggedIn={citationIsLoggedIn}
-                      />
-                    </div>
-                  )}
-                </>
-              ) : (
-                // Array sections: memoryHooks, keyPoints, examTraps
-                renderArraySection(sheet[key] as string[])
-              )}
-            </CardContent>
-          </Card>
-        );
-      })}
-
-      {renderNudgeAndDisclaimer(showNudge, setShowNudge, inputText, disclaimerCollapsed, toggleDisclaimer)}
+      {/* Keyword picker tooltip (mode chooser shown when hovering a bold keyword) */}
+      {keywordPicker && (
+        <div
+          ref={keywordPickerRef}
+          style={{
+            position: "fixed",
+            top: Math.max(8, keywordPicker.rect.top - 44),
+            left: Math.min(
+              Math.max(8, keywordPicker.rect.left + keywordPicker.rect.width / 2 - 100),
+              window.innerWidth - 208
+            ),
+            zIndex: 60,
+            width: 200,
+          }}
+          className="flex items-center gap-1 bg-popover border border-border/60 rounded-lg shadow-lg px-2 py-1.5 animate-fade-in"
+          onMouseLeave={() => setKeywordPicker(null)}
+        >
+          <Sparkles className="h-3 w-3 text-primary shrink-0" />
+          <span className="text-[10px] font-semibold text-foreground mr-1">Enhance:</span>
+          <button
+            type="button"
+            onClick={() => fireKeywordEnhance("expand")}
+            className="flex items-center gap-0.5 text-[10px] text-blue-400 hover:text-blue-300 font-semibold px-1.5 py-0.5 rounded hover:bg-blue-500/10 transition-colors"
+          >
+            <Microscope className="h-2.5 w-2.5" /> Expand
+          </button>
+          <button
+            type="button"
+            onClick={() => fireKeywordEnhance("clinical")}
+            className="flex items-center gap-0.5 text-[10px] text-teal-400 hover:text-teal-300 font-semibold px-1.5 py-0.5 rounded hover:bg-teal-500/10 transition-colors"
+          >
+            <Stethoscope className="h-2.5 w-2.5" /> Clinical
+          </button>
+        </div>
+      )}
     </div>
   );
 };

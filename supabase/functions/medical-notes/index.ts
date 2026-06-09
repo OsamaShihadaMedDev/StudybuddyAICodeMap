@@ -22,7 +22,9 @@ serve(async (req) => {
   }
 
   try {
-    const { notes, difficulty, focus, length, examMode, cardsOnly, cardCount, focusCard, explainMode, userId, isAnonymous, isPro, preferredModel } = await req.json();
+    const { notes, difficulty, focus, length, examMode, cardsOnly, cardCount, focusCard,
+            explainMode, userId, isAnonymous, isPro, preferredModel,
+            enhanceMode, itemText, sectionKey, sectionItems, enhanceTopic } = await req.json();
 
     if (!notes || typeof notes !== "string" || !notes.trim()) {
       return new Response(
@@ -106,7 +108,7 @@ FORMATTING RULES (non-negotiable):
 - Return ONLY a valid JSON object. No markdown fences, no preamble, no
   commentary, no text before or after the JSON.
 - Use **double asterisks** inside string values to bold key terms in the
-  summary field only. The renderer handles this.
+  overview and clinicalApproach fields. The renderer handles this.
 - Use arrows (→) inside string values to show clinical flow.
 - Numbered list items inside array fields: do NOT include the leading
   number (e.g. "1."). Each array element is already one item.
@@ -115,13 +117,14 @@ OUTPUT — return exactly this JSON shape:
 
 {
   "topicEmoji": "<one emoji matching the topic>",
-  "summary": "<dense clinical snapshot as a single JSON string. MANDATORY STRUCTURE: each sub-section MUST start on its own line using \\n before the label. Exact format:\\nDefinition: **Bold disease name** one sentence.\\nMechanism / Pathophysiology: 2-3 sentences on core defect. Bold **key mechanisms**.\\nKey Associations / Features:\\n1. **Buzzword** → clinical meaning\\n2. **Classic presentation** → distinguishing feature\\nDiagnosis: Gold standard → what it shows.\\nManagement: First-line → drug + rationale.\\nDo NOT merge these into one paragraph. Each label starts after a \\n.>",
+  "topic": "<normalized topic name, e.g. Heart Failure — plain text, no emoji>",
+  "overview": "<pathophysiology-first conceptual foundation. MANDATORY STRUCTURE — each sub-section on its own line using \\n before the label. Exact format:\\nMechanism: **Bold the core defect** — one sentence on the cellular or molecular trigger.\\nPathophysiology: 2-3 sentences tracing how that defect produces the clinical syndrome. Use arrows → to show flow. Bold **key mechanisms**.\\nKey associations:\\n1. **Buzzword** → why it occurs mechanistically\\n2. **Classic presentation** → the mechanism behind it\\n3. **High-yield link** → pathophysiologic explanation\\nSTRICT RULES: NO drug names. NO diagnostic criteria (no 'gold standard is...'). NO management steps. NO investigations. Those belong in Clinical Approach only. Each label starts after a \\n. Do NOT merge into one paragraph.>",
   "memoryHooks": [
     "<mnemonic one-liner 1>",
     "<mnemonic one-liner 2>",
     "<mnemonic one-liner 3>"
   ],
-  "clinicalApproach": "<clinical decision tree — Diagnosis, Workup, Management, Complications subsections — same content as before as a single string with newlines>",
+  "clinicalApproach": "<Complete clinical decision section — this is the ONLY section with diagnostic criteria, drug names, and management steps. MANDATORY STRUCTURE — each sub-section on its own line using \\n before the label. Exact format:\\nDiagnosis: Gold standard → what it shows. Key distinguishing findings.\\nWorkup: what to order and why — labs, imaging, scores.\\nManagement:\\nFirst-line → drug + dose rationale.\\nSecond-line → when and why to escalate.\\nDefinitive → surgical or specialist triggers.\\nComplications: what goes wrong if undertreated — bold **the dangerous ones**.\\nAvoid: interventions or drugs contraindicated in this condition.\\nBe complete here — do not hold back detail. This section should be the most clinically dense section on the sheet.>",
   "keyPoints": [
     "<If X → think Y one-liner 1>",
     "<If X → think Y one-liner 2>"
@@ -140,12 +143,33 @@ OUTPUT — return exactly this JSON shape:
   "referenceNote": "${referenceNote}"
 }
 
-RULES FOR ARRAYS:
-- memoryHooks: 3-5 items
-- keyPoints: 6-10 items
-- examTraps: 4-6 items
-- flashcards: exactly 5 items, required mix: 2x Next Step, 1x Diagnosis,
-  1x Mechanism, 1x Complication. All clinical vignettes.
+LENGTH GATE — apply strictly based on the Length setting "${len}":
+
+If Length is "Concise":
+- overview: Mechanism (1 sentence) + Pathophysiology (2 sentences) + Key associations (max 3 items). No more.
+- clinicalApproach: Diagnosis (1-2 sentences, gold standard only) + Management (first-line only, 1-2 sentences) + Complications (max 2 items). Omit Workup, Second-line, Definitive, Avoid sections entirely.
+- memoryHooks: exactly 3 items
+- keyPoints: exactly 5 items
+- examTraps: exactly 3 items
+- flashcards: exactly 3 items, mix: 1x Next Step, 1x Diagnosis, 1x Mechanism. All clinical vignettes.
+
+If Length is "Moderate":
+- overview: Mechanism (1 sentence) + Pathophysiology (2-3 sentences) + Key associations (max 4 items).
+- clinicalApproach: all subsections at moderate depth, no padding.
+- memoryHooks: 3-4 items
+- keyPoints: 6-8 items
+- examTraps: 4 items
+- flashcards: exactly 4 items, mix: 1x Next Step, 1x Diagnosis, 1x Mechanism, 1x Complication. All clinical vignettes.
+
+If Length is "Detailed":
+- overview: Mechanism (1-2 sentences) + Pathophysiology (3-4 sentences) + Key associations (5-6 items).
+- clinicalApproach: all subsections fully expanded, include edge cases and nuances.
+- memoryHooks: 5 items
+- keyPoints: 8-10 items
+- examTraps: 5-6 items
+- flashcards: exactly 5 items, mix: 2x Next Step, 1x Diagnosis, 1x Mechanism, 1x Complication. All clinical vignettes.
+
+These are HARD CAPS. Do not exceed them regardless of topic complexity.
 
 EMOJI OPTIONS:
 🫀 cardiac, 🩸 hematology, 🧠 neuro, 🫁 pulmonary, 🦴 ortho, 🩺 general,
@@ -184,6 +208,45 @@ RULES:
 - No markdown symbols (no #, *, -, **).
 - Use plain uppercase section headers exactly as shown above.
 - Start directly with EXPLANATION. No preamble.`;
+
+    // ── ENHANCE PROMPTS ──────────────────────────────────────────────────────
+
+    const haikuExpandPrompt = `You are a senior medical educator giving a concise, targeted expansion of a single study point.
+
+The student is reviewing a "${sectionKey}" item from a study sheet on "${enhanceTopic}".
+
+Context — other items in this section:
+${Array.isArray(sectionItems) ? sectionItems.map((s: string, i: number) => `${i + 1}. ${s}`).join("\n") : ""}
+
+The specific item to expand:
+"${itemText}"
+
+Write EXACTLY 2-3 sentences expanding on the mechanism or deeper "why". Maximum 60 words total — stop after 60 words even mid-thought if needed. Wrap the single most important keyword or phrase per sentence in **double asterisks** for emphasis. Use clinical language. Do not repeat the item verbatim. No headers, no bullets, no markdown fences. Plain prose with **bold markers** only.`;
+
+    const gptOssExpandPrompt = `You are a medical educator expanding a single study point for a medical student.
+
+Topic: ${enhanceTopic}
+Section: ${sectionKey}
+Item: "${itemText}"
+Other items in section: ${Array.isArray(sectionItems) ? sectionItems.join(" | ") : ""}
+
+Write EXACTLY 2-3 sentences on the mechanism. Maximum 60 words. Bold the most important keyword per sentence using **double asterisks**. Plain prose only.`;
+
+    const haikuClinicalPrompt = `You are a senior clinician connecting a study point to real bedside practice.
+
+The student is reviewing a "${sectionKey}" item from a study sheet on "${enhanceTopic}".
+
+The specific item:
+"${itemText}"
+
+Write EXACTLY 2 sentences: (1) a brief patient presentation where this item is directly relevant, (2) the clinical decision it drives and why. Maximum 50 words total. Bold the key clinical term per sentence using **double asterisks**. Plain prose only, no headers, no bullets.`;
+
+    const gptOssClinicalPrompt = `You are a clinician tying a study point to a real patient scenario.
+
+Topic: ${enhanceTopic}
+Item: "${itemText}"
+
+Write EXACTLY 2 sentences: patient presentation + clinical decision it drives. Maximum 50 words. Bold the key term per sentence using **double asterisks**. Plain prose only.`;
 
     const haikuCardsPrompt = (count: number) => `You are a medical educator. Generate exactly ${count} USMLE-style flashcards on the given topic.
 
@@ -261,7 +324,7 @@ FORMATTING RULES (non-negotiable):
 - Return ONLY a valid JSON object. No markdown fences, no preamble, no
   commentary, no text before or after the JSON.
 - Use **double asterisks** inside string values to bold key terms in the
-  summary field only. The renderer handles this.
+  overview and clinicalApproach fields. The renderer handles this.
 - Use arrows (→) inside string values to show clinical flow.
 - Numbered list items inside array fields: do NOT include the leading
   number (e.g. "1."). Each array element is already one item.
@@ -270,13 +333,14 @@ OUTPUT — return exactly this JSON shape:
 
 {
   "topicEmoji": "<one emoji matching the topic>",
-  "summary": "<dense clinical snapshot as a single JSON string. MANDATORY STRUCTURE: each sub-section MUST start on its own line using \\n before the label. Exact format:\\nDefinition: **Bold disease name** one sentence.\\nMechanism / Pathophysiology: 2-3 sentences on core defect. Bold **key mechanisms**.\\nKey Associations / Features:\\n1. **Buzzword** → clinical meaning\\n2. **Classic presentation** → distinguishing feature\\nDiagnosis: Gold standard → what it shows.\\nManagement: First-line → drug + rationale.\\nDo NOT merge these into one paragraph. Each label starts after a \\n.>",
+  "topic": "<normalized topic name, e.g. Heart Failure — plain text, no emoji>",
+  "overview": "<pathophysiology-first conceptual foundation. MANDATORY STRUCTURE — each sub-section on its own line using \\n before the label. Exact format:\\nMechanism: **Bold the core defect** — one sentence on the cellular or molecular trigger.\\nPathophysiology: 2-3 sentences tracing how that defect produces the clinical syndrome. Use arrows → to show flow. Bold **key mechanisms**.\\nKey associations:\\n1. **Buzzword** → why it occurs mechanistically\\n2. **Classic presentation** → the mechanism behind it\\n3. **High-yield link** → pathophysiologic explanation\\nSTRICT RULES: NO drug names. NO diagnostic criteria (no 'gold standard is...'). NO management steps. NO investigations. Those belong in Clinical Approach only. Each label starts after a \\n. Do NOT merge into one paragraph.>",
   "memoryHooks": [
     "<mnemonic one-liner 1>",
     "<mnemonic one-liner 2>",
     "<mnemonic one-liner 3>"
   ],
-  "clinicalApproach": "<clinical decision tree — Diagnosis, Workup, Management, Complications subsections — same content as before as a single string with newlines>",
+  "clinicalApproach": "<Complete clinical decision section — this is the ONLY section with diagnostic criteria, drug names, and management steps. MANDATORY STRUCTURE — each sub-section on its own line using \\n before the label. Exact format:\\nDiagnosis: Gold standard → what it shows. Key distinguishing findings.\\nWorkup: what to order and why — labs, imaging, scores.\\nManagement:\\nFirst-line → drug + dose rationale.\\nSecond-line → when and why to escalate.\\nDefinitive → surgical or specialist triggers.\\nComplications: what goes wrong if undertreated — bold **the dangerous ones**.\\nAvoid: interventions or drugs contraindicated in this condition.\\nBe complete here — do not hold back detail. This section should be the most clinically dense section on the sheet.>",
   "keyPoints": [
     "<If X → think Y one-liner 1>",
     "<If X → think Y one-liner 2>"
@@ -295,12 +359,33 @@ OUTPUT — return exactly this JSON shape:
   "referenceNote": "${referenceNote}"
 }
 
-RULES FOR ARRAYS:
-- memoryHooks: 3-5 items
-- keyPoints: 6-10 items
-- examTraps: 4-6 items
-- flashcards: exactly 5 items, required mix: 2x Next Step, 1x Diagnosis,
-  1x Mechanism, 1x Complication. All clinical vignettes.
+LENGTH GATE — apply strictly based on the Length setting "${len}":
+
+If Length is "Concise":
+- overview: Mechanism (1 sentence) + Pathophysiology (2 sentences) + Key associations (max 3 items). No more.
+- clinicalApproach: Diagnosis (1-2 sentences, gold standard only) + Management (first-line only, 1-2 sentences) + Complications (max 2 items). Omit Workup, Second-line, Definitive, Avoid sections entirely.
+- memoryHooks: exactly 3 items
+- keyPoints: exactly 5 items
+- examTraps: exactly 3 items
+- flashcards: exactly 3 items, mix: 1x Next Step, 1x Diagnosis, 1x Mechanism. All clinical vignettes.
+
+If Length is "Moderate":
+- overview: Mechanism (1 sentence) + Pathophysiology (2-3 sentences) + Key associations (max 4 items).
+- clinicalApproach: all subsections at moderate depth, no padding.
+- memoryHooks: 3-4 items
+- keyPoints: 6-8 items
+- examTraps: 4 items
+- flashcards: exactly 4 items, mix: 1x Next Step, 1x Diagnosis, 1x Mechanism, 1x Complication. All clinical vignettes.
+
+If Length is "Detailed":
+- overview: Mechanism (1-2 sentences) + Pathophysiology (3-4 sentences) + Key associations (5-6 items).
+- clinicalApproach: all subsections fully expanded, include edge cases and nuances.
+- memoryHooks: 5 items
+- keyPoints: 8-10 items
+- examTraps: 5-6 items
+- flashcards: exactly 5 items, mix: 2x Next Step, 1x Diagnosis, 1x Mechanism, 1x Complication. All clinical vignettes.
+
+These are HARD CAPS. Do not exceed them regardless of topic complexity.
 
 EMOJI OPTIONS:
 🫀 cardiac, 🩸 hematology, 🧠 neuro, 🫁 pulmonary, 🦴 ortho, 🩺 general,
@@ -309,7 +394,9 @@ EMOJI OPTIONS:
 
 Start your response with { and end with }. Nothing else.`;
 
-    const userContent = focusCard && !cardsOnly
+    const userContent = enhanceMode
+      ? `Topic: ${enhanceTopic}\nSection: ${sectionKey}\nItem: ${itemText}`
+      : focusCard && !cardsOnly
       ? `Focus specifically on this concept: ${focusCard}\n\nTopic: ${notes}`
       : notes;
 
@@ -330,7 +417,11 @@ Start your response with { and end with }. Nothing else.`;
     let model: string;
     let isPremiumGeneration = false;
 
-    if (isPro) {
+    // Enhance calls: simple tier routing, no premium hook tracking
+    if (enhanceMode) {
+      model = isPro ? "anthropic/claude-haiku-4.5" : "openai/gpt-oss-20b";
+      isPremiumGeneration = isPro;
+    } else if (isPro) {
       if (preferredModel === "claude") {
         model = "anthropic/claude-haiku-4.5";
         isPremiumGeneration = true;
@@ -378,7 +469,11 @@ Start your response with { and end with }. Nothing else.`;
     // ── PROMPT SELECTION ───────────────────────────────────────────────────
     const isHaiku = model === "anthropic/claude-haiku-4.5";
 
-    if (explainMode) {
+    if (enhanceMode === "expand") {
+      systemPrompt = isHaiku ? haikuExpandPrompt : gptOssExpandPrompt;
+    } else if (enhanceMode === "clinical") {
+      systemPrompt = isHaiku ? haikuClinicalPrompt : gptOssClinicalPrompt;
+    } else if (explainMode) {
       systemPrompt = isHaiku ? haikuExplainPrompt : gptOssExplainPrompt;
     } else if (cardsOnly) {
       const count = Math.min(Math.max(parseInt(cardCount) || 12, 5), 20);

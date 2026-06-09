@@ -4,8 +4,16 @@ export interface Flashcard {
   answer: string;     // answer text
 }
 
+export interface EnhancementResult {
+  mode: "expand" | "clinical";
+  sourceText: string;
+  result: string;
+  createdAt: string;
+}
+
 export interface GeneratedSheet {
-  summary: string;
+  topic?: string; // normalized topic name, e.g. "Heart Failure"
+  overview: string;
   memoryHooks: string[];
   clinicalApproach: string;
   keyPoints: string[];
@@ -14,6 +22,7 @@ export interface GeneratedSheet {
   referenceNote: string;
   // emoji picked by the AI for the topic — extracted from flashcards block
   topicEmoji?: string;
+  enhancements?: Record<string, EnhancementResult>; // key = enhancementKey(sourceText, mode)
 }
 
 // Lightweight type used when loading a saved sheet from study_history.
@@ -41,4 +50,13 @@ export function parseStoredSheet(output: string): GeneratedSheet | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * Generates a stable cache key for an enhancement result.
+ * Used for both localStorage and the enhancements map in saved sheets.
+ */
+export function enhancementKey(sourceText: string, mode: "expand" | "clinical"): string {
+  const snippet = sourceText.trim().slice(0, 40).replace(/\s+/g, "_");
+  return `${mode}:${snippet}`;
 }

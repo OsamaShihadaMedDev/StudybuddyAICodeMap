@@ -2,7 +2,7 @@ import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import SheetGenerator from "@/components/SheetGenerator";
 
 const Sheets = () => (
-  <DashboardLayout>
+  <DashboardLayout wide>
     <div className="space-y-6">
       <div className="space-y-1">
         <h1 className="text-2xl font-extrabold tracking-tight text-foreground">
