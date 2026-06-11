@@ -20,7 +20,7 @@ const ThemeToggle = () => {
       variant="ghost"
       size="icon"
       onClick={() => setDark((d) => !d)}
-      className="rounded-full h-9 w-9 bg-secondary/60 hover:bg-secondary transition-all"
+      className="rounded-md h-8 w-8 text-muted-foreground hover:text-foreground transition-colors"
       aria-label="Toggle theme"
     >
       {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}

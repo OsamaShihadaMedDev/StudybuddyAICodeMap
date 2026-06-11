@@ -35,8 +35,8 @@ const DashboardLayout = ({ children, wide = false }: DashboardLayoutProps) => {
       <div className="relative z-10 flex min-h-screen">
         {/* Desktop sidebar */}
         <div
-          className={`hidden lg:flex lg:shrink-0 lg:border-r lg:border-border/40 transition-all duration-300 ease-in-out ${
-            sidebarCollapsed ? "lg:w-[60px]" : "lg:w-[260px]"
+          className={`hidden lg:flex lg:shrink-0 lg:border-r lg:border-border lg:bg-sidebar transition-all duration-300 ease-in-out ${
+            sidebarCollapsed ? "lg:w-[60px]" : "lg:w-[250px]"
           }`}
         >
           <DashboardSidebar
@@ -49,7 +49,7 @@ const DashboardLayout = ({ children, wide = false }: DashboardLayoutProps) => {
 
         {/* Mobile drawer */}
         <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
-          <SheetContent side="left" className="w-[280px] p-0 border-r border-border/40">
+          <SheetContent side="left" className="w-[280px] p-0 border-r border-border bg-sidebar">
             <DashboardSidebar
               onNavigate={() => setDrawerOpen(false)}
               onOpenAuth={handleOpenAuth}
@@ -60,7 +60,7 @@ const DashboardLayout = ({ children, wide = false }: DashboardLayoutProps) => {
 
         {/* Main content */}
         <main className="flex-1 min-w-0 flex flex-col transition-all duration-300 ease-in-out">
-          <header className="lg:hidden sticky top-0 z-20 flex items-center justify-between border-b border-border/40 bg-background/80 backdrop-blur px-4 py-3">
+          <header className="lg:hidden sticky top-0 z-20 flex items-center justify-between border-b border-border bg-background/90 backdrop-blur px-4 py-2.5">
             <Button
               variant="ghost"
               size="icon"
@@ -69,7 +69,7 @@ const DashboardLayout = ({ children, wide = false }: DashboardLayoutProps) => {
             >
               <Menu className="h-5 w-5" />
             </Button>
-            <p className="text-sm font-extrabold tracking-tight text-foreground">
+            <p className="text-sm font-semibold tracking-tight text-foreground">
               StudyBuddy
             </p>
             <div className="w-9" aria-hidden />

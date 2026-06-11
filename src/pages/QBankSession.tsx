@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
-import StudyBuddyLoader from "@/components/StudyBuddyLoader";
+import PageLoader from "@/components/PageLoader";
 import { useQBankContext } from "@/contexts/QBankContext";
 import type { OptionKey, QuestionMedia } from "@/hooks/use-qbank";
 
@@ -92,10 +92,10 @@ const QuestionCounter = ({
             border = "border-primary";
           } else if (isAnswered) {
             if (isCorrect) {
-              bg = "bg-green-500/20 text-green-400";
+              bg = "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400";
               border = "border-green-500/40";
             } else {
-              bg = "bg-red-500/20 text-red-400";
+              bg = "bg-red-500/15 text-red-600 dark:text-red-400";
               border = "border-red-500/40";
             }
             cursor = "cursor-pointer hover:opacity-80 transition-opacity";
@@ -139,9 +139,9 @@ const QuestionCounter = ({
 };
 
 const PULSE_CONFIG: Record<Difficulty, { bars: number; color: string; label: string }> = {
-  Easy:   { bars: 1, color: "#22c55e", label: "Easy"   },
-  Medium: { bars: 2, color: "#f59e0b", label: "Medium" },
-  Hard:   { bars: 3, color: "#ef4444", label: "Hard"   },
+  Easy:   { bars: 1, color: "#059669", label: "Easy"   },
+  Medium: { bars: 2, color: "#d97706", label: "Medium" },
+  Hard:   { bars: 3, color: "#dc2626", label: "Hard"   },
 };
 
 const StethoscopePulse = ({ difficulty }: { difficulty: Difficulty }) => {
@@ -205,10 +205,10 @@ const ExplanationContent = ({
   <div className="flex flex-col gap-4">
     <div className="flex items-center justify-between">
       <div
-        className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${
+        className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${
           isCorrect
-            ? "bg-green-950/60 text-green-400 border border-green-500/30"
-            : "bg-red-950/60 text-red-400 border border-red-500/30"
+            ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
+            : "bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/30"
         }`}
       >
         {isCorrect ? (
@@ -228,7 +228,7 @@ const ExplanationContent = ({
     )}
 
     <div>
-      <p className="text-[10px] font-bold tracking-[0.12em] text-primary uppercase mb-2">
+      <p className="text-[11px] font-semibold tracking-wider text-primary uppercase mb-2">
         Explanation
       </p>
       <p
@@ -238,7 +238,7 @@ const ExplanationContent = ({
     </div>
 
     <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 space-y-1">
-      <p className="text-[10px] font-bold tracking-[0.12em] text-primary uppercase">
+      <p className="text-[11px] font-semibold tracking-wider text-primary uppercase">
         Key teaching point
       </p>
       <p
@@ -248,10 +248,10 @@ const ExplanationContent = ({
     </div>
 
     <div className="flex items-center gap-2 pt-1">
-      <span className="text-[10px] font-bold tracking-[0.12em] text-muted-foreground/50 uppercase">
+      <span className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
         Domain
       </span>
-      <span className="inline-flex items-center rounded-full border border-border/40 bg-muted/30 px-3 py-1 text-[11px] font-medium text-muted-foreground">
+      <span className="inline-flex items-center rounded-full border border-border bg-muted px-3 py-1 text-[11px] font-medium text-muted-foreground">
         {domain}
       </span>
     </div>
@@ -281,36 +281,36 @@ const OptionTile = ({ letter, text, answerState, pendingKey, onSelect }: OptionT
   const isOtherPending = answerState.status === "selected" && pendingKey !== null && pendingKey !== letter;
 
   const tileStyle = isCorrect
-    ? "border-green-500/70 bg-green-950/40 text-green-300"
+    ? "border-emerald-500/60 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
     : isWrong
-    ? "border-red-500/70 bg-red-950/40 text-red-300"
+    ? "border-red-500/60 bg-red-500/10 text-red-700 dark:text-red-300"
     : isDimmed
-    ? "border-border/20 bg-card/20 text-muted-foreground/40 cursor-default"
+    ? "border-border bg-card text-muted-foreground/40 cursor-default"
     : isPending
-    ? "border-primary/70 bg-primary/15 text-primary cursor-pointer"
+    ? "border-primary bg-primary/10 text-foreground cursor-pointer"
     : isOtherPending
-    ? "border-border/30 bg-card/40 text-muted-foreground/60 cursor-pointer hover:border-primary/40 hover:bg-primary/5"
-    : "border-border/60 bg-card hover:border-primary/50 hover:bg-primary/5 text-foreground cursor-pointer";
+    ? "border-border bg-card text-muted-foreground cursor-pointer hover:border-primary/40"
+    : "border-border bg-card hover:border-primary/50 text-foreground cursor-pointer";
 
   const letterStyle = isCorrect
-    ? "bg-green-500 text-white"
+    ? "bg-emerald-500 text-white"
     : isWrong
     ? "bg-red-500 text-white"
     : isDimmed
-    ? "bg-muted/30 text-muted-foreground/40"
+    ? "bg-muted text-muted-foreground/40"
     : isPending
-    ? "bg-primary/80 text-white"
+    ? "bg-primary text-primary-foreground"
     : isOtherPending
-    ? "bg-muted/30 text-muted-foreground/50 group-hover:bg-primary/20 group-hover:text-primary"
-    : "bg-muted/50 text-muted-foreground group-hover:bg-primary/20 group-hover:text-primary";
+    ? "bg-muted text-muted-foreground group-hover:bg-primary/15 group-hover:text-primary"
+    : "bg-muted text-muted-foreground group-hover:bg-primary/15 group-hover:text-primary";
 
   return (
     <button
       onClick={() => !isAnswered && onSelect(letter)}
       disabled={isAnswered}
-      className={`group w-full flex items-start gap-3 rounded-xl border p-4 text-left transition-all duration-150 ${tileStyle}`}
+      className={`group w-full flex items-start gap-3 rounded-lg border p-4 text-left transition-colors duration-150 ${tileStyle}`}
     >
-      <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs font-bold transition-colors ${letterStyle}`}>
+      <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-xs font-semibold transition-colors ${letterStyle}`}>
         {LETTER_LABELS[letter]}
       </span>
       <span className="text-sm leading-relaxed pt-0.5">{text}</span>
@@ -392,7 +392,7 @@ const QuestionNavigator = ({
     <>
       <button
         onClick={() => setOpen(true)}
-        className="md:hidden inline-flex items-center gap-1.5 rounded-full border border-border/40 bg-muted/20 px-3 py-1 text-[11px] font-medium text-muted-foreground hover:bg-muted/40 transition-colors"
+        className="md:hidden inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1 text-[11px] font-medium text-muted-foreground hover:bg-accent transition-colors"
       >
         Q{displayedNumber} of {total}
         <ChevronDown className="h-3 w-3" />
@@ -427,7 +427,7 @@ const QuestionNavigator = ({
 
         <div className="flex items-center gap-4 px-4 pb-3 flex-wrap">
           <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded-sm bg-green-500/20 border border-green-500/40" />
+            <div className="w-3 h-3 rounded-sm bg-emerald-500/20 border border-emerald-500/40" />
             <span className="text-[10px] text-muted-foreground">Correct</span>
           </div>
           <div className="flex items-center gap-1.5">
@@ -469,8 +469,8 @@ const QuestionNavigator = ({
                 bg = "bg-primary/20 text-primary border-primary/50";
               } else if (isAnswered) {
                 bg = isCorrect
-                  ? "bg-green-500/20 text-green-400 border-green-500/40"
-                  : "bg-red-500/20 text-red-400 border-red-500/40";
+                  ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/40"
+                  : "bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/40";
               } else if (isSkipped) {
                 bg = "bg-amber-500/20 text-amber-400 border-amber-500/40";
               }
@@ -543,13 +543,13 @@ const ReviewExplanationDrawer = ({
       >
         <div className="w-10 h-1 rounded-full bg-border/60" />
         <div className="flex items-center justify-between w-full mt-1">
-          <span className="text-[11px] font-bold tracking-[0.1em] text-primary uppercase">
+          <span className="text-[11px] font-semibold tracking-wider text-primary uppercase">
             Explanation
           </span>
           <div className="flex items-center gap-2">
             <span
               className={`text-[10px] font-bold ${
-                isCorrect ? "text-green-400" : "text-red-400"
+                isCorrect ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"
               }`}
             >
               {isCorrect ? "✓ Correct" : "✗ Incorrect"}
@@ -764,7 +764,7 @@ const QBankSession = () => {
   if (!displayQuestion) {
     return (
       <DashboardLayout wide>
-        <StudyBuddyLoader message="Loading question..." />
+        <PageLoader context="qbank" />
       </DashboardLayout>
     );
   }
@@ -852,12 +852,15 @@ const QBankSession = () => {
         )}
 
         <div className="flex-1 min-w-0 flex gap-6 items-start">
-          <div className="flex-1 min-w-0 space-y-5">
+          <div
+            key={isReviewing ? `review-${reviewIndex}` : `question-${currentIndex}`}
+            className="question-enter flex-1 min-w-0 space-y-5"
+          >
             <div className="flex items-center gap-2 flex-wrap">
               <span className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[11px] font-semibold text-primary">
                 {displayQuestion!.subject}
               </span>
-              <span className="hidden md:inline-flex items-center rounded-full border border-border/40 bg-muted/20 px-3 py-1 text-[11px] font-medium text-muted-foreground">
+              <span className="hidden md:inline-flex items-center rounded-full border border-border bg-card px-3 py-1 text-[11px] font-medium text-muted-foreground">
                 Q{displayedNumber} of {effectiveTotalQuestions}
               </span>
 
@@ -880,7 +883,7 @@ const QBankSession = () => {
               )}
 
               {session && !isReviewing && (
-                <span className="inline-flex items-center rounded-full border border-border/40 bg-muted/20 px-3 py-1 text-[11px] font-medium text-muted-foreground gap-1.5 tabular-nums">
+                <span className="inline-flex items-center rounded-full border border-border bg-card px-3 py-1 text-[11px] font-medium text-muted-foreground gap-1.5 tabular-nums">
                   <Clock className="h-3 w-3" />
                   {formatElapsed(elapsedDisplay)}
                 </span>
@@ -893,8 +896,8 @@ const QBankSession = () => {
                   disabled={isFlagLoading || !displayQuestion}
                   className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-medium transition-colors ${
                     isFlagged
-                      ? "border-amber-500/50 bg-amber-500/15 text-amber-400 hover:bg-amber-500/25"
-                      : "border-border/40 bg-muted/20 text-muted-foreground hover:border-amber-500/30 hover:text-amber-400"
+                      ? "border-amber-500/50 bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20"
+                      : "border-border bg-card text-muted-foreground hover:border-amber-500/40 hover:text-amber-600 dark:hover:text-amber-400"
                   } disabled:opacity-50`}
                   aria-label={isFlagged ? "Unflag question" : "Flag for review"}
                 >
@@ -904,11 +907,23 @@ const QBankSession = () => {
               )}
             </div>
 
-            <div className="glass-card rounded-2xl p-5">
-              <p className="text-[10px] font-bold tracking-[0.12em] text-muted-foreground/50 uppercase mb-3">
+            {/* Animated session progress fill */}
+            {effectiveTotalQuestions > 0 && (
+              <div className="h-1 w-full rounded-full bg-muted overflow-hidden" aria-hidden>
+                <div
+                  className="h-full rounded-full bg-primary transition-all duration-500 ease-out"
+                  style={{
+                    width: `${(sessionAnswers.length / effectiveTotalQuestions) * 100}%`,
+                  }}
+                />
+              </div>
+            )}
+
+            <div className="glass-card rounded-xl p-5">
+              <p className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase mb-3">
                 Clinical vignette
               </p>
-              <p className="text-sm leading-[1.9] text-foreground whitespace-pre-line">
+              <p className="text-[15px] leading-7 text-foreground whitespace-pre-line">
                 {displayQuestion!.question_text}
               </p>
             </div>
@@ -919,7 +934,7 @@ const QBankSession = () => {
 
             <div className="flex items-center gap-3">
               <div className="h-px flex-1 bg-border/40" />
-              <span className="text-[10px] font-bold tracking-[0.15em] text-muted-foreground/50 uppercase">
+              <span className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
                 Select one answer
               </span>
               <div className="h-px flex-1 bg-border/40" />
@@ -942,7 +957,7 @@ const QBankSession = () => {
               <div className="flex justify-start pt-1">
                 <button
                   onClick={skipQuestion}
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-border/40 bg-muted/20 px-4 h-11 text-sm font-medium text-muted-foreground hover:border-amber-500/30 hover:text-amber-400 hover:bg-amber-500/5 transition-colors"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-4 h-10 text-sm font-medium text-muted-foreground hover:border-amber-500/40 hover:text-amber-600 dark:hover:text-amber-400 transition-colors"
                 >
                   <SkipForward className="h-4 w-4" />
                   Skip for now
@@ -954,7 +969,7 @@ const QBankSession = () => {
               <div className="flex justify-end pt-1 animate-fade-in">
                 <Button
                   onClick={handleConfirm}
-                  className="btn-gradient h-11 px-6 rounded-xl font-semibold text-sm gap-2"
+                  className="h-10 px-5 rounded-lg font-medium text-sm gap-2"
                 >
                   <CheckCircle className="h-4 w-4" />
                   Confirm Answer
@@ -978,7 +993,7 @@ const QBankSession = () => {
                 <div className="flex justify-end pt-1 animate-fade-in">
                   <Button
                     onClick={handleNext}
-                    className="btn-gradient h-11 px-6 rounded-xl font-semibold text-sm gap-2"
+                    className="h-10 px-5 rounded-lg font-medium text-sm gap-2"
                   >
                     Finish Session <ChevronRight className="h-4 w-4" />
                   </Button>
@@ -987,7 +1002,7 @@ const QBankSession = () => {
                 <div className="flex justify-end pt-1 animate-fade-in">
                   <Button
                     onClick={handleNext}
-                    className="btn-gradient h-11 px-6 rounded-xl font-semibold text-sm gap-2"
+                    className="h-10 px-5 rounded-lg font-medium text-sm gap-2"
                   >
                     Next Question <ArrowRight className="h-4 w-4" />
                   </Button>
@@ -1002,7 +1017,7 @@ const QBankSession = () => {
             }`}
           >
             {isAnsweredEffective && effectiveAnswerState.status === "answered" && (
-              <div className="glass-card rounded-2xl p-5 border border-border/50 animate-fade-in sticky top-6">
+              <div className="glass-card rounded-xl p-5 animate-fade-in sticky top-6">
                 <ExplanationContent
                   explanation={displayQuestion!.explanation}
                   teachingPoint={displayQuestion!.teaching_point}
@@ -1038,7 +1053,7 @@ const QBankSession = () => {
             >
               <div className="w-10 h-1 rounded-full bg-border/60" />
               <div className="flex items-center justify-between w-full mt-1">
-                <span className="text-[11px] font-bold tracking-[0.1em] text-primary uppercase">
+                <span className="text-[11px] font-semibold tracking-wider text-primary uppercase">
                   Explanation
                 </span>
                 <ChevronDown
@@ -1073,14 +1088,14 @@ const QBankSession = () => {
                 ) : unansweredCount === 0 ? (
                   <Button
                     onClick={handleNext}
-                    className="btn-gradient w-full h-12 rounded-xl font-semibold text-sm gap-2"
+                    className="w-full h-11 rounded-lg font-medium text-sm gap-2"
                   >
                     Finish Session <ChevronRight className="h-4 w-4" />
                   </Button>
                 ) : (
                   <Button
                     onClick={handleNext}
-                    className="btn-gradient w-full h-12 rounded-xl font-semibold text-sm gap-2"
+                    className="w-full h-11 rounded-lg font-medium text-sm gap-2"
                   >
                     Next Question <ArrowRight className="h-4 w-4" />
                   </Button>

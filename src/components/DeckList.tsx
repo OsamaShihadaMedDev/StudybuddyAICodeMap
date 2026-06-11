@@ -76,10 +76,10 @@ const DeckList = ({ cards, onStudyDeck, onDeleteDeck, onReviewAll }: DeckListPro
 
   return (
     <>
-      <Card className="glass-card animate-fade-in">
+      <Card className="glass-card animate-fade-in rounded-xl">
         <CardContent className="p-5 space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
+            <span className="text-xs font-medium text-muted-foreground">
               My Decks
             </span>
             <Button
@@ -87,6 +87,7 @@ const DeckList = ({ cards, onStudyDeck, onDeleteDeck, onReviewAll }: DeckListPro
               size="sm"
               onClick={onReviewAll}
               disabled={decks.length < 2}
+              className="h-8 rounded-md text-xs font-medium"
             >
               Mix All Decks
             </Button>
@@ -99,19 +100,19 @@ const DeckList = ({ cards, onStudyDeck, onDeleteDeck, onReviewAll }: DeckListPro
               return (
                 <div
                   key={deck.topic}
-                  className="rounded-lg p-3 hover:bg-foreground/5 transition-colors flex items-center gap-3"
+                  className="rounded-md p-2.5 hover:bg-accent/60 transition-colors flex items-center gap-3"
                 >
                   <button
                     onClick={() => onStudyDeck(deck.topic)}
                     className="flex-1 flex items-center gap-3 text-left cursor-pointer min-w-0"
                   >
                     <div
-                      className={`h-9 w-9 shrink-0 rounded-full flex items-center justify-center font-bold text-base ${color.bg} ${color.text}`}
+                      className={`h-8 w-8 shrink-0 rounded-md flex items-center justify-center font-semibold text-sm ${color.bg} ${color.text}`}
                     >
                       {deck.emoji || initial}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-foreground truncate">{deck.topic}</p>
+                      <p className="text-sm font-medium text-foreground truncate">{deck.topic}</p>
                       <p className="text-xs text-muted-foreground">
                         {deck.total} cards · {deck.mastered} mastered
                         {deck.due > 0 ? ` · ${deck.due} due` : ""}

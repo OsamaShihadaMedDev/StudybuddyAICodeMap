@@ -5,7 +5,7 @@ const Sheets = () => (
   <DashboardLayout wide>
     <div className="space-y-6">
       <div className="space-y-1">
-        <h1 className="text-2xl font-extrabold tracking-tight text-foreground">
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
           Study Sheet
         </h1>
         <p className="text-sm text-muted-foreground">

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
+import PageLoader from "@/components/PageLoader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -74,21 +75,21 @@ const ResetPassword = () => {
 
   if (status === "parsing") {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <PageLoader context="session" fullPage={false} />
       </div>
     );
   }
 
   if (status === "invalid") {
     return (
-      <div className="min-h-screen px-4">
-        <div className="max-w-sm mx-auto mt-24 p-6 rounded-xl bg-card shadow space-y-4">
-          <h1 className="text-lg font-semibold">Link invalid or expired</h1>
+      <div className="min-h-screen bg-background px-4">
+        <div className="max-w-sm mx-auto mt-24 p-6 rounded-xl bg-card border border-border shadow-sm space-y-4">
+          <h1 className="text-lg font-semibold tracking-tight">Link invalid or expired</h1>
           <p className="text-sm text-muted-foreground">
             Password reset links expire after 1 hour. Request a new one from the sign in page.
           </p>
-          <Button className="w-full" onClick={() => navigate("/")}>
+          <Button className="w-full h-10 rounded-lg font-medium" onClick={() => navigate("/")}>
             Back to home
           </Button>
         </div>
@@ -101,9 +102,9 @@ const ResetPassword = () => {
   const submitting = status === "submitting";
 
   return (
-    <div className="min-h-screen px-4">
-      <div className="max-w-sm mx-auto mt-24 p-6 rounded-xl bg-card shadow space-y-4">
-        <h1 className="text-lg font-semibold">Set a new password</h1>
+    <div className="min-h-screen bg-background px-4">
+      <div className="max-w-sm mx-auto mt-24 p-6 rounded-xl bg-card border border-border shadow-sm space-y-4">
+        <h1 className="text-lg font-semibold tracking-tight">Set a new password</h1>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
@@ -136,7 +137,7 @@ const ResetPassword = () => {
           {error && <p className="text-sm text-destructive">{error}</p>}
           <Button
             type="submit"
-            className="w-full"
+            className="w-full h-10 rounded-lg font-medium"
             disabled={submitting || !passwordsMatch || newPassword.length < 6}
           >
             {submitting ? (

@@ -112,11 +112,11 @@ const DashboardSidebar = ({
 
   return (
     <>
-      <aside className={`flex h-full w-full flex-col gap-4 bg-background/80 py-5 transition-all duration-300 ${collapsed ? "px-2 items-center" : "px-4"}`}>
+      <aside className={`flex h-full w-full flex-col gap-4 py-4 transition-all duration-300 ${collapsed ? "px-2 items-center" : "px-3"}`}>
         {onToggleCollapse && (
           <button
             onClick={onToggleCollapse}
-            className="hidden lg:flex self-end items-center justify-center h-8 w-8 rounded-lg text-muted-foreground hover:bg-secondary/60 hover:text-foreground transition-colors shrink-0"
+            className="hidden lg:flex self-end items-center justify-center h-7 w-7 rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors shrink-0"
             title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
             {collapsed ? (
@@ -131,21 +131,18 @@ const DashboardSidebar = ({
         <Link
           to="/dashboard"
           onClick={handleNavClick}
-          className={`flex items-center gap-3 rounded-lg hover:bg-secondary/40 transition-colors ${collapsed ? "px-0 py-1.5 justify-center" : "px-2 py-1.5"}`}
+          className={`flex items-center gap-2.5 rounded-md transition-colors ${collapsed ? "px-0 py-1 justify-center" : "px-2 py-1"}`}
         >
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary shadow-lg shadow-primary/30 shrink-0">
-            <Stethoscope className="h-5 w-5 text-primary-foreground" />
+          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary shrink-0">
+            <Stethoscope className="h-4 w-4 text-primary-foreground" />
           </div>
           {!collapsed && (
-            <div className="leading-tight space-y-0.5">
-              <p className="text-base font-extrabold tracking-tight text-foreground">
+            <div className="leading-tight">
+              <p className="text-sm font-semibold tracking-tight text-foreground">
                 StudyBuddy
               </p>
-              <p
-                className="text-[11px] font-semibold tracking-wide text-primary"
-                style={{ textShadow: "0 0 12px hsl(var(--primary) / 0.6)" }}
-              >
-                High-yield exam prep in seconds
+              <p className="text-[11px] text-muted-foreground">
+                High-yield exam prep
               </p>
             </div>
           )}
@@ -154,9 +151,9 @@ const DashboardSidebar = ({
         {/* Workspace block */}
         {!collapsed && (
           isAnonymous || !user ? (
-            <div className="rounded-xl border border-border/60 bg-secondary/30 p-3 space-y-2.5">
-              <p className="text-sm font-semibold text-foreground leading-snug">
-                Sign In to save your progress
+            <div className="rounded-lg border border-border bg-card p-3 space-y-2">
+              <p className="text-[13px] font-medium text-foreground leading-snug">
+                Sign in to save your progress
               </p>
               <p className="text-xs text-muted-foreground leading-relaxed">
                 Sync decks and study history across devices.
@@ -164,18 +161,18 @@ const DashboardSidebar = ({
               <Button
                 size="sm"
                 onClick={handleSignIn}
-                className="w-full h-8 btn-gradient text-xs font-semibold"
+                className="w-full h-8 rounded-md text-xs font-medium"
               >
                 <LogIn className="h-3.5 w-3.5 mr-1.5" />
                 Sign In
               </Button>
             </div>
           ) : (
-            <div className="rounded-xl border border-border/60 bg-secondary/30 p-3 space-y-1">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <div className="rounded-lg border border-border bg-card p-3 space-y-1">
+              <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
                 Workspace
               </p>
-              <p className="text-sm font-medium text-foreground truncate">
+              <p className="text-[13px] font-medium text-foreground truncate">
                 {user.email ?? "—"}
               </p>
               <p className="text-xs text-muted-foreground">
@@ -202,17 +199,15 @@ const DashboardSidebar = ({
                 to={item.to}
                 onClick={handleNavClick}
                 title={collapsed ? item.label : undefined}
-                className={`flex items-center rounded-lg text-sm font-medium transition-colors ${
-                  collapsed ? "justify-center px-0 py-2 w-10 h-10 mx-auto" : "gap-2.5 px-3 py-2"
+                className={`flex items-center rounded-md text-[13px] font-medium transition-colors ${
+                  collapsed ? "justify-center px-0 w-9 h-9 mx-auto" : "gap-2.5 px-2.5 h-8"
                 } ${
                   active
-                    ? collapsed
-                      ? "bg-primary/10 text-primary"
-                      : "bg-primary/10 text-primary border-l-2 border-primary pl-[10px]"
-                    : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
+                    ? "bg-accent text-foreground"
+                    : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
                 }`}
               >
-                <Icon className="h-4 w-4 shrink-0" />
+                <Icon className={`h-4 w-4 shrink-0 ${active ? "text-primary" : ""}`} />
                 {!collapsed && item.label}
               </Link>
             );
@@ -220,7 +215,7 @@ const DashboardSidebar = ({
           {!collapsed && !isAnonymous && user && (
             <button
               onClick={handleSettingsClick}
-              className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-secondary/60 hover:text-foreground transition-colors text-left"
+              className="flex items-center gap-2.5 rounded-md px-2.5 h-8 text-[13px] font-medium text-muted-foreground hover:bg-accent/60 hover:text-foreground transition-colors text-left"
             >
               <Settings className="h-4 w-4" />
               Settings
@@ -230,7 +225,7 @@ const DashboardSidebar = ({
             <button
               onClick={handleSettingsClick}
               title="Settings"
-              className="flex items-center justify-center w-10 h-10 mx-auto rounded-lg text-muted-foreground hover:bg-secondary/60 hover:text-foreground transition-colors"
+              className="flex items-center justify-center w-9 h-9 mx-auto rounded-md text-muted-foreground hover:bg-accent/60 hover:text-foreground transition-colors"
             >
               <Settings className="h-4 w-4" />
             </button>
@@ -243,10 +238,10 @@ const DashboardSidebar = ({
         {!isPro && !isAnonymous && user && !collapsed && (
           <Button
             variant="outline"
-            className="w-full h-10 rounded-xl border-primary/40 text-primary hover:bg-primary/10 font-semibold"
+            className="w-full h-9 rounded-lg text-[13px] font-medium"
             onClick={() => setGoProOpen(true)}
           >
-            <Sparkles className="h-4 w-4 mr-2" />
+            <Sparkles className="h-4 w-4 mr-2 text-primary" />
             Go Pro
           </Button>
         )}
@@ -254,7 +249,7 @@ const DashboardSidebar = ({
           <button
             onClick={() => setGoProOpen(true)}
             title="Go Pro"
-            className="flex items-center justify-center w-10 h-10 mx-auto rounded-lg text-primary hover:bg-primary/10 transition-colors"
+            className="flex items-center justify-center w-9 h-9 mx-auto rounded-md text-primary hover:bg-accent transition-colors"
           >
             <Sparkles className="h-4 w-4" />
           </button>
@@ -262,12 +257,12 @@ const DashboardSidebar = ({
         <GoProModal open={goProOpen} onOpenChange={setGoProOpen} />
 
         {!collapsed && (
-          <p className="text-[10px] text-muted-foreground/40 leading-snug text-center px-1 pb-1">
+          <p className="text-[10px] text-muted-foreground/50 leading-snug text-center px-1 pb-1">
             For educational use only · Not for clinical practice
           </p>
         )}
 
-        <div className={`flex items-center gap-2 pt-2 border-t border-border/40 ${collapsed ? "flex-col justify-center w-full" : "justify-between"}`}>
+        <div className={`flex items-center gap-2 pt-3 border-t border-border ${collapsed ? "flex-col justify-center w-full" : "justify-between"}`}>
           <ThemeToggle />
           {!isAnonymous && user && !collapsed && (
             <Button
@@ -284,7 +279,7 @@ const DashboardSidebar = ({
             <button
               onClick={handleSignOut}
               title="Sign out"
-              className="flex items-center justify-center w-8 h-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition-colors"
+              className="flex items-center justify-center w-8 h-8 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
             >
               <LogOut className="h-3.5 w-3.5" />
             </button>

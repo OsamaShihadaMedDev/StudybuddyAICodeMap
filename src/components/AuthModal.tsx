@@ -97,9 +97,9 @@ const AuthModal = ({ open, onOpenChange }: AuthModalProps) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md rounded-xl">
         <DialogHeader>
-          <DialogTitle>Welcome</DialogTitle>
+          <DialogTitle className="text-lg font-semibold tracking-tight">Welcome</DialogTitle>
           <DialogDescription>
             Sign in or create an account to get started.
           </DialogDescription>
@@ -150,7 +150,7 @@ const AuthModal = ({ open, onOpenChange }: AuthModalProps) => {
                 {signInError && (
                   <p className="text-sm text-destructive">{signInError}</p>
                 )}
-                <Button type="submit" className="w-full" disabled={signInLoading}>
+                <Button type="submit" className="w-full h-10 rounded-lg font-medium" disabled={signInLoading}>
                   {signInLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -179,7 +179,7 @@ const AuthModal = ({ open, onOpenChange }: AuthModalProps) => {
                   >
                     <ArrowLeft className="h-4 w-4" />
                   </Button>
-                  <h3 className="text-base font-semibold">Reset your password</h3>
+                  <h3 className="text-base font-semibold tracking-tight">Reset your password</h3>
                 </div>
 
                 {forgotSent ? (
@@ -202,7 +202,7 @@ const AuthModal = ({ open, onOpenChange }: AuthModalProps) => {
                     {forgotError && (
                       <p className="text-sm text-destructive">{forgotError}</p>
                     )}
-                    <Button type="submit" className="w-full" disabled={forgotLoading}>
+                    <Button type="submit" className="w-full h-10 rounded-lg font-medium" disabled={forgotLoading}>
                       {forgotLoading ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -246,7 +246,7 @@ const AuthModal = ({ open, onOpenChange }: AuthModalProps) => {
               {signUpError && (
                 <p className="text-sm text-destructive">{signUpError}</p>
               )}
-              <Button type="submit" className="w-full" disabled={signUpLoading}>
+              <Button type="submit" className="w-full h-10 rounded-lg font-medium" disabled={signUpLoading}>
                 {signUpLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />

@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, Layers, ChevronDown, ChevronUp } from "lucide-react";
+import { History, Loader2, Layers, PenLine } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useFlashcardDeck } from "@/hooks/use-flashcard-deck";
 import { useUsageLimit, MAX_DAILY_CARDS } from "@/hooks/use-usage-limit";
@@ -24,10 +24,22 @@ import CitationCTABanner from "@/components/CitationCTABanner";
 import CitationBadgeList from "@/components/CitationBadgeList";
 import GoProModal from "@/components/GoProModal";
 import AuthModal from "@/components/AuthModal";
+import { startTopProgress, finishTopProgress } from "@/components/TopProgressBar";
 
 type CitationState = "idle" | "loading" | "found" | "locked" | "hidden";
 
-const FlashcardsGenerator = () => {
+export type GeneratedCard = ReturnType<typeof parseFlashcardsFromOutput>[number];
+
+interface FlashcardsGeneratorProps {
+  /** Notifies the page when generation starts/stops so the right pane can show skeletons. */
+  onGeneratingChange?: (generating: boolean, topic: string) => void;
+  /** Called with the freshly saved cards once generation completes. */
+  onGenerated?: (cards: GeneratedCard[], topic: string) => void;
+}
+
+const RECENT_FLASHCARD_TOPICS_KEY = "sb_recent_flashcard_topics_v1";
+
+const FlashcardsGenerator = ({ onGeneratingChange, onGenerated }: FlashcardsGeneratorProps) => {
   const [topic, setTopic] = useState("");
   const [cardCount, setCardCount] = useState("12");
   const [examMode, setExamMode] = useState("General");
@@ -39,17 +51,16 @@ const FlashcardsGenerator = () => {
   const [citationState, setCitationState] = useState<CitationState>("idle");
   const [citations, setCitations] = useState<CitationResult[]>([]);
   const [goProOpen, setGoProOpen] = useState(false);
-  const [hasGenerated, setHasGenerated] = useState(false);
-  const [flashDisclaimer, setFlashDisclaimer] = useState(false);
+  const [recentTopics, setRecentTopics] = useState<string[]>(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem(RECENT_FLASHCARD_TOPICS_KEY) ?? "[]");
+      return Array.isArray(stored) ? stored.slice(0, 5) : [];
+    } catch {
+      return [];
+    }
+  });
 
-  const toggleFlashDisclaimer = () => {
-    setFlashDisclaimer((prev) => {
-      const next = !prev;
-      sessionStorage.setItem("sb_flash_disclaimer_collapsed", next ? "1" : "0");
-      return next;
-    });
-  };
-  const cardRef = useRef<HTMLDivElement>(null);
+  const activeTopicRef = useRef("");
   const { toast } = useToast();
   const { saveCards } = useFlashcardDeck();
   const {
@@ -68,9 +79,29 @@ const FlashcardsGenerator = () => {
   } = useCitationUsage();
   const remaining = Math.max(0, MAX_DAILY_CARDS - cardsCount);
 
+  const recordRecentTopic = (t: string) => {
+    const trimmed = t.trim().slice(0, 60);
+    if (!trimmed) return;
+    setRecentTopics((prev) => {
+      const next = [
+        trimmed,
+        ...prev.filter((x) => x.toLowerCase() !== trimmed.toLowerCase()),
+      ].slice(0, 5);
+      try {
+        localStorage.setItem(RECENT_FLASHCARD_TOPICS_KEY, JSON.stringify(next));
+      } catch {
+        // quota exceeded — recents are a convenience only
+      }
+      return next;
+    });
+  };
+
+  const setGenerating = (generating: boolean, t: string) => {
+    setLoading(generating);
+    onGeneratingChange?.(generating, t);
+  };
+
   const handleGenerate = async (overrideTopic?: string, overrideCardCount?: number) => {
-    setFlashDisclaimer(false);
-    sessionStorage.removeItem("sb_flash_disclaimer_collapsed");
     const activeTopic = overrideTopic ?? topic;
     const activeCardCount = overrideCardCount ?? parseInt(cardCount, 10);
     if (!activeTopic.trim()) {
@@ -81,12 +112,11 @@ const FlashcardsGenerator = () => {
       setGoProOpen(true);
       return;
     }
-    setLoading(true);
+    recordRecentTopic(activeTopic);
+    activeTopicRef.current = activeTopic;
+    setGenerating(true, activeTopic);
     setCitationState("idle");
     setCitations([]);
-    setTimeout(() => {
-      cardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 80);
     try {
       await incrementCards();
 
@@ -176,7 +206,7 @@ const FlashcardsGenerator = () => {
         setCitationState("hidden");
       }
     } catch (e: any) {
-      setLoading(false);
+      setGenerating(false, "");
       setLoadingMsg("");
       setPendingCards(null);
       toast({
@@ -186,6 +216,13 @@ const FlashcardsGenerator = () => {
       });
     }
   };
+
+  useEffect(() => {
+    if (loading) {
+      startTopProgress();
+      return () => finishTopProgress();
+    }
+  }, [loading]);
 
   useEffect(() => {
     if (!loading) return;
@@ -224,10 +261,10 @@ const FlashcardsGenerator = () => {
               });
               setTopic("");
               setShowTextarea(false);
-              setLoading(false);
+              setGenerating(false, "");
               setLoadingMsg("");
-              setHasGenerated(true);
               window.dispatchEvent(new CustomEvent("studybuddy:deck-saved"));
+              onGenerated?.(pending, activeTopicRef.current);
             })();
             return null;
           }
@@ -246,7 +283,6 @@ const FlashcardsGenerator = () => {
       setTopic(detail.topic);
       setShowTextarea(true);
       setCardCount(String(detail.cardCount ?? 5));
-      cardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
       handleGenerate(detail.topic, detail.cardCount ?? 5);
     };
     window.addEventListener("studybuddy:generate-flashcards", handler);
@@ -254,23 +290,80 @@ const FlashcardsGenerator = () => {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div className="space-y-6">
-    <Card ref={cardRef} className="glass-card animate-fade-in border-primary/20">
-      <CardContent className="p-6 space-y-5">
-        <div className="flex items-center gap-2.5">
-          <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-primary/10">
-            <Layers className="h-4 w-4 text-primary" />
-          </div>
-          <h2 className="text-base font-bold text-foreground">Generate Flashcards</h2>
-        </div>
+    <Card className="glass-card animate-fade-in rounded-xl">
+      <CardContent className="px-4 py-5 space-y-4">
         {!isLoggedIn && (
           <CitationCTABanner onSignInClick={() => setAuthModalOpen(true)} />
         )}
+
         <div className="space-y-1.5">
-          <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          <label className="block text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+            Topic
+          </label>
+          {!showTextarea ? (
+            <div className="rounded-lg border border-border bg-background p-3 space-y-2.5">
+              <p className="text-xs font-medium text-muted-foreground">
+                Pick a topic to start — or type your own
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  "Myocardial Infarction",
+                  "Pneumonia",
+                  "Ischemic Stroke",
+                  "Diabetic Ketoacidosis",
+                  "Nephrotic Syndrome",
+                ].map((label) => (
+                  <button
+                    key={label}
+                    type="button"
+                    onClick={() => {
+                      setTopic(label);
+                      setShowTextarea(false);
+                      handleGenerate(label);
+                    }}
+                    className="inline-flex h-7 items-center px-2.5 rounded-md text-xs font-medium border border-border bg-card text-foreground/80 hover:border-primary/50 hover:text-primary transition-colors cursor-pointer"
+                  >
+                    {label}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setShowTextarea(true)}
+                  className="inline-flex h-7 items-center gap-1.5 px-2.5 rounded-md text-xs font-medium border border-dashed border-border bg-transparent text-muted-foreground hover:border-primary/40 hover:text-primary transition-colors cursor-pointer"
+                >
+                  <PenLine className="h-3.5 w-3.5" />
+                  Type my own topic
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="relative">
+              <Textarea
+                autoFocus
+                placeholder="Enter a topic to drill (e.g., 'DKA', 'Heart failure pharmacology')"
+                value={topic}
+                onChange={(e) => setTopic(e.target.value)}
+                className="min-h-[80px] resize-y text-sm leading-relaxed"
+              />
+              {topic && (
+                <button
+                  type="button"
+                  onClick={() => { setTopic(""); setShowTextarea(false); }}
+                  className="absolute top-2 right-2 text-muted-foreground/50 hover:text-muted-foreground transition-colors text-lg leading-none"
+                  aria-label="Clear"
+                >
+                  ×
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-1">
+          <label className="block text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
             Exam Mode
           </label>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="flex flex-wrap gap-1.5">
             {[
               { value: "General", label: "General" },
               { value: "USMLE Step 1", label: "Step 1" },
@@ -282,10 +375,11 @@ const FlashcardsGenerator = () => {
                   key={opt.value}
                   type="button"
                   onClick={() => setExamMode(opt.value)}
-                  className={`h-10 rounded-lg text-sm font-semibold transition-all border ${
+                  aria-pressed={active}
+                  className={`inline-flex h-7 items-center px-2.5 rounded-md border text-xs font-medium transition-colors cursor-pointer ${
                     active
-                      ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                      : "bg-background/60 text-foreground/70 border-border/50 hover:border-primary/40 hover:text-foreground"
+                      ? "bg-primary/10 border-primary/40 text-primary"
+                      : "bg-card border-border text-muted-foreground hover:border-primary/30 hover:text-foreground"
                   }`}
                 >
                   {opt.label}
@@ -294,99 +388,43 @@ const FlashcardsGenerator = () => {
             })}
           </div>
         </div>
-        {!showTextarea ? (
-          <div className="rounded-xl border border-border/50 bg-background/60 p-4 space-y-3">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Pick a topic to start — or type your own
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {[
-                { emoji: "❤️", label: "Myocardial Infarction" },
-                { emoji: "🫁", label: "Pneumonia" },
-                { emoji: "🧠", label: "Ischemic Stroke" },
-                { emoji: "🍬", label: "Diabetic Ketoacidosis" },
-                { emoji: "🩺", label: "Nephrotic Syndrome" },
-              ].map(({ emoji, label }) => (
-                <button
-                  key={label}
-                  type="button"
-                  onClick={() => {
-                    setTopic(label);
-                    setShowTextarea(false);
-                    handleGenerate(label);
-                  }}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-medium border border-border/60 bg-background hover:border-primary/50 hover:bg-primary/5 hover:text-primary transition-all cursor-pointer"
-                >
-                  <span>{emoji}</span>
-                  <span>{label}</span>
-                </button>
-              ))}
-              <button
-                type="button"
-                onClick={() => setShowTextarea(true)}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-medium border border-dashed border-border/60 bg-transparent text-muted-foreground hover:border-primary/40 hover:text-primary transition-all cursor-pointer"
-              >
-                ✏️ Type my own topic
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="relative">
-            <Textarea
-              autoFocus
-              placeholder="Enter a topic to drill (e.g., 'DKA', 'Heart failure pharmacology')"
-              value={topic}
-              onChange={(e) => setTopic(e.target.value)}
-              className="min-h-[100px] resize-y bg-background/60 border-border/50 focus:border-primary/40 transition-colors text-sm leading-relaxed"
-            />
-            {topic && (
-              <button
-                type="button"
-                onClick={() => { setTopic(""); setShowTextarea(false); }}
-                className="absolute top-2 right-2 text-muted-foreground/50 hover:text-muted-foreground transition-colors text-lg leading-none"
-                aria-label="Clear"
-              >
-                ×
-              </button>
-            )}
-          </div>
-        )}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Number of cards
-            </label>
-            <Select value={cardCount} onValueChange={setCardCount}>
-              <SelectTrigger className="bg-background/60 border-border/50 h-12">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="5">5 cards</SelectItem>
-                <SelectItem value="10">10 cards</SelectItem>
-                <SelectItem value="12">12 cards</SelectItem>
-                <SelectItem value="15">15 cards</SelectItem>
-                <SelectItem value="20">20 cards</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <Button
-            className="w-full h-12 text-sm font-bold rounded-xl btn-gradient"
-            onClick={() => handleGenerate()}
-            disabled={loading}
-          >
-            {loading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Generating…
-              </>
-            ) : (
-              <>
-                <Layers className="mr-2 h-4 w-4" />
-                Generate Cards
-              </>
-            )}
-          </Button>
+
+        <div className="space-y-1">
+          <label className="block text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+            Number of cards
+          </label>
+          <Select value={cardCount} onValueChange={setCardCount}>
+            <SelectTrigger className="h-8 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="5">5 cards</SelectItem>
+              <SelectItem value="10">10 cards</SelectItem>
+              <SelectItem value="12">12 cards</SelectItem>
+              <SelectItem value="15">15 cards</SelectItem>
+              <SelectItem value="20">20 cards</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
+
+        <Button
+          className="w-full h-10 text-sm font-medium rounded-lg"
+          onClick={() => handleGenerate()}
+          disabled={loading}
+        >
+          {loading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Generating…
+            </>
+          ) : (
+            <>
+              <Layers className="mr-2 h-4 w-4" />
+              Generate Cards
+            </>
+          )}
+        </Button>
+
         {!pro && (
           <div className="text-center text-xs text-muted-foreground space-y-1">
             {isCardsLimited ? (
@@ -435,6 +473,33 @@ const FlashcardsGenerator = () => {
             </button>
           </div>
         )}
+
+        {recentTopics.length > 0 && (
+          <div className="space-y-1.5 pt-1 border-t border-border">
+            <p className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground pt-2.5">
+              <History className="h-3 w-3" />
+              Recent
+            </p>
+            <div className="flex flex-wrap gap-1.5 max-h-16 overflow-y-auto">
+              {recentTopics.map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  disabled={loading}
+                  onClick={() => {
+                    setTopic(t);
+                    setShowTextarea(false);
+                    handleGenerate(t);
+                  }}
+                  className="max-w-full truncate inline-flex h-7 items-center px-2.5 rounded-md text-xs font-medium border border-border bg-card text-muted-foreground hover:border-primary/40 hover:text-primary transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-default"
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {citationState !== "idle" && citationState !== "hidden" && (
           <div className="pt-1">
             <CitationBadgeList
@@ -451,77 +516,6 @@ const FlashcardsGenerator = () => {
       <AuthModal open={authModalOpen} onOpenChange={setAuthModalOpen} />
       <GoProModal open={goProOpen} onOpenChange={setGoProOpen} />
     </Card>
-
-    {loading && (
-      <div className="flex flex-col items-center justify-center gap-4 py-10 animate-fade-in">
-        <div className="relative h-12 w-12">
-          <div className="absolute inset-0 rounded-full border-4 border-primary/10" />
-          <div className="absolute inset-0 rounded-full border-4 border-t-primary animate-spin" />
-          <div className="absolute inset-0 flex items-center justify-center">
-            <Layers className="h-4 w-4 text-primary" />
-          </div>
-        </div>
-        <div className="text-center space-y-1">
-          <p className="text-sm font-semibold text-foreground transition-all duration-300">
-            {loadingMsg}
-          </p>
-          <p className="text-xs text-muted-foreground opacity-50">
-            Building your exam-ready deck…
-          </p>
-          <p className="text-[10px] text-muted-foreground/40 mt-1">
-            Takes a little longer during peak hours — hang tight
-          </p>
-        </div>
-        <div className="flex gap-1.5">
-          {[0, 1, 2].map((i) => (
-            <div
-              key={i}
-              className="h-1.5 w-1.5 rounded-full bg-primary/40 animate-pulse"
-              style={{ animationDelay: `${i * 200}ms` }}
-            />
-          ))}
-        </div>
-      </div>
-    )}
-
-    {!loading && hasGenerated && (
-      <div className="flex items-start justify-between gap-2 pt-1 animate-fade-in">
-        <div className="flex items-start gap-1.5 min-w-0">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-3.5 w-3.5 text-muted-foreground/50 mt-0.5 shrink-0"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <circle cx="12" cy="12" r="10" />
-            <line x1="12" y1="8" x2="12" y2="12" />
-            <line x1="12" y1="16" x2="12.01" y2="16" />
-          </svg>
-          {!flashDisclaimer && (
-            <p className="text-[11px] text-muted-foreground/50 leading-snug">
-              AI-generated content · May contain errors · Not a substitute for clinical judgment
-            </p>
-          )}
-        </div>
-        <button
-          type="button"
-          onClick={toggleFlashDisclaimer}
-          className="shrink-0 text-muted-foreground/40 hover:text-muted-foreground/70 transition-colors"
-          aria-label={flashDisclaimer ? "Expand disclaimer" : "Collapse disclaimer"}
-        >
-          {flashDisclaimer ? (
-            <ChevronDown className="h-3.5 w-3.5" />
-          ) : (
-            <ChevronUp className="h-3.5 w-3.5" />
-          )}
-        </button>
-      </div>
-    )}
-    </div>
   );
 };
 

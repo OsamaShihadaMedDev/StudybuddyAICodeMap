@@ -2,14 +2,8 @@ import { useState, useEffect, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Loader2, Sparkles } from "lucide-react";
+import { History, Loader2, PenLine, Settings2, Sparkles, Stethoscope, X } from "lucide-react";
+import SectionSkeleton from "@/components/SectionSkeleton";
 import { useToast } from "@/hooks/use-toast";
 import OutputSection, { type CitationState } from "@/components/OutputSection";
 import { useUsageLimit, MAX_DAILY_SHEETS } from "@/hooks/use-usage-limit";
@@ -29,6 +23,7 @@ import { fetchBestCitation, type CitationResult } from "@/lib/citation";
 import CitationCTABanner from "@/components/CitationCTABanner";
 import AuthModal from "@/components/AuthModal";
 import GoProModal from "@/components/GoProModal";
+import { startTopProgress, finishTopProgress } from "@/components/TopProgressBar";
 import type { StudyHistoryItem } from "@/hooks/use-study-history";
 
 export interface SheetGeneratorPrefill {
@@ -40,6 +35,44 @@ export interface SheetGeneratorPrefill {
 interface SheetGeneratorProps {
   prefill?: SheetGeneratorPrefill | null;
 }
+
+const RECENT_TOPICS_KEY = "sb_recent_topics_v1";
+
+interface PillGroupProps {
+  label: string;
+  options: { value: string; label: string }[];
+  value: string;
+  onChange: (value: string) => void;
+}
+
+/** Inline pill toggle group — all options visible, tap to select. */
+const PillGroup = ({ label, options, value, onChange }: PillGroupProps) => (
+  <div className="space-y-1">
+    <label className="block text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+      {label}
+    </label>
+    <div className="flex flex-wrap gap-1.5">
+      {options.map((opt) => {
+        const active = value === opt.value;
+        return (
+          <button
+            key={opt.value}
+            type="button"
+            onClick={() => onChange(opt.value)}
+            aria-pressed={active}
+            className={`inline-flex h-7 items-center px-2.5 rounded-md border text-xs font-medium transition-colors cursor-pointer ${
+              active
+                ? "bg-primary/10 border-primary/40 text-primary"
+                : "bg-card border-border text-muted-foreground hover:border-primary/30 hover:text-foreground"
+            }`}
+          >
+            {opt.label}
+          </button>
+        );
+      })}
+    </div>
+  </div>
+);
 
 const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
   const [notes, setNotes] = useState(prefill?.input ?? "");
@@ -65,8 +98,35 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
   const [citations, setCitations] = useState<CitationResult[]>([]);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [goProOpen, setGoProOpen] = useState(false);
+  // Tablet (768–1023px) slide-out configurator drawer
+  const [configDrawerOpen, setConfigDrawerOpen] = useState(false);
+  const [recentTopics, setRecentTopics] = useState<string[]>(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem(RECENT_TOPICS_KEY) ?? "[]");
+      return Array.isArray(stored) ? stored.slice(0, 5) : [];
+    } catch {
+      return [];
+    }
+  });
   const outputRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+
+  const recordRecentTopic = (topic: string) => {
+    const trimmed = topic.trim().slice(0, 60);
+    if (!trimmed) return;
+    setRecentTopics((prev) => {
+      const next = [
+        trimmed,
+        ...prev.filter((t) => t.toLowerCase() !== trimmed.toLowerCase()),
+      ].slice(0, 5);
+      try {
+        localStorage.setItem(RECENT_TOPICS_KEY, JSON.stringify(next));
+      } catch {
+        // quota exceeded — recents are a convenience only
+      }
+      return next;
+    });
+  };
 
   const { sheetCount, isSheetLimited, isProUser: pro, incrementSheet } = useUsageLimit();
   const { premiumRemaining, isPremiumHookActive } = usePremiumHook();
@@ -89,6 +149,7 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
       setGoProOpen(true);
       return;
     }
+    recordRecentTopic(activeNotes);
     setLoading(true);
     setSheet(null);
     setLegacyOutput("");
@@ -215,6 +276,13 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
   };
 
   useEffect(() => {
+    if (loading) {
+      startTopProgress();
+      return () => finishTopProgress();
+    }
+  }, [loading]);
+
+  useEffect(() => {
     function handleEnhancementSaved(e: Event) {
       const { key, result } = (e as CustomEvent).detail ?? {};
       if (!key || !result) return;
@@ -284,63 +352,58 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
 
   const handleGenerate = () => {
     setDeckSaved(false);
+    setConfigDrawerOpen(false);
     generate();
   };
 
-  return (
-    <div className="space-y-6">
-      <div className="max-w-2xl mx-auto space-y-6">
-      <div className="space-y-2">
-        <p className="text-[11px] font-bold tracking-[0.15em] text-muted-foreground uppercase pl-1">
-          Full Study Sheet
-        </p>
-        <p className="text-xs text-muted-foreground pl-1 -mt-1">
-          Or generate full study material
-        </p>
-      </div>
+  const startTopic = (label: string) => {
+    setNotes(label);
+    setShowTextarea(false);
+    setDeckSaved(false);
+    setConfigDrawerOpen(false);
+    generate(label);
+  };
 
-      <Card className="glass-card animate-fade-in">
-        <CardContent className="p-6 space-y-5">
+  const configurator = (
+      <Card className="glass-card animate-fade-in rounded-xl">
+        <CardContent className="px-4 py-5 space-y-4">
           {!isLoggedIn && (
             <CitationCTABanner onSignInClick={() => setAuthModalOpen(true)} />
           )}
-          <div className="space-y-2">
-            <label className="text-sm font-semibold text-foreground">
+          <div className="space-y-1.5">
+            <label className="block text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
               Medical Notes
             </label>
             {!showTextarea ? (
-              <div className="rounded-xl border border-border/50 bg-background/60 p-4 space-y-3">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              <div className="rounded-lg border border-border bg-background p-3 space-y-2.5">
+                <p className="text-xs font-medium text-muted-foreground">
                   Pick a topic to start — or type your own
                 </p>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-1.5">
                   {[
                     { emoji: "❤️", label: "Heart Failure" },
                     { emoji: "🫁", label: "Pneumonia" },
                     { emoji: "🧠", label: "Ischemic Stroke" },
                     { emoji: "🍬", label: "Diabetic Ketoacidosis" },
-                    { emoji: "🩺", label: "Nephrotic Syndrome" },
+                    { emoji: "🫘", label: "Nephrotic Syndrome" },
                   ].map(({ emoji, label }) => (
                     <button
                       key={label}
                       type="button"
-                      onClick={() => {
-                        setNotes(label);
-                        setShowTextarea(false);
-                        generate(label);
-                      }}
-                      className="flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-medium border border-border/60 bg-background hover:border-primary/50 hover:bg-primary/5 hover:text-primary transition-all cursor-pointer"
+                      onClick={() => startTopic(label)}
+                      className="inline-flex h-7 items-center gap-1.5 px-2.5 rounded-md text-xs font-medium border border-border bg-card text-foreground/80 hover:border-primary/50 hover:text-primary transition-colors cursor-pointer"
                     >
-                      <span>{emoji}</span>
+                      <span aria-hidden>{emoji}</span>
                       <span>{label}</span>
                     </button>
                   ))}
                   <button
                     type="button"
                     onClick={() => setShowTextarea(true)}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-medium border border-dashed border-border/60 bg-transparent text-muted-foreground hover:border-primary/40 hover:text-primary transition-all cursor-pointer"
+                    className="inline-flex h-7 items-center gap-1.5 px-2.5 rounded-md text-xs font-medium border border-dashed border-border bg-transparent text-muted-foreground hover:border-primary/40 hover:text-primary transition-colors cursor-pointer"
                   >
-                    ✏️ Type my own topic
+                    <PenLine className="h-3.5 w-3.5" />
+                    Type my own topic
                   </button>
                 </div>
               </div>
@@ -351,7 +414,7 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
                   placeholder="Paste notes, type a topic, or say what you want to study…"
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  className="min-h-[120px] resize-y bg-background/60 border-border/50 focus:border-primary/40 transition-colors text-sm leading-relaxed"
+                  className="min-h-[100px] resize-y text-sm leading-relaxed"
                 />
                 {notes && (
                   <button
@@ -367,73 +430,54 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
             )}
           </div>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                Exam Mode
-              </label>
-              <Select value={examMode} onValueChange={setExamMode}>
-                <SelectTrigger className="bg-background/60 border-border/50">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="General">General</SelectItem>
-                  <SelectItem value="USMLE Step 1">USMLE Step 1</SelectItem>
-                  <SelectItem value="USMLE Step 2">USMLE Step 2</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                Difficulty
-              </label>
-              <Select value={difficulty} onValueChange={setDifficulty}>
-                <SelectTrigger className="bg-background/60 border-border/50">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Basic">Basic</SelectItem>
-                  <SelectItem value="Medium">Medium</SelectItem>
-                  <SelectItem value="Advanced">Advanced</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                Focus
-              </label>
-              <Select value={focus} onValueChange={setFocus}>
-                <SelectTrigger className="bg-background/60 border-border/50">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Quick Revision">Quick Revision</SelectItem>
-                  <SelectItem value="Deep Understanding">Deep Understanding</SelectItem>
-                  <SelectItem value="Clinical Reasoning">Clinical Reasoning</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                Length
-              </label>
-              <Select value={length} onValueChange={setLength}>
-                <SelectTrigger className="bg-background/60 border-border/50">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Concise">Concise</SelectItem>
-                  <SelectItem value="Moderate">Moderate</SelectItem>
-                  <SelectItem value="Detailed">Detailed</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="space-y-3">
+            <PillGroup
+              label="Exam Mode"
+              value={examMode}
+              onChange={setExamMode}
+              options={[
+                { value: "General", label: "General" },
+                { value: "USMLE Step 1", label: "Step 1" },
+                { value: "USMLE Step 2", label: "Step 2" },
+              ]}
+            />
+            <PillGroup
+              label="Difficulty"
+              value={difficulty}
+              onChange={setDifficulty}
+              options={[
+                { value: "Basic", label: "Basic" },
+                { value: "Medium", label: "Medium" },
+                { value: "Advanced", label: "Advanced" },
+              ]}
+            />
+            <PillGroup
+              label="Focus"
+              value={focus}
+              onChange={setFocus}
+              options={[
+                { value: "Quick Revision", label: "Quick Revision" },
+                { value: "Deep Understanding", label: "Deep Understanding" },
+                { value: "Clinical Reasoning", label: "Clinical Reasoning" },
+              ]}
+            />
+            <PillGroup
+              label="Length"
+              value={length}
+              onChange={setLength}
+              options={[
+                { value: "Concise", label: "Concise" },
+                { value: "Moderate", label: "Moderate" },
+                { value: "Detailed", label: "Detailed" },
+              ]}
+            />
           </div>
 
           {pro && (
-            <div className="rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 text-center">
-              <p className="text-sm font-semibold text-primary">
-                ✅ Unlimited Access Activated
+            <div className="flex items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 py-2.5">
+              <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+              <p className="text-sm font-medium text-foreground">
+                Unlimited access active
               </p>
             </div>
           )}
@@ -473,35 +517,37 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
             </div>
           )}
           {pro && (
-            <div className="rounded-lg border border-border/30 bg-background/40 px-4 py-3 space-y-2">
-              <p className="text-[10px] font-semibold tracking-widest text-muted-foreground/50 uppercase text-center">
+            <div className="rounded-lg border border-border bg-card px-4 py-3 space-y-2">
+              <p className="text-xs font-medium text-muted-foreground text-center">
                 AI Model
               </p>
-              <div className="flex items-center justify-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setPreferredModel("gpt-oss")}
-                  disabled={modelSaving}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition-all ${
-                    preferredModel !== "claude"
-                      ? "bg-primary/15 border-primary/40 text-primary"
-                      : "bg-secondary/30 border-border/50 text-muted-foreground hover:border-primary/30 hover:text-foreground"
-                  }`}
-                >
-                  GPT-OSS 20B
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPreferredModel("claude")}
-                  disabled={modelSaving}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition-all ${
-                    preferredModel === "claude"
-                      ? "bg-primary/15 border-primary/40 text-primary"
-                      : "bg-secondary/30 border-border/50 text-muted-foreground hover:border-primary/30 hover:text-foreground"
-                  }`}
-                >
-                  ✦ Claude Haiku 4.5
-                </button>
+              <div className="flex items-center justify-center">
+                <div className="inline-flex items-center rounded-lg bg-muted p-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setPreferredModel("gpt-oss")}
+                    disabled={modelSaving}
+                    className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                      preferredModel !== "claude"
+                        ? "bg-background text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    GPT-OSS 20B
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPreferredModel("claude")}
+                    disabled={modelSaving}
+                    className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                      preferredModel === "claude"
+                        ? "bg-background text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    Claude Haiku 4.5
+                  </button>
+                </div>
               </div>
               {modelSaving && (
                 <p className="text-[11px] text-muted-foreground/50 text-center">Saving preference…</p>
@@ -510,7 +556,7 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
           )}
 
           <Button
-            className="w-full h-12 text-sm font-bold rounded-xl btn-gradient"
+            className="w-full h-10 text-sm font-medium rounded-lg"
             onClick={handleGenerate}
             disabled={loading}
           >
@@ -526,43 +572,95 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
               </>
             )}
           </Button>
+
+          {recentTopics.length > 0 && (
+            <div className="space-y-1.5 pt-1 border-t border-border">
+              <p className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground pt-2.5">
+                <History className="h-3 w-3" />
+                Recent
+              </p>
+              <div className="flex flex-wrap gap-1.5 max-h-16 overflow-y-auto">
+                {recentTopics.map((topic) => (
+                  <button
+                    key={topic}
+                    type="button"
+                    disabled={loading}
+                    onClick={() => startTopic(topic)}
+                    className="max-w-full truncate px-2.5 py-1 rounded-md text-xs font-medium border border-border bg-card text-muted-foreground hover:border-primary/40 hover:text-primary transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-default"
+                  >
+                    {topic}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
-      </div>{/* end max-w-2xl controls wrapper */}
+  );
 
-      <div ref={outputRef}>
+  return (
+    <>
+    <div className="flex flex-col gap-6 lg:flex-row lg:gap-0 lg:items-start">
+      {/* ── Left pane: configurator (static on mobile + desktop, drawer on tablet) ── */}
+      <div className="min-w-0 md:max-lg:hidden lg:sticky lg:top-6 lg:self-start lg:w-[280px] lg:min-w-[280px] lg:max-w-[280px] lg:shrink-0 lg:pr-5">
+        {configurator}
+      </div>
+
+      {/* ── 1px divider between panes ── */}
+      <div aria-hidden className="hidden lg:block lg:w-px lg:shrink-0 lg:self-stretch bg-border" />
+
+      {/* ── Right pane: living document ── */}
+      <div ref={outputRef} className="min-w-0 lg:flex-1 lg:pl-8">
+      <div className="mx-auto w-full max-w-[720px] space-y-6">
       {loading && !sheet && !legacyOutput && (
-        <div className="flex flex-col items-center justify-center gap-4 py-14 animate-fade-in">
-          {/* Spinner */}
-          <div className="relative h-14 w-14">
-            <div className="absolute inset-0 rounded-full border-4 border-primary/10" />
-            <div className="absolute inset-0 rounded-full border-4 border-t-primary animate-spin" />
-            <div className="absolute inset-0 flex items-center justify-center">
-              <Sparkles className="h-5 w-5 text-primary" />
-            </div>
-          </div>
-
-          {/* Step message */}
-          <div className="text-center space-y-1">
-            <p className="text-sm font-semibold text-foreground transition-all duration-300">
+        <div className="space-y-6 animate-fade-in">
+          <div className="flex items-center gap-2.5 px-1">
+            <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+            <p className="text-sm font-medium text-foreground transition-all duration-300">
               {loadingMsg}
             </p>
-            <p className="text-xs text-muted-foreground opacity-50">
-              Building your exam-ready sheet…
-            </p>
-            <p className="text-[10px] text-muted-foreground/40 mt-1">
+            <p className="text-xs text-muted-foreground/50">
               Takes a little longer during peak hours — hang tight
             </p>
           </div>
-
-          {/* Pulsing dots */}
-          <div className="flex gap-1.5">
-            {[0, 1, 2].map((i) => (
+          {/* Document structure forming — skeletons mirror the incoming sections */}
+          <div className="space-y-6">
+            {[0, 1, 2, 3, 4].map((i) => (
               <div
                 key={i}
-                className="h-1.5 w-1.5 rounded-full bg-primary/40 animate-pulse"
-                style={{ animationDelay: `${i * 200}ms` }}
-              />
+                className="section-reveal"
+                style={{ animationDelay: `${i * 150}ms` }}
+              >
+                <SectionSkeleton variant="sheet-section" />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {!loading && !sheet && !legacyOutput && (
+        <div className="flex flex-col items-center justify-center gap-5 rounded-xl border border-dashed border-border py-20 px-6 text-center animate-fade-in">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
+            <Stethoscope className="h-6 w-6 text-primary" />
+          </div>
+          <div className="space-y-1">
+            <p className="text-sm font-medium text-foreground">
+              Pick a topic to generate your study sheet
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Your sheet will build here, section by section.
+            </p>
+          </div>
+          <div className="flex flex-wrap justify-center gap-2">
+            {["Heart Failure", "Pneumonia", "Diabetic Ketoacidosis"].map((label) => (
+              <button
+                key={label}
+                type="button"
+                onClick={() => startTopic(label)}
+                className="px-3 py-1.5 rounded-md text-[13px] font-medium border border-border bg-transparent text-muted-foreground hover:border-primary/50 hover:text-primary transition-colors cursor-pointer"
+              >
+                {label}
+              </button>
             ))}
           </div>
         </div>
@@ -586,13 +684,12 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
           citationIsLoggedIn={isLoggedIn}
         />
       )}
-      </div>
 
       {(sheet || legacyOutput) && (
         <div className="flex justify-center pt-2">
           <Button
             variant="outline"
-            className="h-10 rounded-xl border-primary/40 text-primary hover:bg-primary/10 font-semibold text-sm px-5"
+            className="h-9 rounded-lg font-medium text-sm px-5"
             disabled={deckSaved}
             onClick={() => {
               try {
@@ -629,10 +726,58 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
           </Button>
         </div>
       )}
-
-      <AuthModal open={authModalOpen} onOpenChange={setAuthModalOpen} />
-      <GoProModal open={goProOpen} onOpenChange={setGoProOpen} />
+      </div>
+      </div>{/* end right pane */}
     </div>
+
+    {/* ── Tablet-only (768–1023px): floating configure button ── */}
+    <button
+      type="button"
+      onClick={() => setConfigDrawerOpen(true)}
+      className="hidden md:max-lg:inline-flex fixed bottom-4 left-4 z-40 h-9 items-center gap-1.5 rounded-full bg-primary px-4 text-xs font-semibold text-primary-foreground shadow-lg hover:bg-primary/90 transition-colors"
+    >
+      <Settings2 className="h-3.5 w-3.5" />
+      Configure
+    </button>
+
+    {/* ── Tablet-only: slide-out configurator drawer ── */}
+    <div
+      className={`hidden md:max-lg:block fixed inset-0 z-50 ${
+        configDrawerOpen ? "" : "pointer-events-none"
+      }`}
+      aria-hidden={!configDrawerOpen}
+    >
+      <div
+        className={`absolute inset-0 bg-black/50 motion-safe:transition-opacity motion-safe:duration-200 ${
+          configDrawerOpen ? "opacity-100" : "opacity-0"
+        }`}
+        onClick={() => setConfigDrawerOpen(false)}
+      />
+      <div
+        className={`absolute inset-y-0 left-0 w-[320px] overflow-y-auto bg-background border-r border-border p-4 motion-safe:transition-transform motion-safe:duration-[250ms] motion-safe:ease-out ${
+          configDrawerOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        <div className="flex items-center justify-between pb-3">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Configure
+          </span>
+          <button
+            type="button"
+            onClick={() => setConfigDrawerOpen(false)}
+            className="p-1 rounded-md text-muted-foreground hover:text-foreground transition-colors"
+            aria-label="Close configurator"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        {configurator}
+      </div>
+    </div>
+
+    <AuthModal open={authModalOpen} onOpenChange={setAuthModalOpen} />
+    <GoProModal open={goProOpen} onOpenChange={setGoProOpen} />
+    </>
   );
 };
 

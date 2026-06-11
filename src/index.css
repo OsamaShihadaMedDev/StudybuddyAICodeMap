@@ -245,11 +245,16 @@
 
   /* Y-axis flip for study mode cards */
   .flip-card-y-inner {
-    transition: transform 400ms cubic-bezier(0.4, 0, 0.2, 1);
+    transition: transform 400ms ease-in-out;
     transform-style: preserve-3d;
     -webkit-transform-style: preserve-3d;
     position: relative;
     will-change: transform;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .flip-card-y-inner {
+      transition-duration: 0ms;
+    }
   }
   .flip-card-y-inner.flipped {
     transform: rotateY(180deg);
@@ -263,5 +268,251 @@
   .flip-face-back {
     transform: rotateY(180deg) translateZ(0);
     -webkit-transform: rotateY(180deg) translateZ(0);
+  }
+}
+
+/* ─── UX overhaul: transitions & loading (motion-safe) ──────────────── */
+@layer utilities {
+  @media (prefers-reduced-motion: no-preference) {
+    /* Route transitions */
+    .page-transition-enter {
+      animation: page-enter 200ms ease-out;
+    }
+    .page-transition-exit {
+      opacity: 0;
+      transition: opacity 150ms ease-in;
+    }
+
+    /* Skeleton shimmer sweep */
+    .skeleton-shimmer {
+      position: relative;
+      overflow: hidden;
+    }
+    .skeleton-shimmer::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      transform: translateX(-100%);
+      background: linear-gradient(
+        90deg,
+        transparent,
+        hsl(var(--foreground) / 0.06),
+        transparent
+      );
+      animation: skeleton-sweep 1.6s ease-in-out infinite;
+    }
+
+    /* Logo pulse for PageLoader */
+    .loader-pulse {
+      animation: loader-pulse 1.2s ease-in-out infinite;
+    }
+
+    /* Section reveal inside the sheet document */
+    .section-reveal {
+      animation: section-reveal 200ms ease-out both;
+    }
+
+    /* Study-mode card slide transitions */
+    .card-slide-exit-left {
+      animation: card-exit-left 150ms ease-in both;
+    }
+    .card-slide-enter-right {
+      animation: card-enter-right 200ms ease-out both;
+    }
+    .card-slide-exit-right {
+      animation: card-exit-right 150ms ease-in both;
+    }
+    .card-slide-enter-left {
+      animation: card-enter-left 200ms ease-out both;
+    }
+
+    /* Departure-board number flip */
+    .flip-number {
+      animation: flip-number 300ms ease-out both;
+      transform-origin: center 60%;
+      display: inline-block;
+    }
+
+    /* Question fade for QBank */
+    .question-enter {
+      animation: question-enter 150ms ease-out both;
+    }
+
+    /* Banner collapse */
+    .banner-collapsing {
+      max-height: 0 !important;
+      opacity: 0;
+      padding-top: 0 !important;
+      padding-bottom: 0 !important;
+      margin-bottom: 0 !important;
+      transition: max-height 250ms ease-in, opacity 200ms ease-in,
+        margin-bottom 250ms ease-in, padding 250ms ease-in;
+    }
+
+    /* Floating enhance bubble fade-in */
+    .enhance-bubble-in {
+      animation: enhance-bubble-in 150ms ease-out both;
+    }
+
+    /* Inline enhancement expand / collapse */
+    .inline-enh-enter {
+      animation: inline-enh-enter 200ms ease-out both;
+      overflow: hidden;
+    }
+    .inline-enh-exit {
+      max-height: 0 !important;
+      opacity: 0;
+      margin-top: 0 !important;
+      margin-bottom: 0 !important;
+      transition: max-height 150ms ease-in, opacity 150ms ease-in,
+        margin 150ms ease-in;
+      overflow: hidden;
+    }
+
+    /* Left/right pane mode cross-fade (flashcards split-pane) */
+    .pane-crossfade {
+      animation: pane-crossfade 200ms ease-out both;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .page-transition-exit {
+      opacity: 1;
+    }
+    .inline-enh-exit {
+      display: none;
+    }
+  }
+
+  @keyframes page-enter {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes skeleton-sweep {
+    100% {
+      transform: translateX(100%);
+    }
+  }
+
+  @keyframes loader-pulse {
+    0%, 100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.05);
+    }
+  }
+
+  @keyframes section-reveal {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes card-exit-left {
+    to {
+      opacity: 0;
+      transform: translateX(-40px);
+    }
+  }
+  @keyframes card-enter-right {
+    from {
+      opacity: 0;
+      transform: translateX(40px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+  @keyframes card-exit-right {
+    to {
+      opacity: 0;
+      transform: translateX(40px);
+    }
+  }
+  @keyframes card-enter-left {
+    from {
+      opacity: 0;
+      transform: translateX(-40px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes flip-number {
+    0% {
+      transform: rotateX(-90deg);
+      opacity: 0;
+    }
+    100% {
+      transform: rotateX(0deg);
+      opacity: 1;
+    }
+  }
+
+  @keyframes question-enter {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes enhance-bubble-in {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes inline-enh-enter {
+    from {
+      opacity: 0;
+      max-height: 0;
+    }
+    to {
+      opacity: 1;
+      max-height: 640px;
+    }
+  }
+
+  @keyframes pane-crossfade {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  /* Top progress bar — width transitions are cheap enough to keep always-on,
+     but hide the bar entirely for reduced motion */
+  .top-progress-bar {
+    transition: width 350ms ease-out, opacity 250ms ease-in;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .top-progress-bar {
+      transition: none;
+    }
   }
 }

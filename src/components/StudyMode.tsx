@@ -9,6 +9,7 @@ import { useUsageLimit } from "@/hooks/use-usage-limit";
 import GoProModal from "@/components/GoProModal";
 import { getCitationsForTopic } from "@/lib/citation-store";
 import CitationBadgeList from "@/components/CitationBadgeList";
+import { startTopProgress, finishTopProgress } from "@/components/TopProgressBar";
 
 interface StudyModeProps {
   dueCards: Card[];
@@ -36,6 +37,7 @@ const StudyMode = ({ dueCards, onReview, onClose }: StudyModeProps) => {
   const [done, setDone] = useState(sessionCards.length === 0);
   const [explainOpen, setExplainOpen] = useState(false);
   const [explainScope, setExplainScope] = useState<"card" | "topic">("card");
+  const [slidePhase, setSlidePhase] = useState<"idle" | "exit">("idle");
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -54,23 +56,28 @@ const StudyMode = ({ dueCards, onReview, onClose }: StudyModeProps) => {
   };
 
   const handleRate = (rating: "again" | "good" | "easy") => {
-    if (!current) return;
+    if (!current || slidePhase !== "idle") return;
     vibrate(rating);
     onReview(current.id, rating);
     const nextReviewed = reviewedCount + 1;
     setReviewedCount(nextReviewed);
     if (index + 1 >= sessionCards.length) {
       setDone(true);
-    } else {
-      setFlipped(false);
-      setIndex(index + 1);
+      return;
     }
+    // Slide current card out left (150ms), then bring the next in from the right
+    setSlidePhase("exit");
+    window.setTimeout(() => {
+      setFlipped(false);
+      setIndex((i) => i + 1);
+      setSlidePhase("idle");
+    }, 150);
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm flex flex-col">
+    <div className="fixed inset-0 z-50 bg-background flex flex-col">
       {/* Progress bar */}
-      <div className="h-[2px] w-full bg-border/40">
+      <div className="h-[2px] w-full bg-border">
         <div
           className="h-full bg-primary transition-all duration-300"
           style={{ width: `${progress}%` }}
@@ -89,43 +96,48 @@ const StudyMode = ({ dueCards, onReview, onClose }: StudyModeProps) => {
           <div className="text-center space-y-4 animate-fade-in">
             {sessionCards.length === 0 ? (
               <>
-                <h2 className="text-2xl font-bold text-foreground">You're all caught up.</h2>
+                <h2 className="text-2xl font-semibold tracking-tight text-foreground">You're all caught up.</h2>
                 <p className="text-muted-foreground">
                   New cards will appear here after your next study session.
                 </p>
               </>
             ) : (
               <>
-                <h2 className="text-2xl font-bold text-foreground">Session complete</h2>
+                <h2 className="text-2xl font-semibold tracking-tight text-foreground">Session complete</h2>
                 <p className="text-muted-foreground">
                   {reviewedCount} {reviewedCount === 1 ? "card" : "cards"} reviewed. See you tomorrow.
                 </p>
               </>
             )}
-            <Button onClick={onClose} className="btn-gradient h-11 px-8 rounded-xl mt-4">
+            <Button onClick={onClose} className="h-10 px-8 rounded-lg mt-4 font-medium">
               Done
             </Button>
           </div>
         ) : current ? (
           <div className="w-full max-w-xl space-y-4 md:space-y-6">
-            {/* Card with flip — tap to flip */}
+            {/* Card with flip — tap to flip; keyed wrapper drives slide transitions */}
             <div
-              className="perspective cursor-pointer select-none"
-              style={{ perspective: "1000px" }}
-              onClick={handleFlip}
-              role="button"
-              aria-label={flipped ? "Tap to show question" : "Tap to show answer"}
+              key={current.id}
+              className={slidePhase === "exit" ? "card-slide-exit-left" : "card-slide-enter-right"}
             >
               <div
-                className={`flip-card-y-inner relative h-[260px] sm:h-[300px] ${flipped ? "flipped" : ""}`}
+                className="perspective cursor-pointer select-none"
+                style={{ perspective: "1000px" }}
+                onClick={handleFlip}
+                role="button"
+                aria-label={flipped ? "Tap to show question" : "Tap to show answer"}
               >
-                {/* Front */}
-                <div className="flip-face absolute inset-0 w-full">
-                  <CardFace card={current} text={current.question} />
-                </div>
-                {/* Back */}
-                <div className="flip-face flip-face-back absolute inset-0 w-full">
-                  <CardFace card={current} text={current.answer} showCitation />
+                <div
+                  className={`flip-card-y-inner relative h-[260px] sm:h-[300px] ${flipped ? "flipped" : ""}`}
+                >
+                  {/* Front */}
+                  <div className="flip-face absolute inset-0 w-full">
+                    <CardFace card={current} text={current.question} />
+                  </div>
+                  {/* Back */}
+                  <div className="flip-face flip-face-back absolute inset-0 w-full">
+                    <CardFace card={current} text={current.answer} showCitation />
+                  </div>
                 </div>
               </div>
             </div>
@@ -134,7 +146,7 @@ const StudyMode = ({ dueCards, onReview, onClose }: StudyModeProps) => {
               <div className="space-y-3">
                 <Button
                   onClick={handleFlip}
-                  className="w-full h-12 btn-gradient rounded-xl font-semibold"
+                  className="w-full h-11 rounded-lg font-medium"
                 >
                   Show Answer
                 </Button>
@@ -170,21 +182,21 @@ const StudyMode = ({ dueCards, onReview, onClose }: StudyModeProps) => {
                 <Button
                   variant="outline"
                   onClick={() => handleRate("again")}
-                  className="h-12 rounded-xl font-semibold bg-red-500/10 text-red-500 border-red-500/30 hover:bg-red-500/20 hover:text-red-500"
+                  className="h-11 rounded-lg font-medium text-red-600 dark:text-red-400 border-red-500/30 hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400"
                 >
                   Still learning
                 </Button>
                 <Button
                   variant="outline"
                   onClick={() => handleRate("good")}
-                  className="h-12 rounded-xl font-semibold bg-emerald-500/10 text-emerald-500 border-emerald-500/30 hover:bg-emerald-500/20 hover:text-emerald-500"
+                  className="h-11 rounded-lg font-medium text-emerald-600 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10 hover:text-emerald-600 dark:hover:text-emerald-400"
                 >
                   Got it
                 </Button>
                 <Button
                   variant="outline"
                   onClick={() => handleRate("easy")}
-                  className="h-12 rounded-xl font-semibold bg-blue-500/10 text-blue-500 border-blue-500/30 hover:bg-blue-500/20 hover:text-blue-500"
+                  className="h-11 rounded-lg font-medium text-primary border-primary/30 hover:bg-primary/10 hover:text-primary"
                 >
                   Easy
                 </Button>
@@ -211,7 +223,7 @@ const StudyMode = ({ dueCards, onReview, onClose }: StudyModeProps) => {
   );
 };
 
-const CardFace = ({
+export const CardFace = ({
   card,
   text,
   showCitation = false,
@@ -229,7 +241,7 @@ const CardFace = ({
     return "text-xs";
   }
   return (
-    <div className="glass-card rounded-2xl p-5 md:p-8 h-[260px] sm:h-[300px] flex flex-col gap-2.5">
+    <div className="glass-card rounded-xl p-5 md:p-8 h-[260px] sm:h-[300px] flex flex-col gap-2.5">
       <div className="shrink-0 flex items-center gap-2.5">
         {card.topicEmoji && (
           <span className="text-xl leading-none" aria-hidden>
@@ -237,7 +249,7 @@ const CardFace = ({
           </span>
         )}
         <span
-          className={`inline-block px-2.5 py-1 rounded-md text-[11px] font-semibold uppercase tracking-wider border ${tagColors.bg} ${tagColors.text} ${tagColors.border}`}
+          className={`inline-block px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wider border ${tagColors.bg} ${tagColors.text} ${tagColors.border}`}
         >
           {card.tag || "Card"}
         </span>
@@ -314,7 +326,7 @@ interface ExplainPanelProps {
   onClose: () => void;
 }
 
-const ExplainPanel = ({ open, scope, card, onClose }: ExplainPanelProps) => {
+export const ExplainPanel = ({ open, scope, card, onClose }: ExplainPanelProps) => {
   const { toast } = useToast();
   const { isSheetLimited, incrementSheet } = useUsageLimit();
   const [output, setOutput] = useState("");
@@ -326,6 +338,13 @@ const ExplainPanel = ({ open, scope, card, onClose }: ExplainPanelProps) => {
     setStarted(false);
     setOutput("");
   }, [card.id, scope]);
+
+  useEffect(() => {
+    if (loading) {
+      startTopProgress();
+      return () => finishTopProgress();
+    }
+  }, [loading]);
 
   useEffect(() => {
     if (!open || started) return;
@@ -426,7 +445,7 @@ const ExplainPanel = ({ open, scope, card, onClose }: ExplainPanelProps) => {
     <>
     <GoProModal open={goProOpen} onOpenChange={setGoProOpen} />
     <div
-      className="fixed inset-x-0 bottom-0 top-[15vh] z-50 bg-background rounded-t-2xl shadow-2xl flex flex-col"
+      className="fixed inset-x-0 bottom-0 top-[15vh] z-50 bg-background border-t border-border rounded-t-xl shadow-2xl flex flex-col"
       style={{
         transform: open ? "translateY(0)" : "translateY(100%)",
         transition: "transform 350ms cubic-bezier(0.4, 0, 0.2, 1)",

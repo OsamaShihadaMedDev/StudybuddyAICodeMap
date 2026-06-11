@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { FlaskConical, CheckCircle, XCircle, Clock, RotateCcw, ChevronRight, Flag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
-import StudyBuddyLoader from "@/components/StudyBuddyLoader";
+import PageLoader from "@/components/PageLoader";
 import { useQBankContext } from "@/contexts/QBankContext";
 import { supabase } from "@/integrations/supabase/client";
 import type { Question, QuestionMedia, SessionAnswer } from "@/hooks/use-qbank";
@@ -22,18 +22,18 @@ const ScoreRing = ({ score, total }: { score: number; total: number }) => {
   const radius = 54;
   const circumference = 2 * Math.PI * radius;
   const offset = circumference - (pct / 100) * circumference;
-  const color = pct >= 80 ? "#22c55e" : pct >= 60 ? "#f59e0b" : "#ef4444";
+  const color = pct >= 80 ? "#059669" : pct >= 60 ? "#d97706" : "#dc2626";
 
   return (
     <div className="relative flex items-center justify-center w-36 h-36">
       <svg width="144" height="144" viewBox="0 0 144 144" className="-rotate-90">
-        <circle cx="72" cy="72" r={radius} fill="none" stroke="hsl(var(--muted) / 0.3)" strokeWidth="10" />
+        <circle cx="72" cy="72" r={radius} fill="none" stroke="hsl(var(--border))" strokeWidth="10" />
         <circle cx="72" cy="72" r={radius} fill="none" stroke={color} strokeWidth="10"
           strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={offset}
           style={{ transition: "stroke-dashoffset 0.8s ease-out" }} />
       </svg>
       <div className="absolute flex flex-col items-center">
-        <span className="text-3xl font-extrabold" style={{ color }}>{pct}%</span>
+        <span className="text-3xl font-semibold tabular-nums tracking-tight" style={{ color }}>{pct}%</span>
         <span className="text-xs text-muted-foreground font-medium">{score} / {total}</span>
       </div>
     </div>
@@ -49,10 +49,10 @@ const formatTime = (ms: number): string => {
 };
 
 const performanceLabel = (pct: number): { text: string; color: string } => {
-  if (pct >= 80) return { text: "Strong performance", color: "#22c55e" };
-  if (pct >= 60) return { text: "Good effort", color: "#f59e0b" };
-  if (pct >= 40) return { text: "Keep practicing", color: "#f97316" };
-  return { text: "Review the material", color: "#ef4444" };
+  if (pct >= 80) return { text: "Strong performance", color: "#059669" };
+  if (pct >= 60) return { text: "Good effort", color: "#d97706" };
+  if (pct >= 40) return { text: "Keep practicing", color: "#ea580c" };
+  return { text: "Review the material", color: "#dc2626" };
 };
 
 const QBankSummary = () => {
@@ -188,7 +188,7 @@ const QBankSummary = () => {
   if (loading) {
     return (
       <DashboardLayout>
-        <StudyBuddyLoader message="Loading session..." />
+        <PageLoader context="qbank" />
       </DashboardLayout>
     );
   }
@@ -227,46 +227,46 @@ const QBankSummary = () => {
     <DashboardLayout>
       <div className="space-y-8 animate-fade-in">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
-            <FlaskConical className="h-5 w-5 text-primary" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-card">
+            <FlaskConical className="h-4 w-4 text-primary" />
           </div>
           <div>
-            <h1 className="text-xl font-extrabold tracking-tight text-foreground">Session Complete</h1>
+            <h1 className="text-xl font-semibold tracking-tight text-foreground">Session Complete</h1>
             <p className="text-xs text-muted-foreground">Cardiovascular System · {total} questions</p>
           </div>
         </div>
 
-        <div className="glass-card rounded-2xl p-6">
+        <div className="glass-card rounded-xl p-6">
           <div className="flex flex-col sm:flex-row items-center gap-6">
             <ScoreRing score={score} total={total} />
             <div className="flex-1 space-y-4 text-center sm:text-left">
               <div>
-                <p className="text-lg font-extrabold" style={{ color: perf.color }}>{perf.text}</p>
+                <p className="text-lg font-semibold tracking-tight" style={{ color: perf.color }}>{perf.text}</p>
                 <p className="text-sm text-muted-foreground mt-0.5">{score} correct out of {total} questions</p>
               </div>
               <div className="flex flex-wrap gap-3 justify-center sm:justify-start">
-                <div className="flex items-center gap-1.5 rounded-full border border-border/50 bg-muted/30 px-3 py-1.5">
+                <div className="flex items-center gap-1.5 rounded-full border border-border bg-muted px-3 py-1.5">
                   <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="text-xs font-medium text-muted-foreground">{formatTime(totalTime)} total</span>
+                  <span className="text-xs font-medium text-muted-foreground tabular-nums">{formatTime(totalTime)} total</span>
                 </div>
-                <div className="flex items-center gap-1.5 rounded-full border border-border/50 bg-muted/30 px-3 py-1.5">
+                <div className="flex items-center gap-1.5 rounded-full border border-border bg-muted px-3 py-1.5">
                   <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="text-xs font-medium text-muted-foreground">~{avgTime}s per question</span>
+                  <span className="text-xs font-medium text-muted-foreground tabular-nums">~{avgTime}s per question</span>
                 </div>
               </div>
             </div>
           </div>
 
           {difficultyBreakdown.length > 0 && (
-            <div className="mt-5 pt-5 border-t border-border/40">
-              <p className="text-[10px] font-bold tracking-[0.12em] text-muted-foreground/60 uppercase mb-3">By difficulty</p>
+            <div className="mt-5 pt-5 border-t border-border">
+              <p className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase mb-3">By difficulty</p>
               <div className="flex gap-3 flex-wrap">
                 {difficultyBreakdown.map(({ diff, correct, total: t }) => {
                   const diffPct = t > 0 ? Math.round((correct / t) * 100) : 0;
-                  const diffColor = diff === "Easy" ? "#22c55e" : diff === "Medium" ? "#f59e0b" : "#ef4444";
+                  const diffColor = diff === "Easy" ? "#059669" : diff === "Medium" ? "#d97706" : "#dc2626";
                   return (
-                    <div key={diff} className="flex-1 min-w-[80px] rounded-xl border border-border/40 bg-muted/20 p-3 text-center">
-                      <p className="text-base font-extrabold" style={{ color: diffColor }}>{diffPct}%</p>
+                    <div key={diff} className="flex-1 min-w-[80px] rounded-lg border border-border bg-background p-3 text-center">
+                      <p className="text-base font-semibold tabular-nums" style={{ color: diffColor }}>{diffPct}%</p>
                       <p className="text-[11px] text-muted-foreground mt-0.5">{diff}</p>
                       <p className="text-[10px] text-muted-foreground/60">{correct}/{t}</p>
                     </div>
@@ -278,11 +278,11 @@ const QBankSummary = () => {
         </div>
 
         <div className="space-y-3">
-          <p className="text-[10px] font-bold tracking-[0.15em] text-muted-foreground/60 uppercase pl-1">
+          <p className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase pl-1">
             Question breakdown
           </p>
           {questions.some((q) => summaryFlaggedIds.has(q.id)) && (
-            <div className="flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-[11px] font-medium text-amber-400 w-fit">
+            <div className="flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-[11px] font-medium text-amber-600 dark:text-amber-400 w-fit">
               <Flag className="h-3 w-3" fill="currentColor" />
               {questions.filter((q) => summaryFlaggedIds.has(q.id)).length} flagged for review
             </div>
@@ -291,7 +291,7 @@ const QBankSummary = () => {
             {questions.map((q, i) => {
               const ans = answers.find((a) => a.question_id === q.id);
               const isCorrect = ans?.is_correct ?? false;
-              const diffColor = q.difficulty === "Easy" ? "#22c55e" : q.difficulty === "Medium" ? "#f59e0b" : "#ef4444";
+              const diffColor = q.difficulty === "Easy" ? "#059669" : q.difficulty === "Medium" ? "#d97706" : "#dc2626";
               const stemSnippet = q.question_text.length > 80
                 ? q.question_text.slice(0, 80).trimEnd() + "…"
                 : q.question_text;
@@ -300,19 +300,19 @@ const QBankSummary = () => {
                 <button
                   key={q.id}
                   onClick={() => handleReviewQuestion(i)}
-                  className="w-full flex items-start gap-3 rounded-lg border border-border/40 bg-card/60 px-3 py-2.5 text-left hover:bg-card/90 hover:border-border/60 transition-all group"
+                  className="w-full flex items-start gap-3 rounded-lg border border-border bg-card px-3 py-2.5 text-left hover:border-foreground/20 transition-colors group"
                 >
                   <div className="shrink-0 mt-0.5">
                     {isCorrect
-                      ? <CheckCircle className="text-green-500" style={{ width: 15, height: 15 }} />
-                      : <XCircle className="text-red-500" style={{ width: 15, height: 15 }} />
+                      ? <CheckCircle className="text-emerald-600 dark:text-emerald-400" style={{ width: 15, height: 15 }} />
+                      : <XCircle className="text-red-600 dark:text-red-400" style={{ width: 15, height: 15 }} />
                     }
                   </div>
                   <div className="flex-1 min-w-0 space-y-0.5">
                     <div className="flex items-center gap-2">
-                      <span className="text-[11px] font-bold text-muted-foreground shrink-0">Q{i + 1}</span>
+                      <span className="text-[11px] font-semibold tabular-nums text-muted-foreground shrink-0">Q{i + 1}</span>
                       {summaryFlaggedIds.has(q.id) && (
-                        <Flag className="h-3 w-3 text-amber-400 shrink-0" fill="currentColor" />
+                        <Flag className="h-3 w-3 text-amber-500 shrink-0" fill="currentColor" />
                       )}
                       <span className="text-[11px] text-muted-foreground">{q.domain}</span>
                       <span className="text-[11px] font-semibold shrink-0" style={{ color: diffColor }}>{q.difficulty}</span>
@@ -321,7 +321,7 @@ const QBankSummary = () => {
                   </div>
                   <div className="shrink-0 flex items-center gap-2 mt-0.5">
                     {!isCorrect && ans && (
-                      <span className="text-[10px] text-red-400 font-medium">
+                      <span className="text-[10px] text-red-600 dark:text-red-400 font-medium">
                         {ans.selected_option.toUpperCase()} → {q.correct_option.toUpperCase()}
                       </span>
                     )}
@@ -339,12 +339,12 @@ const QBankSummary = () => {
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3 pb-8">
-          <Button onClick={handleTryAgain} className="btn-gradient flex-1 h-12 text-sm font-bold rounded-xl gap-2">
+          <Button onClick={handleTryAgain} className="flex-1 h-10 text-sm font-medium rounded-lg gap-2">
             <RotateCcw className="h-4 w-4" />
             Try Again
           </Button>
           <Button variant="outline" onClick={() => navigate("/qbank")}
-            className="flex-1 h-12 text-sm font-semibold rounded-xl gap-2 border-border/60">
+            className="flex-1 h-10 text-sm font-medium rounded-lg gap-2">
             Back to QBank
             <ChevronRight className="h-4 w-4" />
           </Button>

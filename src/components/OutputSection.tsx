@@ -2,6 +2,7 @@ import { useRef, useEffect, useState, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   BookOpen,
+  Check,
   List,
   HelpCircle,
   FileText,
@@ -15,27 +16,63 @@ import {
   ChevronUp,
   RefreshCw,
   Sparkles,
-  Microscope,
+  RotateCcw,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import CopyButton from "@/components/CopyButton";
 import FlashcardsSection from "@/components/FlashcardsSection";
 import SaveButton from "@/components/SaveButton";
 import CitationBadgeList from "@/components/CitationBadgeList";
-import EnhanceSidebar from "@/components/EnhanceSidebar";
+import { startTopProgress, finishTopProgress } from "@/components/TopProgressBar";
 import type { CitationResult } from "@/lib/citation";
 import {
   type GeneratedSheet,
   type EnhancementResult,
   parseStoredSheet,
   isJsonSheet,
-  enhancementKey,
 } from "@/types/generated-sheet";
+
+type EnhanceKind = "enhance" | "expand" | "clinical";
 
 interface ActiveEnhancement {
   sourceText: string;
-  mode: "expand" | "clinical";
-  sectionKey: string;
+  kind: EnhanceKind;
+  anchor: string; // "sectionKey:lineIdx" | "sectionKey:end" | "saved"
+  /** When true, render the source text as a golden highlight instead of the inline block. */
+  isCollapsed?: boolean;
+  /** Pre-loaded result from a saved sheet, so the inline block renders without re-calling the AI. */
+  savedResult?: string;
+}
+
+/** Lightweight ref to a collapsed enhancement, used when wrapping its source text in a golden mark. */
+interface CollapsedRef {
+  key: string;
+  sourceText: string;
+}
+
+/** Golden highlight styling for the source text of a collapsed enhancement. */
+const ENH_MARK_STYLE: React.CSSProperties = {
+  background: "rgba(234, 179, 8, 0.18)",
+  borderBottom: "1.5px solid rgba(234, 179, 8, 0.5)",
+  borderRadius: "2px",
+  padding: "0 2px",
+  cursor: "pointer",
+};
+
+/** Backend mode for a presentational kind — the edge function only knows expand/clinical. */
+const kindToMode = (kind: EnhanceKind): "expand" | "clinical" =>
+  kind === "clinical" ? "clinical" : "expand";
+
+const kindLabel: Record<EnhanceKind, string> = {
+  enhance: "✦ Enhancement",
+  expand: "↗ Expansion",
+  clinical: "🔗 Clinical Tie",
+};
+
+function makeEnhancementKey(sourceText: string, kind: EnhanceKind): string {
+  const snippet = sourceText.trim().slice(0, 40).replace(/\s+/g, "_");
+  return `${kind}:${snippet}`;
 }
 
 export type CitationState = "idle" | "loading" | "found" | "locked" | "hidden";
@@ -63,13 +100,13 @@ interface OutputSectionProps {
 // ─── Legacy renderer helpers (kept for old text-blob sheets) ───────────────
 
 const sectionConfig = {
-  SUMMARY: { icon: BookOpen, label: "Summary", className: "section-summary" },
-  "MEMORY HOOKS": { icon: Lightbulb, label: "Memory Hooks", className: "section-memoryhooks" },
-  "CLINICAL APPROACH": { icon: Stethoscope, label: "Clinical Approach", className: "section-clinical" },
-  "KEY POINTS": { icon: List, label: "Key Points", className: "section-keypoints" },
+  SUMMARY: { icon: BookOpen, label: "📋 Summary", className: "section-summary" },
+  "MEMORY HOOKS": { icon: Lightbulb, label: "🧠 Memory Hooks", className: "section-memoryhooks" },
+  "CLINICAL APPROACH": { icon: Stethoscope, label: "🩺 Clinical Approach", className: "section-clinical" },
+  "KEY POINTS": { icon: List, label: "📌 Key Points", className: "section-keypoints" },
   "EXAM TRAPS": { icon: AlertTriangle, label: "⚠️ Exam Traps", className: "section-examtraps" },
-  FLASHCARDS: { icon: HelpCircle, label: "Flashcards", className: "section-flashcards" },
-  "REFERENCE NOTE": { icon: FileText, label: "Reference Note", className: "section-reference" },
+  FLASHCARDS: { icon: HelpCircle, label: "❓ Flashcards", className: "section-flashcards" },
+  "REFERENCE NOTE": { icon: FileText, label: "📚 Reference Note", className: "section-reference" },
 };
 
 type SectionKey = keyof typeof sectionConfig;
@@ -125,23 +162,33 @@ function renderFormattedContent(content: string) {
 // ─── JSON renderer helpers ─────────────────────────────────────────────────
 
 const JSON_SECTION_CONFIG = {
-  overview: { icon: BookOpen, label: "Overview", className: "section-summary", evidenceBacked: true },
-  memoryHooks: { icon: Lightbulb, label: "Memory Hooks", className: "section-memoryhooks", evidenceBacked: false },
-  clinicalApproach: { icon: Stethoscope, label: "Clinical Approach", className: "section-clinical", evidenceBacked: true },
-  keyPoints: { icon: List, label: "Key Points", className: "section-keypoints", evidenceBacked: true },
+  overview: { icon: BookOpen, label: "📋 Overview", className: "section-summary", evidenceBacked: true },
+  memoryHooks: { icon: Lightbulb, label: "🧠 Memory Hooks", className: "section-memoryhooks", evidenceBacked: false },
+  clinicalApproach: { icon: Stethoscope, label: "🩺 Clinical Approach", className: "section-clinical", evidenceBacked: true },
+  keyPoints: { icon: List, label: "📌 Key Points", className: "section-keypoints", evidenceBacked: true },
   examTraps: { icon: AlertTriangle, label: "⚠️ Exam Traps", className: "section-examtraps", evidenceBacked: false },
-  flashcards: { icon: HelpCircle, label: "Flashcards", className: "section-flashcards", evidenceBacked: false },
-  referenceNote: { icon: FileText, label: "Reference Note", className: "section-reference", evidenceBacked: false },
+  flashcards: { icon: HelpCircle, label: "❓ Flashcards", className: "section-flashcards", evidenceBacked: false },
+  referenceNote: { icon: FileText, label: "📚 Reference Note", className: "section-reference", evidenceBacked: false },
 } as const;
 
 type JsonSectionKey = keyof typeof JSON_SECTION_CONFIG;
 
 const SECTION_LABEL_RE = /^(Mechanism|Pathophysiology|Key associations|Definition|Key Associations(?:\s*\/\s*Features)?|Diagnosis|Management|Prognosis|Complications?|Workup|Avoid|Follow[- ]?up)(\s*[:：])/i;
 
+type KeywordHoverHandler = (keyword: string, rect: DOMRect, anchor: string) => void;
+
+function anchorFromElement(el: Element | null): string {
+  const anchorEl = el?.closest("[data-enh-anchor]");
+  if (anchorEl) return anchorEl.getAttribute("data-enh-anchor") ?? "end";
+  const sectionEl = el?.closest("[data-enh-section]");
+  if (sectionEl) return `${sectionEl.getAttribute("data-enh-section")}:end`;
+  return "end";
+}
+
 function renderBoldKeyword(
   text: string,
   i: number,
-  onKeywordHover?: (keyword: string, rect: DOMRect) => void
+  onKeywordHover?: KeywordHoverHandler
 ) {
   if (!onKeywordHover) {
     return (
@@ -154,13 +201,14 @@ function renderBoldKeyword(
     <span
       key={i}
       className="font-semibold text-foreground cursor-pointer underline-offset-2 hover:underline hover:text-primary/90 transition-colors group relative inline"
-      onMouseEnter={(e) =>
-        onKeywordHover(text, (e.currentTarget as HTMLElement).getBoundingClientRect())
-      }
+      onMouseEnter={(e) => {
+        const el = e.currentTarget as HTMLElement;
+        onKeywordHover(text, el.getBoundingClientRect(), anchorFromElement(el));
+      }}
       onTouchStart={(e) => {
         const el = e.currentTarget as HTMLElement;
         const timer = window.setTimeout(() => {
-          onKeywordHover(text, el.getBoundingClientRect());
+          onKeywordHover(text, el.getBoundingClientRect(), anchorFromElement(el));
         }, 500);
         el.dataset.longpress = String(timer);
       }}
@@ -172,16 +220,151 @@ function renderBoldKeyword(
       }}
     >
       {text}
-      <span className="absolute -top-4 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity text-[9px] text-primary/60 whitespace-nowrap pointer-events-none">
-        ✨ enhance
+      <span className="absolute -top-4 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity text-[9px] font-medium text-primary/70 whitespace-nowrap pointer-events-none">
+        enhance
       </span>
     </span>
   );
 }
 
+/**
+ * Locate a collapsed enhancement's source text inside a line's visible text.
+ * Falls back to the longest word-bounded prefix when the full selection spans
+ * past this line (selections anchor to their *start* line).
+ */
+function findNeedleMatch(
+  visibleLower: string,
+  sourceLower: string
+): { idx: number; len: number } | null {
+  const needle = sourceLower.trim();
+  if (!needle) return null;
+  let idx = visibleLower.indexOf(needle);
+  if (idx >= 0) return { idx, len: needle.length };
+  const words = needle.split(/\s+/);
+  for (let w = words.length - 1; w >= 1; w--) {
+    const prefix = words.slice(0, w).join(" ");
+    if (prefix.length < 3) break;
+    idx = visibleLower.indexOf(prefix);
+    if (idx >= 0) return { idx, len: prefix.length };
+  }
+  return null;
+}
+
+/**
+ * Render a line of text with `**bold**` keywords AND a golden highlight wrapped
+ * around the source text of the first matching collapsed enhancement. Clicking
+ * the highlight re-opens the enhancement inline.
+ */
+function renderRich(
+  text: string,
+  baseKey: string,
+  onKeywordHover: KeywordHoverHandler | undefined,
+  collapsed: CollapsedRef[],
+  onReopen: ((key: string) => void) | undefined
+): React.ReactNode {
+  const rawParts = text.split(/(\*\*[^*]+\*\*)/g).filter((p) => p !== "");
+  const tokens = rawParts.map((part) => {
+    const isBold = part.startsWith("**") && part.endsWith("**");
+    return { isBold, visible: isBold ? part.slice(2, -2) : part };
+  });
+
+  const renderToken = (
+    tok: { isBold: boolean; visible: string },
+    key: string
+  ): React.ReactNode =>
+    tok.isBold ? (
+      renderBoldKeyword(tok.visible, key as unknown as number, onKeywordHover)
+    ) : (
+      <span key={key}>{tok.visible}</span>
+    );
+
+  // Find the first collapsed source text present in this line.
+  let range: { start: number; end: number; key: string } | null = null;
+  if (collapsed.length && onReopen) {
+    const visible = tokens.map((t) => t.visible).join("");
+    const lower = visible.toLowerCase();
+    for (const c of collapsed) {
+      const m = findNeedleMatch(lower, c.sourceText.toLowerCase());
+      if (m) {
+        range = { start: m.idx, end: m.idx + m.len, key: c.key };
+        break;
+      }
+    }
+  }
+
+  if (!range) {
+    return tokens.map((t, i) => renderToken(t, `${baseKey}-${i}`));
+  }
+
+  const before: React.ReactNode[] = [];
+  const inside: React.ReactNode[] = [];
+  const after: React.ReactNode[] = [];
+  let offset = 0;
+  tokens.forEach((tok, i) => {
+    const tStart = offset;
+    const tEnd = offset + tok.visible.length;
+    offset = tEnd;
+    if (tEnd <= range!.start) {
+      before.push(renderToken(tok, `${baseKey}-b${i}`));
+      return;
+    }
+    if (tStart >= range!.end) {
+      after.push(renderToken(tok, `${baseKey}-a${i}`));
+      return;
+    }
+    if (tok.isBold) {
+      // Keep bold tokens atomic — drop them whole inside the highlight.
+      inside.push(
+        <strong key={`${baseKey}-i${i}`} className="font-semibold text-foreground">
+          {tok.visible}
+        </strong>
+      );
+      return;
+    }
+    const ls = Math.max(0, range!.start - tStart);
+    const le = Math.min(tok.visible.length, range!.end - tStart);
+    const pre = tok.visible.slice(0, ls);
+    const mid = tok.visible.slice(ls, le);
+    const post = tok.visible.slice(le);
+    if (pre) before.push(<span key={`${baseKey}-bp${i}`}>{pre}</span>);
+    if (mid) inside.push(<span key={`${baseKey}-m${i}`}>{mid}</span>);
+    if (post) after.push(<span key={`${baseKey}-ap${i}`}>{post}</span>);
+  });
+
+  return (
+    <>
+      {before}
+      <mark
+        style={ENH_MARK_STYLE}
+        className="sb-enh-mark text-foreground"
+        role="button"
+        tabIndex={0}
+        title="Re-open enhancement"
+        onClick={(e) => {
+          e.stopPropagation();
+          onReopen!(range!.key);
+        }}
+      >
+        {inside}
+        <sup
+          aria-hidden
+          style={{ fontSize: "0.6em", color: "rgba(234,179,8,0.95)", marginLeft: "1px" }}
+        >
+          ✦
+        </sup>
+      </mark>
+      {after}
+    </>
+  );
+}
+
 function renderJsonText(
   text: string,
-  onKeywordHover?: (keyword: string, rect: DOMRect) => void
+  anchorPrefix: string,
+  onKeywordHover?: KeywordHoverHandler,
+  renderInline?: (anchor: string) => React.ReactNode,
+  collapsedByAnchor?: Record<string, CollapsedRef[]>,
+  onReopen?: (key: string) => void
 ) {
   const lines = text.split("\n");
 
@@ -191,58 +374,115 @@ function renderJsonText(
       return <span key={lineIdx} className="block h-2" />;
     }
 
+    const anchor = `${anchorPrefix}:${lineIdx}`;
+    const collapsed = collapsedByAnchor?.[anchor] ?? [];
     const labelMatch = trimmed.match(SECTION_LABEL_RE);
 
+    let lineNode: React.ReactNode;
     if (labelMatch) {
       const labelPart = labelMatch[1] + labelMatch[2];
       const rest = trimmed.slice(labelPart.length);
 
-      const restParts = rest.split(/(\*\*[^*]+\*\*)/g).map((part, i) => {
-        if (part.startsWith("**") && part.endsWith("**")) {
-          return renderBoldKeyword(part.slice(2, -2), i, onKeywordHover);
-        }
-        return <span key={i}>{part}</span>;
-      });
-
-      return (
+      lineNode = (
         <span
-          key={lineIdx}
+          data-enh-anchor={anchor}
           className={`block text-sm leading-relaxed ${lineIdx === 0 ? "mt-0" : "mt-3"}`}
         >
           <span className="font-semibold text-foreground/90">{labelPart}</span>
-          <span className="text-muted-foreground">{restParts}</span>
+          <span className="text-muted-foreground">
+            {renderRich(rest, `${anchor}-r`, onKeywordHover, collapsed, onReopen)}
+          </span>
+        </span>
+      );
+    } else {
+      lineNode = (
+        <span
+          data-enh-anchor={anchor}
+          className="block text-sm text-muted-foreground leading-relaxed"
+        >
+          {renderRich(trimmed, anchor, onKeywordHover, collapsed, onReopen)}
         </span>
       );
     }
 
-    const parts = trimmed.split(/(\*\*[^*]+\*\*)/g);
     return (
-      <span key={lineIdx} className="block text-sm text-muted-foreground leading-relaxed">
-        {parts.map((part, i) => {
-          if (part.startsWith("**") && part.endsWith("**")) {
-            return renderBoldKeyword(part.slice(2, -2), i, onKeywordHover);
-          }
-          return part;
-        })}
+      <span key={lineIdx} className="block">
+        {lineNode}
+        {renderInline?.(anchor)}
       </span>
     );
   });
 }
 
 // Render an array section (memoryHooks, keyPoints, examTraps)
-function renderArraySection(items: string[]) {
+function renderArraySection(
+  items: string[],
+  sectionKey?: string,
+  renderInline?: (anchor: string) => React.ReactNode,
+  collapsedByAnchor?: Record<string, CollapsedRef[]>,
+  onReopen?: (key: string) => void
+) {
   return (
     <ol className="space-y-2">
-      {items.map((item, i) => (
-        <li key={i} className="flex gap-2.5 text-sm text-muted-foreground leading-relaxed">
-          <span className="shrink-0 font-bold text-primary/60 tabular-nums w-5 text-right">
-            {i + 1}.
-          </span>
-          <span className="flex-1">{renderFormattedContent(item)}</span>
-        </li>
-      ))}
+      {items.map((item, i) => {
+        const anchor = sectionKey ? `${sectionKey}:${i}` : "";
+        const collapsed = (sectionKey && collapsedByAnchor?.[anchor]) || [];
+        return (
+          <li
+            key={i}
+            data-enh-anchor={sectionKey ? anchor : undefined}
+            className="text-sm text-muted-foreground leading-relaxed"
+          >
+            <span className="flex gap-2.5">
+              <span className="shrink-0 font-bold text-primary/60 tabular-nums w-5 text-right">
+                {i + 1}.
+              </span>
+              <span className="flex-1">
+                {renderRich(item, `${sectionKey ?? "arr"}-${i}`, undefined, collapsed, onReopen)}
+              </span>
+            </span>
+            {sectionKey && renderInline?.(anchor)}
+          </li>
+        );
+      })}
     </ol>
   );
+}
+
+/**
+ * Resolve a saved enhancement (which stores only sourceText) to an inline anchor
+ * by locating its source text within the sheet's sections. Returns null if the
+ * text can't be found (e.g. the sheet was edited after the enhancement was made).
+ */
+function resolveSavedAnchor(sheet: GeneratedSheet, sourceText: string): string | null {
+  const needle = sourceText.trim().toLowerCase();
+  if (!needle) return null;
+  const strip = (s: string) => s.replace(/\*\*/g, "").toLowerCase();
+  const match = (haystack: string) =>
+    findNeedleMatch(strip(haystack), needle) !== null;
+
+  const stringSections: [string, string][] = [
+    ["overview", sheet.overview ?? ""],
+    ["clinicalApproach", sheet.clinicalApproach ?? ""],
+  ];
+  for (const [key, value] of stringSections) {
+    const lines = value.split("\n");
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i].trim() && match(lines[i])) return `${key}:${i}`;
+    }
+  }
+
+  const arraySections: [string, string[]][] = [
+    ["memoryHooks", sheet.memoryHooks ?? []],
+    ["keyPoints", sheet.keyPoints ?? []],
+    ["examTraps", sheet.examTraps ?? []],
+  ];
+  for (const [key, items] of arraySections) {
+    for (let i = 0; i < items.length; i++) {
+      if (match(items[i])) return `${key}:${i}`;
+    }
+  }
+  return null;
 }
 
 // ─── Shared sub-components ─────────────────────────────────────────────────
@@ -250,30 +490,30 @@ function renderArraySection(items: string[]) {
 function ModelBadge({ model, isPro }: { model: "flash" | "gpt-oss" | "claude"; isPro: boolean }) {
   if (isPro && model === "claude") {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-primary/10 text-primary border border-primary/20 ml-2">
+      <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium bg-primary/10 text-primary border border-primary/20 ml-2">
         <Zap className="h-3 w-3" />
-        Powered by Claude Haiku 4.5
+        Claude Haiku 4.5
       </span>
     );
   }
   if (isPro && model === "gpt-oss") {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-primary/10 text-primary border border-primary/20 ml-2">
+      <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium bg-primary/10 text-primary border border-primary/20 ml-2">
         <Zap className="h-3 w-3" />
-        Powered by GPT-OSS 20B
+        GPT-OSS 20B
       </span>
     );
   }
   if (model === "claude") {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-violet-500/15 text-violet-400 border border-violet-500/30 ml-2">
+      <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium bg-violet-500/10 text-violet-600 dark:text-violet-400 border border-violet-500/30 ml-2">
         <Zap className="h-3 w-3" />
-        ✦ Premium AI
+        Premium AI
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-secondary/60 text-muted-foreground border border-border/40 ml-2">
+    <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium bg-muted text-muted-foreground border border-border ml-2">
       GPT-OSS 20B
     </span>
   );
@@ -284,7 +524,7 @@ function EvidenceBadge({ onClick }: { onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-amber-500/15 text-amber-400 border border-amber-500/30 hover:bg-amber-500/25 transition-colors cursor-pointer animate-pulse-subtle ml-2"
+      className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 hover:bg-amber-500/20 transition-colors cursor-pointer ml-2"
       title="This section is backed by peer-reviewed sources — see below"
     >
       <Zap className="h-3 w-3" />
@@ -307,6 +547,256 @@ function RegenerateButton({ sectionKey }: { sectionKey: string }) {
     </button>
   );
 }
+
+// ─── Floating enhance bubble ───────────────────────────────────────────────
+
+interface EnhanceBubbleProps {
+  top: number;
+  left: number;
+  onAction: (kind: EnhanceKind) => void;
+  innerRef?: React.Ref<HTMLDivElement>;
+  onMouseLeave?: () => void;
+}
+
+const EnhanceBubble = ({ top, left, onAction, innerRef, onMouseLeave }: EnhanceBubbleProps) => (
+  <div
+    ref={innerRef}
+    style={
+      {
+        "--sb-bubble-top": `${top}px`,
+        "--sb-bubble-left": `${left}px`,
+      } as React.CSSProperties
+    }
+    className="enhance-bubble-in fixed top-[var(--sb-bubble-top)] left-[var(--sb-bubble-left)] -translate-x-1/2 z-[60] flex h-8 items-center gap-0.5 rounded-full border border-border/60 bg-popover px-1.5 shadow-lg"
+    onMouseDown={(e) => e.stopPropagation()}
+    onMouseLeave={onMouseLeave}
+  >
+    <button
+      type="button"
+      onClick={() => onAction("enhance")}
+      className="h-6 px-2 rounded-full text-[11px] font-semibold text-primary hover:bg-primary/10 transition-colors whitespace-nowrap"
+    >
+      ✦ Enhance
+    </button>
+    <span className="h-3.5 w-px bg-border/60" aria-hidden />
+    <button
+      type="button"
+      onClick={() => onAction("expand")}
+      className="h-6 px-2 rounded-full text-[11px] font-semibold text-blue-500 dark:text-blue-400 hover:bg-blue-500/10 transition-colors whitespace-nowrap"
+    >
+      ↗ Expand
+    </button>
+    <span className="h-3.5 w-px bg-border/60" aria-hidden />
+    <button
+      type="button"
+      onClick={() => onAction("clinical")}
+      className="h-6 px-2 rounded-full text-[11px] font-semibold text-teal-600 dark:text-teal-400 hover:bg-teal-500/10 transition-colors whitespace-nowrap"
+    >
+      🔗 Clinical
+    </button>
+  </div>
+);
+
+// ─── Inline enhancement block ──────────────────────────────────────────────
+
+interface InlineEnhancementProps {
+  enhKey: string;
+  enhancement: ActiveEnhancement;
+  topic: string;
+  isPro: boolean;
+  userId: string | null;
+  isAnonymous: boolean;
+  sheetId?: string;
+  /** Pre-loaded result from a saved sheet — when present, render it without re-calling the AI. */
+  savedResult?: string;
+  onResult?: (key: string, result: EnhancementResult) => void;
+  onClose: (key: string) => void;
+}
+
+const InlineEnhancement = ({
+  enhKey,
+  enhancement,
+  topic,
+  isPro,
+  userId,
+  isAnonymous,
+  sheetId,
+  savedResult,
+  onResult,
+  onClose,
+}: InlineEnhancementProps) => {
+  const [result, setResult] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [closing, setClosing] = useState(false);
+  const abortRef = useRef<AbortController | null>(null);
+
+  const cacheKey = `sb_enhance:${sheetId ?? "unsaved"}:${enhKey}`;
+  const mode = kindToMode(enhancement.kind);
+
+  const runEnhance = useCallback(async () => {
+    abortRef.current?.abort();
+    abortRef.current = new AbortController();
+
+    setLoading(true);
+    setResult(null);
+    setError(null);
+
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/medical-notes`,
+        {
+          method: "POST",
+          signal: abortRef.current.signal,
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({
+            enhanceMode: mode,
+            itemText: enhancement.sourceText,
+            sectionKey: enhancement.anchor,
+            sectionItems: [],
+            enhanceTopic: topic,
+            isPro,
+            userId,
+            isAnonymous,
+            notes: enhancement.sourceText,
+          }),
+        }
+      );
+
+      if (!response.ok) throw new Error("Enhancement failed");
+
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error("No response body");
+
+      const decoder = new TextDecoder();
+      let accumulated = "";
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed.startsWith("data:")) continue;
+          const payload = trimmed.slice(5).trim();
+          if (!payload || payload === "[DONE]") continue;
+          try {
+            const parsed = JSON.parse(payload);
+            const text = parsed?.choices?.[0]?.delta?.content;
+            if (typeof text === "string") {
+              accumulated += text;
+              setResult(accumulated);
+            }
+          } catch {
+            // skip unparseable chunks
+          }
+        }
+      }
+
+      if (accumulated) {
+        try {
+          localStorage.setItem(cacheKey, accumulated);
+        } catch {
+          // quota exceeded
+        }
+        onResult?.(enhKey, {
+          mode,
+          sourceText: enhancement.sourceText,
+          result: accumulated,
+          createdAt: new Date().toISOString(),
+        });
+      }
+    } catch (e: unknown) {
+      if (e instanceof Error && e.name === "AbortError") return;
+      setError("Enhancement failed. Try again.");
+    } finally {
+      setLoading(false);
+    }
+  }, [enhKey, enhancement, mode, topic, isPro, userId, isAnonymous, cacheKey, onResult]);
+
+  useEffect(() => {
+    if (loading) {
+      startTopProgress();
+      return () => finishTopProgress();
+    }
+  }, [loading]);
+
+  // On mount: prefer a saved result, then the local cache, only call the AI as a last resort.
+  useEffect(() => {
+    if (savedResult) {
+      setResult(savedResult);
+      return;
+    }
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) {
+      setResult(cached);
+      return;
+    }
+    runEnhance();
+    return () => abortRef.current?.abort();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleClose = () => {
+    if (closing) return;
+    setClosing(true);
+    window.setTimeout(() => onClose(enhKey), 160);
+  };
+
+  return (
+    <span
+      className={`block mt-3 ${closing ? "inline-enh-exit" : "inline-enh-enter"}`}
+    >
+      <span className="block rounded-md border-l-2 border-l-primary/60 bg-muted/50 px-4 py-3">
+        <span className="flex items-start justify-between gap-2">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            {kindLabel[enhancement.kind]}
+          </span>
+          <button
+            type="button"
+            onClick={handleClose}
+            className="shrink-0 -mt-0.5 -mr-1 p-1 rounded text-muted-foreground/40 hover:text-muted-foreground transition-colors"
+            aria-label="Dismiss enhancement"
+          >
+            <X className="h-3 w-3" />
+          </button>
+        </span>
+
+        {loading && !result && (
+          <span className="block space-y-2 pt-2">
+            <span className="block animate-pulse bg-secondary/60 rounded h-2.5 w-11/12" />
+            <span className="block animate-pulse bg-secondary/60 rounded h-2.5 w-9/12" />
+            <span className="block animate-pulse bg-secondary/60 rounded h-2.5 w-10/12" />
+          </span>
+        )}
+        {result && (
+          <span className="block text-sm text-muted-foreground leading-relaxed pt-1.5">
+            {renderFormattedContent(result)}
+          </span>
+        )}
+        {error && !loading && (
+          <span className="flex items-center gap-2 pt-1.5">
+            <span className="text-xs text-destructive flex-1">{error}</span>
+            <button
+              type="button"
+              onClick={runEnhance}
+              className="inline-flex items-center gap-1 text-xs text-primary hover:underline shrink-0"
+            >
+              <RotateCcw className="h-3 w-3" /> Retry
+            </button>
+          </span>
+        )}
+      </span>
+    </span>
+  );
+};
 
 // ─── Main component ───────────────────────────────────────────────────────
 
@@ -331,20 +821,31 @@ const OutputSection = ({
     sessionStorage.getItem("sb_disclaimer_collapsed") === "1"
   );
 
-  // Enhance sidebar state
+  // Inline enhancement state
   const [activeEnhancements, setActiveEnhancements] = useState<Record<string, ActiveEnhancement>>(() => {
-    // Pre-populate from saved sheet enhancements if present
+    // Pre-populate from saved sheet enhancements if present. Each saved
+    // enhancement is resolved back to the line it came from and rendered as a
+    // collapsed golden highlight, so saved sheets look exactly like the live
+    // generator. Unresolvable ones fall back to an expanded block at the end.
     if (!isJsonSheet(output)) return {};
     const parsed = parseStoredSheet(output);
     if (!parsed?.enhancements) return {};
     return Object.fromEntries(
-      Object.entries(parsed.enhancements).map(([key, r]) => [
-        key,
-        { sourceText: r.sourceText, mode: r.mode, sectionKey: "saved" } as ActiveEnhancement,
-      ])
+      Object.entries(parsed.enhancements).map(([key, r]) => {
+        const resolved = resolveSavedAnchor(parsed, r.sourceText);
+        return [
+          key,
+          {
+            sourceText: r.sourceText,
+            kind: r.mode,
+            anchor: resolved ?? "referenceNote:end",
+            isCollapsed: resolved !== null,
+            savedResult: r.result,
+          } as ActiveEnhancement,
+        ];
+      })
     );
   });
-  const [openTabKeys, setOpenTabKeys] = useState<Set<string>>(() => new Set());
 
   const sheet: GeneratedSheet | null = isJsonSheet(output) ? parseStoredSheet(output) : null;
   if (sheet && sheet.overview === undefined && (sheet as { summary?: string }).summary !== undefined) {
@@ -353,14 +854,14 @@ const OutputSection = ({
   const isJson = sheet !== null;
 
   // Keyword hover state — only used in JSON renderer
-  const [keywordPicker, setKeywordPicker] = useState<{ text: string; rect: DOMRect } | null>(null);
+  const [keywordPicker, setKeywordPicker] = useState<{ text: string; rect: DOMRect; anchor: string } | null>(null);
   const keywordHoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const keywordPickerRef = useRef<HTMLDivElement>(null);
 
-  const handleKeywordHover = useCallback((keyword: string, rect: DOMRect) => {
+  const handleKeywordHover = useCallback((keyword: string, rect: DOMRect, anchor: string) => {
     if (keywordHoverTimer.current) clearTimeout(keywordHoverTimer.current);
     keywordHoverTimer.current = setTimeout(() => {
-      setKeywordPicker({ text: keyword, rect });
+      setKeywordPicker({ text: keyword, rect, anchor });
     }, 300);
   }, []);
 
@@ -376,19 +877,22 @@ const OutputSection = ({
     }
   }, [keywordPicker]);
 
-  const fireKeywordEnhance = (mode: "expand" | "clinical") => {
-    if (!keywordPicker) return;
-    const key = enhancementKey(keywordPicker.text, mode);
+  const addEnhancement = (sourceText: string, kind: EnhanceKind, anchor: string) => {
+    const key = makeEnhancementKey(sourceText, kind);
     setActiveEnhancements((prev) => ({
       ...prev,
-      [key]: { sourceText: keywordPicker.text, mode, sectionKey: "keyword" },
+      [key]: { sourceText, kind, anchor },
     }));
-    setOpenTabKeys((prev) => new Set([...prev, key]));
+  };
+
+  const fireKeywordEnhance = (kind: EnhanceKind) => {
+    if (!keywordPicker) return;
+    addEnhancement(keywordPicker.text, kind, keywordPicker.anchor);
     setKeywordPicker(null);
   };
 
   // Selection-to-enhance state
-  const [selection, setSelection] = useState<{ text: string; rect: DOMRect } | null>(null);
+  const [selection, setSelection] = useState<{ text: string; rect: DOMRect; anchor: string } | null>(null);
   const selectionTooltipRef = useRef<HTMLDivElement>(null);
 
   const handleSelectionChange = useCallback(() => {
@@ -408,18 +912,17 @@ const OutputSection = ({
       setSelection(null);
       return;
     }
+    const startEl =
+      range.startContainer instanceof Element
+        ? range.startContainer
+        : range.startContainer.parentElement;
     const rect = range.getBoundingClientRect();
-    setSelection({ text, rect });
+    setSelection({ text, rect, anchor: anchorFromElement(startEl) });
   }, []);
 
-  const fireSelectionEnhance = (mode: "expand" | "clinical") => {
+  const fireSelectionEnhance = (kind: EnhanceKind) => {
     if (!selection) return;
-    const key = enhancementKey(selection.text, mode);
-    setActiveEnhancements((prev) => ({
-      ...prev,
-      [key]: { sourceText: selection.text, mode, sectionKey: "selection" },
-    }));
-    setOpenTabKeys((prev) => new Set([...prev, key]));
+    addEnhancement(selection.text, kind, selection.anchor);
     setSelection(null);
     window.getSelection()?.removeAllRanges();
   };
@@ -440,16 +943,34 @@ const OutputSection = ({
     }
   }, [selection]);
 
-  const closeEnhancementTab = (key: string) => {
+  // Escape dismisses any open bubble
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        setSelection(null);
+        setKeywordPicker(null);
+      }
+    }
+    if (selection || keywordPicker) {
+      document.addEventListener("keydown", onKey);
+      return () => document.removeEventListener("keydown", onKey);
+    }
+  }, [selection, keywordPicker]);
+
+  // Dismissing an enhancement collapses it into a golden highlight on its source
+  // text rather than deleting it, so students never lose track of what they enhanced.
+  const closeEnhancement = (key: string) => {
     setActiveEnhancements((prev) => {
-      const next = { ...prev };
-      delete next[key];
-      return next;
+      if (!prev[key]) return prev;
+      return { ...prev, [key]: { ...prev[key], isCollapsed: true } };
     });
-    setOpenTabKeys((prev) => {
-      const next = new Set(prev);
-      next.delete(key);
-      return next;
+  };
+
+  // Clicking a golden highlight re-opens the enhancement inline.
+  const reopenEnhancement = (key: string) => {
+    setActiveEnhancements((prev) => {
+      if (!prev[key]) return prev;
+      return { ...prev, [key]: { ...prev[key], isCollapsed: false } };
     });
   };
 
@@ -480,9 +1001,18 @@ const OutputSection = ({
     if (showNudge) localStorage.setItem("sb_first_sheet_seen", "1");
   }, [showNudge]);
 
+  // Tracks the identity of the *core* sheet content (ignoring enhancements) so we
+  // only scroll-to-top for a genuinely new sheet — not when an enhancement is
+  // saved into the sheet (which also mutates `output`).
+  const sheetIdentityRef = useRef<string | null>(null);
+
   useEffect(() => {
     const hasContent = isJson ? !!sheet : parseSections(output).length > 0;
-    if (hasContent) {
+    if (!hasContent) return;
+    const identity = isJson ? `${sheet?.topic ?? ""}::${sheet?.overview ?? ""}` : output;
+    const isNewSheet = sheetIdentityRef.current !== identity;
+    sheetIdentityRef.current = identity;
+    if (isNewSheet) {
       setDisclaimerCollapsed(false);
       sessionStorage.removeItem("sb_disclaimer_collapsed");
       ref.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -510,10 +1040,10 @@ const OutputSection = ({
     const hasReferenceSection = sections.some((s) => s.title === "REFERENCE NOTE");
 
     return (
-      <div ref={ref} className="space-y-5">
+      <div ref={ref} className="space-y-4">
         <div className="animate-fade-in flex items-center justify-between">
           {modeInfo && (
-            <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground bg-secondary/40 border border-border/40 rounded-lg px-4 py-2.5">
+            <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground bg-card border border-border rounded-md px-3 py-2">
               <Settings2 className="h-3.5 w-3.5 text-primary" />
               <span>
                 <span className="text-foreground">{modeInfo.examMode}</span>
@@ -540,15 +1070,15 @@ const OutputSection = ({
             <Card
               key={title}
               ref={isReference ? referenceNoteRef : undefined}
-              className={`glass-card animate-fade-in overflow-hidden hover-lift ${config.className}`}
-              style={{ animationDelay: `${idx * 100}ms` }}
+              className={`glass-card animate-fade-in overflow-hidden rounded-md border-l-2 border-l-primary/25 ${config.className}`}
+              style={{ animationDelay: `${idx * 200}ms`, animationFillMode: "backwards" }}
             >
               <div className="px-6 pt-5 pb-2 flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2.5 flex-wrap">
-                  <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-primary/10">
-                    <Icon className="h-4 w-4 text-primary" />
+                  <div className="flex items-center justify-center h-7 w-7 rounded-md border border-border bg-background">
+                    <Icon className="h-3.5 w-3.5 text-primary" />
                   </div>
-                  <h3 className="text-base font-bold tracking-wide text-foreground uppercase">
+                  <h3 className="text-sm font-semibold tracking-tight text-foreground">
                     {config.label}
                   </h3>
                   {showEvidenceBadge && <EvidenceBadge onClick={scrollToReference} />}
@@ -558,7 +1088,7 @@ const OutputSection = ({
                 </div>
                 <CopyButton text={content} />
               </div>
-              <CardContent className="px-6 pb-6 pt-2">
+              <CardContent className="px-6 pb-5 pt-2">
                 {title === "FLASHCARDS" ? (
                   <FlashcardsSection content={content} />
                 ) : (
@@ -587,11 +1117,11 @@ const OutputSection = ({
               <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-primary/10">
                 <FileText className="h-4 w-4 text-primary" />
               </div>
-              <h3 className="text-base font-bold tracking-wide text-foreground uppercase">
-                Reference Note
+              <h3 className="text-sm font-semibold tracking-tight text-foreground">
+                📚 Reference Note
               </h3>
             </div>
-            <CardContent className="px-6 pb-6 pt-2">
+            <CardContent className="px-6 pb-5 pt-2">
               <p className="text-sm text-muted-foreground leading-relaxed mb-3">
                 Based on standard medical references and clinical guidelines.
               </p>
@@ -621,217 +1151,198 @@ const OutputSection = ({
     "referenceNote",
   ];
 
-  const sidebarProps = {
-    activeEnhancements,
-    openTabKeys,
-    onTabToggle: (key: string) => {
-      setOpenTabKeys((prev) => {
-        const next = new Set(prev);
-        if (next.has(key)) next.delete(key);
-        else next.add(key);
-        return next;
-      });
-    },
-    onCloseTab: closeEnhancementTab,
-    topic: sheet.topic ?? inputText ?? "",
-    isPro,
-    userId: userId ?? null,
-    isAnonymous: isAnonymous ?? false,
-    sheetId: sheetId ?? inputText,
-    onResult: handleEnhancementResult,
+  // Group active enhancements by anchor so they can be injected inline.
+  // Open ones render as inline blocks; collapsed ones render as golden
+  // highlights wrapped around their source text.
+  const enhancementsByAnchor: Record<string, [string, ActiveEnhancement][]> = {};
+  const collapsedByAnchor: Record<string, CollapsedRef[]> = {};
+  for (const [key, enh] of Object.entries(activeEnhancements)) {
+    (enhancementsByAnchor[enh.anchor] ??= []).push([key, enh]);
+    if (enh.isCollapsed) {
+      (collapsedByAnchor[enh.anchor] ??= []).push({ key, sourceText: enh.sourceText });
+    }
+  }
+
+  const renderInline = (anchor: string): React.ReactNode => {
+    const entries = enhancementsByAnchor[anchor];
+    if (!entries?.length) return null;
+    return entries
+      .filter(([, enh]) => !enh.isCollapsed)
+      .map(([key, enh]) => (
+        <InlineEnhancement
+          key={key}
+          enhKey={key}
+          enhancement={enh}
+          topic={sheet.topic ?? inputText ?? ""}
+          isPro={isPro}
+          userId={userId ?? null}
+          isAnonymous={isAnonymous ?? false}
+          sheetId={sheetId ?? inputText}
+          savedResult={enh.savedResult}
+          onResult={handleEnhancementResult}
+          onClose={closeEnhancement}
+        />
+      ));
   };
 
   return (
     <div
-      className="flex gap-6 items-start"
+      ref={ref}
+      className="space-y-4"
       onMouseUp={handleSelectionChange}
       onTouchEnd={handleSelectionChange}
     >
-      {/* ── Left column: sheet content ── */}
-      <div ref={ref} className="flex-1 min-w-0 space-y-5">
-        {/* Mode header + Save */}
-        <div className="animate-fade-in flex items-center justify-between">
-          {modeInfo && (
-            <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground bg-secondary/40 border border-border/40 rounded-lg px-4 py-2.5">
-              <Settings2 className="h-3.5 w-3.5 text-primary" />
-              <span>
-                <span className="text-foreground">{modeInfo.examMode}</span>
-                <span className="mx-1.5 opacity-40">|</span>
-                <span>{modeInfo.difficulty}</span>
-                <span className="mx-1.5 opacity-40">|</span>
-                <span>{modeInfo.focus}</span>
-                <span className="mx-1.5 opacity-40">|</span>
-                <span>{modeInfo.length}</span>
-              </span>
-            </div>
-          )}
-          <SaveButton input={inputText || ""} output={output} modeInfo={modeInfo} />
-        </div>
+      {/* Persistent highlight-to-enhance hint — sticky at top of the document */}
+      <div className="sticky top-0 z-20 flex items-center gap-1.5 rounded-md border border-border bg-background/95 backdrop-blur px-3 py-2 text-[11px] text-muted-foreground animate-fade-in">
+        <Sparkles className="h-3 w-3 text-primary shrink-0" />
+        <span>Highlight any text on this sheet to expand or get a clinical tie</span>
+      </div>
 
-        {/* CTA nudge */}
-        <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground/50 animate-fade-in px-1">
-          <Sparkles className="h-3 w-3 text-primary/40 shrink-0" />
-          <span>Highlight any text on this sheet to expand or get a clinical tie</span>
-        </div>
+      {/* Mode header + Save */}
+      <div className="animate-fade-in flex items-center justify-between">
+        {modeInfo && (
+          <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground bg-card border border-border rounded-md px-3 py-2">
+            <Settings2 className="h-3.5 w-3.5 text-primary" />
+            <span>
+              <span className="text-foreground">{modeInfo.examMode}</span>
+              <span className="mx-1.5 opacity-40">|</span>
+              <span>{modeInfo.difficulty}</span>
+              <span className="mx-1.5 opacity-40">|</span>
+              <span>{modeInfo.focus}</span>
+              <span className="mx-1.5 opacity-40">|</span>
+              <span>{modeInfo.length}</span>
+            </span>
+          </div>
+        )}
+        <SaveButton input={inputText || ""} output={output} modeInfo={modeInfo} />
+      </div>
 
-        {JSON_SECTION_ORDER.map((key, idx) => {
-          const config = JSON_SECTION_CONFIG[key];
-          const Icon = config.icon;
-          const isReference = key === "referenceNote";
-          const showEvidenceBadge = citationState === "found" && config.evidenceBacked;
+      {JSON_SECTION_ORDER.map((key, idx) => {
+        const config = JSON_SECTION_CONFIG[key];
+        const Icon = config.icon;
+        const isReference = key === "referenceNote";
+        const showEvidenceBadge = citationState === "found" && config.evidenceBacked;
 
-          const copyText =
-            key === "flashcards"
-              ? sheet.flashcards.map((c) => `Q: [${c.tag}] ${c.question}\nA: ${c.answer}`).join("\n\n")
-              : Array.isArray(sheet[key])
-              ? (sheet[key] as string[]).map((item, i) => `${i + 1}. ${item}`).join("\n")
-              : (sheet[key] as string) ?? "";
+        const copyText =
+          key === "flashcards"
+            ? sheet.flashcards.map((c) => `Q: [${c.tag}] ${c.question}\nA: ${c.answer}`).join("\n\n")
+            : Array.isArray(sheet[key])
+            ? (sheet[key] as string[]).map((item, i) => `${i + 1}. ${item}`).join("\n")
+            : (sheet[key] as string) ?? "";
 
-          return (
-            <Card
-              key={key}
-              ref={isReference ? referenceNoteRef : undefined}
-              className={`glass-card animate-fade-in overflow-hidden hover-lift ${config.className}`}
-              style={{ animationDelay: `${idx * 100}ms` }}
-            >
-              <div className="px-6 pt-5 pb-2 flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2.5 flex-wrap">
-                  <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-primary/10">
-                    <Icon className="h-4 w-4 text-primary" />
-                  </div>
-                  <h3 className="text-base font-bold tracking-wide text-foreground uppercase">
-                    {config.label}
-                    {key === "overview" && sheet.topicEmoji && (
-                      <span className="ml-2 text-base">{sheet.topicEmoji}</span>
-                    )}
-                  </h3>
-                  {showEvidenceBadge && <EvidenceBadge onClick={scrollToReference} />}
-                  {key === "overview" && modelUsed && (
-                    <ModelBadge model={modelUsed} isPro={isPro} />
-                  )}
+        return (
+          <Card
+            key={key}
+            ref={isReference ? referenceNoteRef : undefined}
+            className={`glass-card animate-fade-in overflow-hidden rounded-md border-l-2 border-l-primary/25 ${config.className}`}
+            style={{ animationDelay: `${idx * 200}ms`, animationFillMode: "backwards" }}
+          >
+            <div className="px-6 pt-5 pb-2 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <div className="flex items-center justify-center h-7 w-7 rounded-md border border-border bg-background">
+                  <Icon className="h-3.5 w-3.5 text-primary" />
                 </div>
-                <div className="flex items-center gap-1">
-                  {key !== "referenceNote" && key !== "flashcards" && (
-                    <RegenerateButton sectionKey={key} />
+                <h3 className="text-sm font-semibold tracking-tight text-foreground">
+                  {config.label}
+                  {key === "overview" && sheet.topicEmoji && (
+                    <span className="ml-2 text-base">{sheet.topicEmoji}</span>
                   )}
-                  <CopyButton text={copyText} />
-                </div>
-              </div>
-
-              <CardContent className="px-6 pb-6 pt-2">
-                {key === "flashcards" ? (
-                  <FlashcardsSection cards={sheet.flashcards} />
-                ) : key === "overview" || key === "clinicalApproach" ? (
-                  <div className="text-sm text-muted-foreground leading-relaxed">
-                    {renderJsonText(sheet[key] as string, handleKeywordHover)}
-                  </div>
-                ) : key === "referenceNote" ? (
-                  <>
-                    <div className="text-sm text-muted-foreground leading-relaxed">
-                      {sheet.referenceNote}
-                    </div>
-                    {citationState && citationState !== "idle" && citationState !== "hidden" && (
-                      <div className="mt-3">
-                        <CitationBadgeList
-                          state={citationState}
-                          citations={citations}
-                          onLockedClick={onCitationLockedClick}
-                          isLoggedIn={citationIsLoggedIn}
-                        />
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  renderArraySection(sheet[key] as string[])
+                </h3>
+                {showEvidenceBadge && <EvidenceBadge onClick={scrollToReference} />}
+                {key === "overview" && modelUsed && (
+                  <ModelBadge model={modelUsed} isPro={isPro} />
                 )}
-              </CardContent>
-            </Card>
-          );
-        })}
+              </div>
+              <div className="flex items-center gap-1">
+                <Check
+                  aria-label="Section loaded"
+                  className="h-3.5 w-3.5 text-primary/50 animate-fade-in"
+                  style={{ animationDelay: `${idx * 200 + 350}ms`, animationFillMode: "backwards" }}
+                />
+                {key !== "referenceNote" && key !== "flashcards" && (
+                  <RegenerateButton sectionKey={key} />
+                )}
+                <CopyButton text={copyText} />
+              </div>
+            </div>
 
-        {renderNudgeAndDisclaimer(showNudge, setShowNudge, inputText, disclaimerCollapsed, toggleDisclaimer)}
+            <CardContent className="px-6 pb-5 pt-2" data-enh-section={key}>
+              {key === "flashcards" ? (
+                <FlashcardsSection cards={sheet.flashcards} />
+              ) : key === "overview" || key === "clinicalApproach" ? (
+                <div className="text-sm text-muted-foreground leading-relaxed">
+                  {renderJsonText(
+                    sheet[key] as string,
+                    key,
+                    handleKeywordHover,
+                    renderInline,
+                    collapsedByAnchor,
+                    reopenEnhancement
+                  )}
+                </div>
+              ) : key === "referenceNote" ? (
+                <>
+                  <div className="text-sm text-muted-foreground leading-relaxed">
+                    {sheet.referenceNote}
+                  </div>
+                  {citationState && citationState !== "idle" && citationState !== "hidden" && (
+                    <div className="mt-3">
+                      <CitationBadgeList
+                        state={citationState}
+                        citations={citations}
+                        onLockedClick={onCitationLockedClick}
+                        isLoggedIn={citationIsLoggedIn}
+                      />
+                    </div>
+                  )}
+                </>
+              ) : (
+                renderArraySection(
+                  sheet[key] as string[],
+                  key,
+                  renderInline,
+                  collapsedByAnchor,
+                  reopenEnhancement
+                )
+              )}
+              {renderInline(`${key}:end`)}
+            </CardContent>
+          </Card>
+        );
+      })}
 
-        {/* Mobile: enhance panels below sheet */}
-        <div className="lg:hidden w-full">
-          <EnhanceSidebar {...sidebarProps} />
-        </div>
-      </div>
+      {/* Fallback: selections that couldn't be anchored to a specific line */}
+      {enhancementsByAnchor["end"]?.length ? (
+        <div className="space-y-1">{renderInline("end")}</div>
+      ) : null}
 
-      {/* ── Right column: enhance sidebar ── */}
-      <div className="w-80 shrink-0 sticky top-6 hidden lg:block">
-        <EnhanceSidebar {...sidebarProps} />
-      </div>
+      {renderNudgeAndDisclaimer(showNudge, setShowNudge, inputText, disclaimerCollapsed, toggleDisclaimer)}
 
-      {/* Selection tooltip — ephemeral floating mode picker */}
+      {/* Floating action bubble — selection */}
       {selection && (
-        <div
-          ref={selectionTooltipRef}
-          style={{
-            position: "fixed",
-            top: Math.max(8, selection.rect.top - 44),
-            left: Math.min(
-              Math.max(8, selection.rect.left + selection.rect.width / 2 - 100),
-              window.innerWidth - 208
-            ),
-            zIndex: 60,
-            width: 200,
-          }}
-          className="flex items-center gap-1 bg-popover border border-border/60 rounded-lg shadow-lg px-2 py-1.5 animate-fade-in"
-          onMouseDown={(e) => e.stopPropagation()}
-        >
-          <Sparkles className="h-3 w-3 text-primary shrink-0" />
-          <span className="text-[10px] font-semibold text-foreground mr-1">Enhance:</span>
-          <button
-            type="button"
-            onClick={() => fireSelectionEnhance("expand")}
-            className="flex items-center gap-0.5 text-[10px] text-blue-400 hover:text-blue-300 font-semibold px-1.5 py-0.5 rounded hover:bg-blue-500/10 transition-colors"
-          >
-            <Microscope className="h-2.5 w-2.5" /> Expand
-          </button>
-          <button
-            type="button"
-            onClick={() => fireSelectionEnhance("clinical")}
-            className="flex items-center gap-0.5 text-[10px] text-teal-400 hover:text-teal-300 font-semibold px-1.5 py-0.5 rounded hover:bg-teal-500/10 transition-colors"
-          >
-            <Stethoscope className="h-2.5 w-2.5" /> Clinical
-          </button>
-        </div>
+        <EnhanceBubble
+          innerRef={selectionTooltipRef}
+          top={Math.max(8, selection.rect.top - 42)}
+          left={Math.min(
+            Math.max(120, selection.rect.left + selection.rect.width / 2),
+            window.innerWidth - 120
+          )}
+          onAction={fireSelectionEnhance}
+        />
       )}
 
-      {/* Keyword picker tooltip (mode chooser shown when hovering a bold keyword) */}
-      {keywordPicker && (
-        <div
-          ref={keywordPickerRef}
-          style={{
-            position: "fixed",
-            top: Math.max(8, keywordPicker.rect.top - 44),
-            left: Math.min(
-              Math.max(8, keywordPicker.rect.left + keywordPicker.rect.width / 2 - 100),
-              window.innerWidth - 208
-            ),
-            zIndex: 60,
-            width: 200,
-          }}
-          className="flex items-center gap-1 bg-popover border border-border/60 rounded-lg shadow-lg px-2 py-1.5 animate-fade-in"
+      {/* Floating action bubble — bold keyword hover */}
+      {keywordPicker && !selection && (
+        <EnhanceBubble
+          innerRef={keywordPickerRef}
+          top={Math.max(8, keywordPicker.rect.top - 42)}
+          left={Math.min(
+            Math.max(120, keywordPicker.rect.left + keywordPicker.rect.width / 2),
+            window.innerWidth - 120
+          )}
+          onAction={fireKeywordEnhance}
           onMouseLeave={() => setKeywordPicker(null)}
-        >
-          <Sparkles className="h-3 w-3 text-primary shrink-0" />
-          <span className="text-[10px] font-semibold text-foreground mr-1">Enhance:</span>
-          <button
-            type="button"
-            onClick={() => fireKeywordEnhance("expand")}
-            className="flex items-center gap-0.5 text-[10px] text-blue-400 hover:text-blue-300 font-semibold px-1.5 py-0.5 rounded hover:bg-blue-500/10 transition-colors"
-          >
-            <Microscope className="h-2.5 w-2.5" /> Expand
-          </button>
-          <button
-            type="button"
-            onClick={() => fireKeywordEnhance("clinical")}
-            className="flex items-center gap-0.5 text-[10px] text-teal-400 hover:text-teal-300 font-semibold px-1.5 py-0.5 rounded hover:bg-teal-500/10 transition-colors"
-          >
-            <Stethoscope className="h-2.5 w-2.5" /> Clinical
-          </button>
-        </div>
+        />
       )}
     </div>
   );
@@ -850,15 +1361,15 @@ function renderNudgeAndDisclaimer(
     <>
       {showNudge && (
         <div className="mt-4 animate-fade-in">
-          <div className="rounded-xl border border-primary/30 bg-primary/5 p-5 text-center space-y-3">
-            <p className="text-sm font-semibold text-foreground">🎉 Your first sheet is ready!</p>
+          <div className="rounded-xl border border-border bg-card p-5 text-center space-y-3">
+            <p className="text-sm font-semibold text-foreground">Your first sheet is ready</p>
             <p className="text-xs text-muted-foreground leading-relaxed">
               Now lock it in — generate a flashcard deck from this topic and start drilling the key
               concepts with spaced repetition.
             </p>
             <div className="flex flex-col sm:flex-row gap-2 justify-center">
               <Button
-                className="w-full sm:w-auto h-10 rounded-xl btn-gradient font-semibold text-sm gap-2 px-6"
+                className="w-full sm:w-auto h-9 rounded-lg font-medium text-sm gap-2 px-5"
                 onClick={() => {
                   const topic = (inputText || "").trim();
                   if (!topic) return;

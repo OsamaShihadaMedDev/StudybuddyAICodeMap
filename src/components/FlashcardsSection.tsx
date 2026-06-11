@@ -73,14 +73,14 @@ function FlipCard({
   return (
     <div onClick={() => setRevealed(!revealed)} className="perspective cursor-pointer">
       <div
-        className={`rounded-xl border border-border/60 bg-secondary/30 p-4 space-y-2 transition-all hover:shadow-md hover:-translate-y-0.5 ${
-          isOpen ? "ring-1 ring-primary/20" : ""
+        className={`rounded-lg border bg-background p-4 space-y-2 transition-colors hover:border-foreground/20 ${
+          isOpen ? "border-primary/30" : "border-border"
         }`}
       >
-        <p className="font-semibold text-foreground text-sm leading-relaxed">
-          <span className="text-primary font-bold mr-1.5">Q:</span>
+        <p className="font-medium text-foreground text-sm leading-relaxed">
+          <span className="text-primary font-semibold mr-1.5">Q:</span>
           {tag && (
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 mr-1.5 border border-border/40 rounded px-1 py-0.5">
+            <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground mr-1.5 border border-border rounded px-1 py-0.5">
               {tag}
             </span>
           )}
@@ -91,13 +91,13 @@ function FlipCard({
             isOpen ? "max-h-40 opacity-100" : "max-h-0 opacity-0"
           }`}
         >
-          <p className="text-muted-foreground text-sm leading-relaxed pt-1 border-t border-border/40">
-            <span className="font-bold mr-1.5 text-accent">A:</span>
+          <p className="text-muted-foreground text-sm leading-relaxed pt-1 border-t border-border">
+            <span className="font-semibold mr-1.5 text-primary">A:</span>
             {answer}
           </p>
         </div>
         {!isOpen && (
-          <p className="text-xs text-muted-foreground/60 italic">Click to reveal answer</p>
+          <p className="text-xs text-muted-foreground/60">Click to reveal answer</p>
         )}
       </div>
     </div>

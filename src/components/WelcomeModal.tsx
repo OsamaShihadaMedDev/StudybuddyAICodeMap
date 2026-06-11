@@ -24,15 +24,15 @@ const WelcomeModal = () => {
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) handleClose(); }}>
-      <DialogContent className="max-w-sm text-center p-0 overflow-hidden">
-        {/* Header gradient strip */}
-        <div className="bg-gradient-to-br from-primary/20 via-primary/10 to-background px-8 pt-8 pb-6">
+      <DialogContent className="max-w-sm p-0 overflow-hidden rounded-xl">
+        {/* Header */}
+        <div className="border-b border-border px-7 pt-7 pb-6 text-center">
           <div className="flex justify-center mb-4">
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/15 border border-primary/20">
-              <Sparkles className="h-8 w-8 text-primary" />
+            <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-primary">
+              <Sparkles className="h-5 w-5 text-primary-foreground" />
             </div>
           </div>
-          <h2 className="text-2xl font-extrabold text-foreground tracking-tight">
+          <h2 className="text-xl font-semibold text-foreground tracking-tight">
             Welcome to StudyBuddy
           </h2>
           <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
@@ -42,7 +42,7 @@ const WelcomeModal = () => {
         </div>
 
         {/* Feature highlights */}
-        <div className="px-8 py-5 space-y-3 text-left">
+        <div className="px-7 py-5 space-y-3.5 text-left">
           {[
             {
               icon: FileText,
@@ -66,21 +66,21 @@ const WelcomeModal = () => {
             },
           ].map(({ icon: Icon, title, desc }) => (
             <div key={title} className="flex items-start gap-3">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 mt-0.5">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border bg-background mt-0.5">
                 <Icon className="h-4 w-4 text-primary" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-foreground">{title}</p>
-                <p className="text-xs text-muted-foreground">{desc}</p>
+                <p className="text-sm font-medium text-foreground">{title}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{desc}</p>
               </div>
             </div>
           ))}
         </div>
 
         {/* CTA */}
-        <div className="px-8 pb-8">
+        <div className="px-7 pb-7">
           <Button
-            className="w-full h-12 rounded-xl btn-gradient font-bold text-base"
+            className="w-full h-10 rounded-lg font-medium text-sm"
             onClick={handleClose}
           >
             Generate my first sheet →

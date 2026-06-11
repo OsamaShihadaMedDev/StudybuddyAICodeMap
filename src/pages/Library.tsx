@@ -120,11 +120,11 @@ const Library = () => {
 
       <div className="space-y-6">
         <header className="flex items-start gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
-            <LibraryIcon className="h-5 w-5 text-primary" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-card">
+            <LibraryIcon className="h-4 w-4 text-primary" />
           </div>
           <div>
-            <h1 className="text-2xl font-extrabold tracking-tight text-foreground md:text-3xl">
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground">
               Library
             </h1>
             <p className="text-sm text-muted-foreground">
@@ -146,14 +146,14 @@ const Library = () => {
                 placeholder="Search decks…"
                 value={deckSearch}
                 onChange={(e) => setDeckSearch(e.target.value)}
-                className="pl-9 bg-background/60 border-border/50 h-10 rounded-xl"
+                className="pl-9 h-10 rounded-lg"
               />
             </div>
             {totalDecks === 0 ? (
               <Card className="glass-card">
                 <CardContent className="p-8 flex flex-col items-center text-center gap-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-                    <Sparkles className="h-5 w-5 text-primary" />
+                  <div className="flex h-11 w-11 items-center justify-center rounded-lg border border-border bg-background">
+                    <Sparkles className="h-4 w-4 text-primary" />
                   </div>
                   <div className="space-y-1">
                     <p className="text-base font-semibold text-foreground">
@@ -163,7 +163,7 @@ const Library = () => {
                       Generate flashcards from a topic to build your first deck.
                     </p>
                   </div>
-                  <Button asChild className="btn-gradient h-10 rounded-xl px-5 font-semibold">
+                  <Button asChild className="h-9 rounded-lg px-5 font-medium">
                     <Link to="/dashboard">Create your first deck</Link>
                   </Button>
                 </CardContent>
@@ -180,7 +180,7 @@ const Library = () => {
                   <div className="flex justify-center pt-2">
                     <Button
                       variant="outline"
-                      className="h-9 rounded-xl border-border/50 text-muted-foreground hover:text-foreground text-sm px-6"
+                      className="h-9 rounded-lg text-muted-foreground hover:text-foreground text-sm px-6"
                       onClick={() => setVisibleDecks((n) => n + 10)}
                     >
                       Load more
@@ -198,14 +198,14 @@ const Library = () => {
                 placeholder="Search sheets…"
                 value={sheetSearch}
                 onChange={(e) => setSheetSearch(e.target.value)}
-                className="pl-9 bg-background/60 border-border/50 h-10 rounded-xl"
+                className="pl-9 h-10 rounded-lg"
               />
             </div>
             {history.length === 0 ? (
               <Card className="glass-card">
                 <CardContent className="p-8 flex flex-col items-center text-center gap-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-                    <FileText className="h-5 w-5 text-primary" />
+                  <div className="flex h-11 w-11 items-center justify-center rounded-lg border border-border bg-background">
+                    <FileText className="h-4 w-4 text-primary" />
                   </div>
                   <div className="space-y-1">
                     <p className="text-base font-semibold text-foreground">
@@ -215,7 +215,7 @@ const Library = () => {
                       Generate a study sheet and save it to see it here.
                     </p>
                   </div>
-                  <Button asChild className="btn-gradient h-10 rounded-xl px-5 font-semibold">
+                  <Button asChild className="h-9 rounded-lg px-5 font-medium">
                     <Link to="/dashboard">Generate your first study sheet</Link>
                   </Button>
                 </CardContent>
@@ -235,7 +235,7 @@ const Library = () => {
                       onClick={() => setActiveSheet(item)}
                     >
                       <CardContent className="p-4 flex items-start gap-3">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-border bg-background">
                           <FileText className="h-4 w-4 text-primary" />
                         </div>
                         <div className="flex-1 min-w-0 space-y-1">
@@ -271,7 +271,7 @@ const Library = () => {
                   <div className="flex justify-center pt-2">
                     <Button
                       variant="outline"
-                      className="h-9 rounded-xl border-border/50 text-muted-foreground hover:text-foreground text-sm px-6"
+                      className="h-9 rounded-lg text-muted-foreground hover:text-foreground text-sm px-6"
                       onClick={() => setVisibleSheets((n) => n + 10)}
                     >
                       Load more

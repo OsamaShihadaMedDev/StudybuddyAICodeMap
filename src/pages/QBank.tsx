@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { FlaskConical, LogIn, Zap, BookOpen, CheckCircle, History, ChevronRight, Clock, Trash2, Flag } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
+import PageLoader from "@/components/PageLoader";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { useQBankContext } from "@/contexts/QBankContext";
@@ -37,16 +38,16 @@ const formatSessionTime = (ms: number) => {
 
 const getScoreColor = (score: number, total: number) => {
   const pct = total > 0 ? score / total : 0;
-  if (pct >= 0.8) return "text-green-400";
-  if (pct >= 0.6) return "text-amber-400";
-  return "text-red-400";
+  if (pct >= 0.8) return "text-emerald-600 dark:text-emerald-400";
+  if (pct >= 0.6) return "text-amber-600 dark:text-amber-400";
+  return "text-red-600 dark:text-red-400";
 };
 
 const getScoreBg = (score: number, total: number) => {
   const pct = total > 0 ? score / total : 0;
-  if (pct >= 0.8) return "bg-green-500/10 border-green-500/20";
-  if (pct >= 0.6) return "bg-amber-500/10 border-amber-500/20";
-  return "bg-red-500/10 border-red-500/20";
+  if (pct >= 0.8) return "bg-emerald-500/10 border-emerald-500/30";
+  if (pct >= 0.6) return "bg-amber-500/10 border-amber-500/30";
+  return "bg-red-500/10 border-red-500/30";
 };
 
 const PAGE_SIZE = 5;
@@ -78,6 +79,7 @@ const QBank = () => {
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [flaggedOnly, setFlaggedOnly] = useState(false);
+  const [starting, setStarting] = useState(false);
 
   useEffect(() => {
     if (availableSystems.length > 0 && selectedSystem === "") {
@@ -203,12 +205,18 @@ const QBank = () => {
   });
 
   const handleStart = async () => {
-    await startSession({
-      domains: selectedDomains,
-      system: selectedSystem,
-      limit: flaggedOnly ? flaggedCount : questionLimit,
-      questionIds: flaggedOnly ? [...flaggedIds] : undefined,
-    });
+    // Brief full-screen hand-off so the session player never snaps in
+    setStarting(true);
+    const minDelay = new Promise((resolve) => window.setTimeout(resolve, 800));
+    await Promise.all([
+      startSession({
+        domains: selectedDomains,
+        system: selectedSystem,
+        limit: flaggedOnly ? flaggedCount : questionLimit,
+        questionIds: flaggedOnly ? [...flaggedIds] : undefined,
+      }),
+      minDelay,
+    ]);
     navigate("/qbank/session");
   };
 
@@ -243,16 +251,26 @@ const QBank = () => {
     }
   };
 
+  if (starting) {
+    return (
+      <DashboardLayout>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background animate-fade-in">
+          <PageLoader context="qbank" fullPage={false} />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   return (
     <DashboardLayout>
       <div className="flex flex-col items-center justify-center min-h-[70vh] px-4">
         <div className="w-full max-w-lg space-y-8 animate-fade-in">
           <div className="flex flex-col items-center gap-4 text-center">
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 border border-primary/20">
-              <FlaskConical className="h-8 w-8 text-primary" />
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-border bg-card">
+              <FlaskConical className="h-6 w-6 text-primary" />
             </div>
             <div className="space-y-2">
-              <h1 className="text-3xl font-extrabold tracking-tight text-foreground">
+              <h1 className="text-3xl font-semibold tracking-tight text-foreground">
                 QBank
               </h1>
               <p className="text-sm text-muted-foreground leading-relaxed max-w-sm mx-auto">
@@ -265,7 +283,7 @@ const QBank = () => {
 
           <div className="grid grid-cols-3 gap-3">
             <div className="glass-card rounded-xl p-3 text-center space-y-1">
-              <p className="text-2xl font-extrabold text-primary">
+              <p className="text-2xl font-semibold tabular-nums text-primary">
                 {questionCount}
               </p>
               <p className="text-[11px] text-muted-foreground">
@@ -273,11 +291,11 @@ const QBank = () => {
               </p>
             </div>
             <div className="glass-card rounded-xl p-3 text-center space-y-1">
-              <p className="text-2xl font-extrabold text-foreground">Step 1</p>
+              <p className="text-2xl font-semibold text-foreground">Step 1</p>
               <p className="text-[11px] text-muted-foreground">& Step 2</p>
             </div>
             <div className="glass-card rounded-xl p-3 text-center space-y-1">
-              <p className="text-2xl font-extrabold text-foreground">
+              <p className="text-2xl font-semibold tabular-nums text-foreground">
                 {availableSystems.length > 0 ? availableSystems.length : "—"}
               </p>
               <p className="text-[11px] text-muted-foreground">
@@ -294,7 +312,7 @@ const QBank = () => {
             ].map(({ icon: Icon, label }) => (
               <div
                 key={label}
-                className="flex items-center gap-1.5 rounded-full border border-border/60 bg-secondary/30 px-3 py-1.5"
+                className="flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5"
               >
                 <Icon className="h-3.5 w-3.5 text-primary" />
                 <span className="text-xs font-medium text-muted-foreground">
@@ -305,9 +323,9 @@ const QBank = () => {
           </div>
 
           {isAnonymous || !user ? (
-            <div className="glass-card rounded-2xl p-6 space-y-4 text-center border border-primary/20">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 mx-auto">
-                <LogIn className="h-5 w-5 text-primary" />
+            <div className="glass-card rounded-xl p-6 space-y-4 text-center">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-background mx-auto">
+                <LogIn className="h-4 w-4 text-primary" />
               </div>
               <div className="space-y-1">
                 <p className="text-sm font-semibold text-foreground">
@@ -319,7 +337,7 @@ const QBank = () => {
                 </p>
               </div>
               <Button
-                className="btn-gradient w-full h-11 text-sm font-semibold rounded-xl"
+                className="w-full h-10 text-sm font-medium rounded-lg"
                 onClick={() => navigate("/dashboard")}
               >
                 <LogIn className="h-4 w-4 mr-2" />
@@ -329,24 +347,24 @@ const QBank = () => {
           ) : (
             <>
               {hasSavedSession && savedSessionMeta && (
-                <div className="glass-card rounded-2xl p-4 border border-primary/30 bg-primary/5 space-y-3">
+                <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 space-y-3">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/15 border border-primary/20 shrink-0">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-primary/20 bg-background shrink-0">
                         <History className="h-4 w-4 text-primary" />
                       </div>
                       <div>
                         <p className="text-sm font-semibold text-foreground">
                           Resume previous session
                         </p>
-                        <p className="text-[11px] text-muted-foreground/70 mt-0.5">
+                        <p className="text-[11px] text-muted-foreground mt-0.5">
                           {savedSessionMeta.system} · {savedSessionMeta.answered}/{savedSessionMeta.total} questions answered
                         </p>
                       </div>
                     </div>
                   </div>
 
-                  <div className="w-full h-1 rounded-full bg-muted/30 overflow-hidden">
+                  <div className="w-full h-1 rounded-full bg-border overflow-hidden">
                     <div
                       className="h-full rounded-full bg-primary transition-all"
                       style={{
@@ -358,15 +376,15 @@ const QBank = () => {
                   <div className="flex gap-2">
                     <Button
                       onClick={handleResume}
-                      className="btn-gradient flex-1 h-9 text-sm font-semibold rounded-xl"
+                      className="flex-1 h-9 text-sm font-medium rounded-lg"
                     >
                       <ChevronRight className="h-4 w-4 mr-1" />
                       Continue
                     </Button>
                     <Button
                       onClick={handleDiscard}
-                      variant="ghost"
-                      className="h-9 px-4 text-sm text-muted-foreground/70 hover:text-foreground rounded-xl border border-border/40 hover:border-border/70"
+                      variant="outline"
+                      className="h-9 px-4 text-sm text-muted-foreground hover:text-foreground rounded-lg"
                     >
                       Discard
                     </Button>
@@ -374,9 +392,9 @@ const QBank = () => {
                 </div>
               )}
 
-              <div className="glass-card rounded-2xl p-5 space-y-5 border border-border/30">
+              <div className="glass-card rounded-xl p-5 space-y-5">
                 <div className="space-y-2">
-                  <p className="text-[10px] font-semibold tracking-widest text-muted-foreground/50 uppercase">
+                  <p className="text-xs font-medium text-muted-foreground">
                     System
                   </p>
                   <div className="flex flex-wrap gap-2">
@@ -396,10 +414,10 @@ const QBank = () => {
                             key={system}
                             type="button"
                             onClick={() => handleSystemChange(system)}
-                            className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
+                            className={`rounded-md border px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer ${
                               isSelected
-                                ? "bg-primary/15 border-primary/40 text-primary"
-                                : "bg-secondary/30 border-border/50 text-muted-foreground hover:border-primary/30 hover:text-foreground"
+                                ? "bg-primary/10 border-primary/40 text-primary"
+                                : "bg-card border-border text-muted-foreground hover:border-primary/30 hover:text-foreground"
                             }`}
                           >
                             {system}
@@ -412,16 +430,16 @@ const QBank = () => {
 
                 {flaggedCount > 0 && (
                   <div className="space-y-2">
-                    <p className="text-[10px] font-semibold tracking-widest text-muted-foreground/50 uppercase">
+                    <p className="text-xs font-medium text-muted-foreground">
                       Filter
                     </p>
                     <button
                       type="button"
                       onClick={() => setFlaggedOnly((v) => !v)}
-                      className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer ${
+                      className={`flex items-center gap-2 rounded-md border px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer ${
                         flaggedOnly
-                          ? "bg-amber-500/15 border-amber-500/40 text-amber-400"
-                          : "bg-secondary/30 border-border/50 text-muted-foreground hover:border-amber-500/30 hover:text-amber-400"
+                          ? "bg-amber-500/10 border-amber-500/40 text-amber-600 dark:text-amber-400"
+                          : "bg-card border-border text-muted-foreground hover:border-amber-500/30 hover:text-amber-600 dark:hover:text-amber-400"
                       }`}
                     >
                       <Flag className="h-3 w-3" fill={flaggedOnly ? "currentColor" : "none"} />
@@ -431,7 +449,7 @@ const QBank = () => {
                 )}
 
                 <div className={`space-y-2 ${flaggedOnly ? "opacity-50 pointer-events-none" : ""}`}>
-                  <p className="text-[10px] font-semibold tracking-widest text-muted-foreground/50 uppercase">
+                  <p className="text-xs font-medium text-muted-foreground">
                     Domain
                   </p>
                   <div className="flex flex-wrap gap-2">
@@ -448,10 +466,10 @@ const QBank = () => {
                         <button
                           type="button"
                           onClick={selectAll}
-                          className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors cursor-pointer ${
+                          className={`rounded-md border px-3 py-1 text-xs font-medium transition-colors cursor-pointer ${
                             selectedDomains.length === 0
-                              ? "bg-primary/15 border-primary/40 text-primary"
-                              : "bg-secondary/30 border-border/50 text-muted-foreground hover:border-primary/30 hover:text-foreground"
+                              ? "bg-primary/10 border-primary/40 text-primary"
+                              : "bg-card border-border text-muted-foreground hover:border-primary/30 hover:text-foreground"
                           }`}
                         >
                           All
@@ -463,10 +481,10 @@ const QBank = () => {
                               key={domain}
                               type="button"
                               onClick={() => toggleDomain(domain)}
-                              className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors cursor-pointer ${
+                              className={`rounded-md border px-3 py-1 text-xs font-medium transition-colors cursor-pointer ${
                                 isSelected
-                                  ? "bg-primary/15 border-primary/40 text-primary"
-                                  : "bg-secondary/30 border-border/50 text-muted-foreground hover:border-primary/30 hover:text-foreground"
+                                  ? "bg-primary/10 border-primary/40 text-primary"
+                                  : "bg-card border-border text-muted-foreground hover:border-primary/30 hover:text-foreground"
                               }`}
                             >
                               {domain}
@@ -480,10 +498,10 @@ const QBank = () => {
 
                 <div className={`space-y-2 ${flaggedOnly ? "opacity-50 pointer-events-none" : ""}`}>
                   <div className="flex items-center justify-between">
-                    <p className="text-[10px] font-semibold tracking-widest text-muted-foreground/50 uppercase">
+                    <p className="text-xs font-medium text-muted-foreground">
                       Questions
                     </p>
-                    <span className="text-xs font-bold tabular-nums px-2 py-0.5 rounded-full bg-primary/15 text-primary">
+                    <span className="text-xs font-semibold tabular-nums px-2 py-0.5 rounded-md bg-primary/10 text-primary">
                       {questionLimit}
                     </span>
                   </div>
@@ -494,7 +512,7 @@ const QBank = () => {
                     step={5}
                     value={questionLimit}
                     onChange={(e) => setQuestionLimit(Number(e.target.value))}
-                    className="w-full h-1.5 rounded-full appearance-none cursor-pointer accent-primary bg-muted/30"
+                    className="w-full h-1.5 rounded-full appearance-none cursor-pointer accent-primary bg-muted"
                   />
                   <div className="flex justify-between text-[11px] text-muted-foreground/40">
                     <span>5</span>
@@ -511,9 +529,9 @@ const QBank = () => {
               <Button
                 onClick={handleStart}
                 disabled={questionCount === 0 || (flaggedOnly ? flaggedCount === 0 : effectiveSliderMax === 0)}
-                className="btn-gradient w-full h-14 text-base font-bold rounded-xl"
+                className="w-full h-11 text-sm font-medium rounded-lg"
               >
-                <FlaskConical className="h-5 w-5 mr-2" />
+                <FlaskConical className="h-4 w-4 mr-2" />
                 Start Session · {flaggedOnly ? flaggedCount : questionLimit} Questions
               </Button>
             </>
@@ -523,7 +541,7 @@ const QBank = () => {
             <div className="w-full space-y-3 pt-2">
               <div className="flex items-center gap-2">
                 <History className="h-4 w-4 text-muted-foreground/60" />
-                <p className="text-xs font-semibold text-muted-foreground/60 uppercase tracking-wider">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   Session History
                 </p>
               </div>
@@ -553,7 +571,7 @@ const QBank = () => {
                         return (
                           <div
                             key={s.id}
-                            className="w-full glass-card rounded-xl px-4 py-3 flex items-center justify-between gap-3 border border-red-500/30 bg-red-500/5"
+                            className="w-full rounded-lg px-4 py-3 flex items-center justify-between gap-3 border border-red-500/30 bg-red-500/5"
                           >
                             <p className="text-xs font-medium text-foreground">Delete this session?</p>
                             <div className="flex items-center gap-2 shrink-0">
@@ -566,10 +584,10 @@ const QBank = () => {
                               <button
                                 onClick={() => handleDeleteSession(s.id)}
                                 disabled={isDeleting}
-                                className="flex items-center gap-1.5 rounded-lg bg-red-500/20 border border-red-500/40 text-red-400 hover:bg-red-500/30 text-xs font-semibold px-3 py-1.5 transition-colors disabled:opacity-50"
+                                className="flex items-center gap-1.5 rounded-md bg-red-500/10 border border-red-500/40 text-red-600 dark:text-red-400 hover:bg-red-500/20 text-xs font-medium px-3 py-1.5 transition-colors disabled:opacity-50"
                               >
                                 {isDeleting ? (
-                                  <span className="h-3 w-3 rounded-full border-2 border-red-400/40 border-t-red-400 animate-spin" />
+                                  <span className="h-3 w-3 rounded-full border-2 border-red-400/40 border-t-red-500 animate-spin" />
                                 ) : (
                                   <Trash2 className="h-3 w-3" />
                                 )}
@@ -584,12 +602,12 @@ const QBank = () => {
                         <button
                           key={s.id}
                           onClick={() => navigate(`/qbank/summary?session=${s.id}`)}
-                          className="w-full glass-card rounded-xl px-4 py-3 flex items-center gap-4 border border-border/30 hover:border-primary/30 hover:bg-primary/5 transition-all duration-150 text-left group"
+                          className="w-full glass-card rounded-lg px-4 py-3 flex items-center gap-4 hover:border-foreground/20 transition-all duration-150 text-left group"
                         >
                           <div
-                            className={`flex flex-col items-center justify-center rounded-lg border px-3 py-1.5 shrink-0 ${getScoreBg(s.score, s.total)}`}
+                            className={`flex flex-col items-center justify-center rounded-md border px-3 py-1.5 shrink-0 ${getScoreBg(s.score, s.total)}`}
                           >
-                            <span className={`text-base font-extrabold leading-none ${getScoreColor(s.score, s.total)}`}>
+                            <span className={`text-base font-semibold tabular-nums leading-none ${getScoreColor(s.score, s.total)}`}>
                               {pct}%
                             </span>
                             <span className="text-[10px] text-muted-foreground/60 mt-0.5">
@@ -626,7 +644,7 @@ const QBank = () => {
                                 setPendingDeleteId(s.id);
                               }
                             }}
-                            className="shrink-0 p-1.5 rounded-lg text-muted-foreground/40 hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
+                            className="shrink-0 p-1.5 rounded-md text-muted-foreground/40 hover:text-red-500 hover:bg-red-500/10 transition-colors cursor-pointer"
                             aria-label="Delete session"
                           >
                             <Trash2 className="h-3.5 w-3.5" />

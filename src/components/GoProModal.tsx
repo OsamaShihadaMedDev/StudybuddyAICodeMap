@@ -16,16 +16,16 @@ interface GoProModalProps {
 const GoProModal = ({ open, onOpenChange }: GoProModalProps) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm text-center">
+      <DialogContent className="max-w-sm text-center rounded-xl">
         <DialogHeader>
           <div className="flex justify-center mb-2">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-              <Sparkles className="h-6 w-6 text-primary" />
+            <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-primary">
+              <Sparkles className="h-5 w-5 text-primary-foreground" />
             </div>
           </div>
-          <DialogTitle className="text-xl font-extrabold">Go Pro</DialogTitle>
+          <DialogTitle className="text-xl font-semibold tracking-tight">Go Pro</DialogTitle>
           <div className="pt-1">
-            <p className="text-2xl font-extrabold text-foreground">
+            <p className="text-2xl font-semibold tracking-tight text-foreground">
               $4.99 <span className="text-sm font-medium text-muted-foreground">USD / month</span>
             </p>
           </div>
@@ -62,7 +62,7 @@ const GoProModal = ({ open, onOpenChange }: GoProModalProps) => {
             rel="noopener noreferrer"
             className="w-full"
           >
-            <Button className="w-full h-11 rounded-xl btn-gradient font-semibold gap-2">
+            <Button className="w-full h-10 rounded-lg font-medium gap-2">
               <MessageCircle className="h-4 w-4" />
               Message on WhatsApp
             </Button>
@@ -70,7 +70,7 @@ const GoProModal = ({ open, onOpenChange }: GoProModalProps) => {
           <a href="mailto:Osama200az@gmail.com" className="w-full">
             <Button
               variant="outline"
-              className="w-full h-11 rounded-xl border-primary/40 text-primary hover:bg-primary/10 font-semibold gap-2"
+              className="w-full h-10 rounded-lg font-medium gap-2"
             >
               <Mail className="h-4 w-4" />
               Send an Email

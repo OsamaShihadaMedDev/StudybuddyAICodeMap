@@ -33,14 +33,14 @@ const ActiveToolCard = ({
 }: ActiveToolCardProps) => (
   <div
     onClick={onClick}
-    className="group relative flex flex-col justify-between rounded-2xl border border-border/60 bg-card p-6 cursor-pointer transition-all duration-200 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-0.5 animate-fade-in"
+    className="group relative flex flex-col justify-between rounded-xl border border-border bg-card p-6 cursor-pointer transition-all duration-150 hover:border-foreground/20 hover:shadow-[0_4px_12px_-2px_hsl(216_45%_10%/0.12)] motion-safe:hover:-translate-y-0.5 motion-safe:active:scale-[0.98] motion-safe:active:duration-75 animate-fade-in"
   >
     <div className="space-y-4">
-      <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 transition-colors group-hover:bg-primary/15">
-        <span className="text-primary">{icon}</span>
+      <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-background">
+        <span className="text-primary [&_svg]:h-4 [&_svg]:w-4">{icon}</span>
       </div>
       <div className="space-y-1">
-        <h3 className="text-base font-extrabold tracking-tight text-foreground">
+        <h3 className="text-[15px] font-semibold tracking-tight text-foreground">
           {title}
         </h3>
         <p className="text-sm text-muted-foreground leading-relaxed">
@@ -51,31 +51,30 @@ const ActiveToolCard = ({
 
     <div className="mt-6 flex items-end justify-between gap-3">
       <div className="text-sm text-muted-foreground">{stat}</div>
-      <span className="inline-flex items-center rounded-xl bg-primary/10 px-4 py-2 text-xs font-bold text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
-        {ctaLabel} →
+      <span className="inline-flex items-center gap-1 text-sm font-medium text-primary">
+        {ctaLabel}
+        <span className="transition-transform duration-150 group-hover:translate-x-0.5">→</span>
       </span>
     </div>
   </div>
 );
 
 const ComingSoonCard = ({ icon, title, description }: ComingSoonCardProps) => (
-  <div className="group relative flex flex-col justify-between rounded-2xl border border-border/40 bg-card/50 p-6 opacity-80 cursor-default transition-all duration-300 hover:opacity-70 overflow-hidden">
-    <div className="pointer-events-none absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out bg-gradient-to-r from-transparent via-white/5 to-transparent" />
-
+  <div className="relative flex flex-col justify-between rounded-xl border border-dashed border-border p-6 cursor-default">
     <div className="space-y-4">
       <div className="flex items-start justify-between">
-        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-muted/50">
-          <span className="text-muted-foreground">{icon}</span>
+        <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-muted/50">
+          <span className="text-muted-foreground [&_svg]:h-4 [&_svg]:w-4">{icon}</span>
         </div>
-        <span className="inline-flex items-center rounded-full border border-border/70 bg-muted/50 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/90">
+        <span className="inline-flex items-center rounded-full border border-border bg-muted px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
           Coming Soon
         </span>
       </div>
       <div className="space-y-1">
-        <h3 className="text-base font-extrabold tracking-tight text-foreground/75">
+        <h3 className="text-[15px] font-semibold tracking-tight text-foreground/70">
           {title}
         </h3>
-        <p className="text-sm text-muted-foreground/85 leading-relaxed">
+        <p className="text-sm text-muted-foreground/80 leading-relaxed">
           {description}
         </p>
       </div>
@@ -92,14 +91,14 @@ const Dashboard = () => {
   const { sheetsThisWeek, isAnonymous: sheetsAnon } = useSheetsStats();
 
   const sheetStat = sheetsAnon ? (
-    <span className="text-[11px] text-muted-foreground/70 italic">
+    <span className="text-xs text-muted-foreground/70">
       Sign in to track your stats
     </span>
   ) : sheetsThisWeek === null ? (
-    <span className="text-[11px] text-muted-foreground/50">Loading…</span>
+    <span className="text-xs text-muted-foreground/50">Loading…</span>
   ) : (
     <span>
-      <span className="text-lg font-extrabold text-foreground">
+      <span className="text-base font-semibold tabular-nums text-foreground">
         {sheetsThisWeek}
       </span>
       <span className="text-xs text-muted-foreground ml-1.5">
@@ -109,12 +108,12 @@ const Dashboard = () => {
   );
 
   const flashcardStat = isAnonymous ? (
-    <span className="text-[11px] text-muted-foreground/70 italic">
+    <span className="text-xs text-muted-foreground/70">
       Sign in to track your stats
     </span>
   ) : (
     <span>
-      <span className="text-lg font-extrabold text-foreground">
+      <span className="text-base font-semibold tabular-nums text-foreground">
         {stats.due}
       </span>
       <span className="text-xs text-muted-foreground ml-1.5">
@@ -133,10 +132,10 @@ const Dashboard = () => {
         <StatsStrip />
 
         <div className="space-y-1">
-          <p className="text-[11px] font-bold tracking-[0.15em] text-primary uppercase pl-1">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground pl-1">
             Tools
           </p>
-          <p className="text-xs text-muted-foreground pl-1">
+          <p className="text-xs text-muted-foreground/70 pl-1">
             Everything you need to study smarter
           </p>
         </div>
@@ -166,7 +165,7 @@ const Dashboard = () => {
             description="USMLE-style questions for Step 1 and Step 2 — built on NBME blueprints and clinical guidelines. Human-verified."
             stat={
               <span>
-                <span className="text-lg font-extrabold text-foreground">10</span>
+                <span className="text-base font-semibold tabular-nums text-foreground">10</span>
                 <span className="text-xs text-muted-foreground ml-1.5">questions ready</span>
               </span>
             }
