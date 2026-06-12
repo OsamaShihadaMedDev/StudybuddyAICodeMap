@@ -175,7 +175,7 @@ type JsonSectionKey = keyof typeof JSON_SECTION_CONFIG;
 
 const SECTION_LABEL_RE = /^(Mechanism|Pathophysiology|Key associations|Definition|Key Associations(?:\s*\/\s*Features)?|Diagnosis|Management|Prognosis|Complications?|Workup|Avoid|Follow[- ]?up)(\s*[:：])/i;
 
-type KeywordHoverHandler = (keyword: string, rect: DOMRect, anchor: string) => void;
+type KeywordClickHandler = (keyword: string, rect: DOMRect, anchor: string) => void;
 
 function anchorFromElement(el: Element | null): string {
   const anchorEl = el?.closest("[data-enh-anchor]");
@@ -188,9 +188,9 @@ function anchorFromElement(el: Element | null): string {
 function renderBoldKeyword(
   text: string,
   i: number,
-  onKeywordHover?: KeywordHoverHandler
+  onKeywordClick?: KeywordClickHandler
 ) {
-  if (!onKeywordHover) {
+  if (!onKeywordClick) {
     return (
       <strong key={i} className="font-semibold text-foreground">
         {text}
@@ -200,29 +200,17 @@ function renderBoldKeyword(
   return (
     <span
       key={i}
-      className="font-semibold text-foreground cursor-pointer underline-offset-2 hover:underline hover:text-primary/90 transition-colors group relative inline"
-      onMouseEnter={(e) => {
+      className="font-semibold text-foreground cursor-pointer underline-offset-2 hover:underline hover:text-primary/90 transition-colors"
+      // Stop propagation so the open menu's outside-click dismissal (a document
+      // mousedown listener) doesn't immediately close the menu we're opening.
+      onMouseDown={(e) => e.stopPropagation()}
+      onClick={(e) => {
+        e.stopPropagation();
         const el = e.currentTarget as HTMLElement;
-        onKeywordHover(text, el.getBoundingClientRect(), anchorFromElement(el));
-      }}
-      onTouchStart={(e) => {
-        const el = e.currentTarget as HTMLElement;
-        const timer = window.setTimeout(() => {
-          onKeywordHover(text, el.getBoundingClientRect(), anchorFromElement(el));
-        }, 500);
-        el.dataset.longpress = String(timer);
-      }}
-      onTouchEnd={(e) => {
-        const el = e.currentTarget as HTMLElement;
-        if (el.dataset.longpress) {
-          clearTimeout(Number(el.dataset.longpress));
-        }
+        onKeywordClick(text, el.getBoundingClientRect(), anchorFromElement(el));
       }}
     >
       {text}
-      <span className="absolute -top-4 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity text-[9px] font-medium text-primary/70 whitespace-nowrap pointer-events-none">
-        enhance
-      </span>
     </span>
   );
 }
@@ -258,7 +246,7 @@ function findNeedleMatch(
 function renderRich(
   text: string,
   baseKey: string,
-  onKeywordHover: KeywordHoverHandler | undefined,
+  onKeywordClick: KeywordClickHandler | undefined,
   collapsed: CollapsedRef[],
   onReopen: ((key: string) => void) | undefined
 ): React.ReactNode {
@@ -273,7 +261,7 @@ function renderRich(
     key: string
   ): React.ReactNode =>
     tok.isBold ? (
-      renderBoldKeyword(tok.visible, key as unknown as number, onKeywordHover)
+      renderBoldKeyword(tok.visible, key as unknown as number, onKeywordClick)
     ) : (
       <span key={key}>{tok.visible}</span>
     );
@@ -361,7 +349,7 @@ function renderRich(
 function renderJsonText(
   text: string,
   anchorPrefix: string,
-  onKeywordHover?: KeywordHoverHandler,
+  onKeywordClick?: KeywordClickHandler,
   renderInline?: (anchor: string) => React.ReactNode,
   collapsedByAnchor?: Record<string, CollapsedRef[]>,
   onReopen?: (key: string) => void
@@ -390,7 +378,7 @@ function renderJsonText(
         >
           <span className="font-semibold text-foreground/90">{labelPart}</span>
           <span className="text-muted-foreground">
-            {renderRich(rest, `${anchor}-r`, onKeywordHover, collapsed, onReopen)}
+            {renderRich(rest, `${anchor}-r`, onKeywordClick, collapsed, onReopen)}
           </span>
         </span>
       );
@@ -400,7 +388,7 @@ function renderJsonText(
           data-enh-anchor={anchor}
           className="block text-sm text-muted-foreground leading-relaxed"
         >
-          {renderRich(trimmed, anchor, onKeywordHover, collapsed, onReopen)}
+          {renderRich(trimmed, anchor, onKeywordClick, collapsed, onReopen)}
         </span>
       );
     }
@@ -551,14 +539,16 @@ function RegenerateButton({ sectionKey }: { sectionKey: string }) {
 // ─── Floating enhance bubble ───────────────────────────────────────────────
 
 interface EnhanceBubbleProps {
+  /** Position relative to the document container (which scrolls with content). */
   top: number;
   left: number;
   onAction: (kind: EnhanceKind) => void;
   innerRef?: React.Ref<HTMLDivElement>;
-  onMouseLeave?: () => void;
 }
 
-const EnhanceBubble = ({ top, left, onAction, innerRef, onMouseLeave }: EnhanceBubbleProps) => (
+// Anchored to the scrolling document container (its parent is `position: relative`),
+// so the menu travels with the source text as the user scrolls — no scroll listeners.
+const EnhanceBubble = ({ top, left, onAction, innerRef }: EnhanceBubbleProps) => (
   <div
     ref={innerRef}
     style={
@@ -567,9 +557,8 @@ const EnhanceBubble = ({ top, left, onAction, innerRef, onMouseLeave }: EnhanceB
         "--sb-bubble-left": `${left}px`,
       } as React.CSSProperties
     }
-    className="enhance-bubble-in fixed top-[var(--sb-bubble-top)] left-[var(--sb-bubble-left)] -translate-x-1/2 z-[60] flex h-8 items-center gap-0.5 rounded-full border border-border/60 bg-popover px-1.5 shadow-lg"
+    className="enhance-bubble-in absolute top-[var(--sb-bubble-top)] left-[var(--sb-bubble-left)] -translate-x-1/2 z-[60] flex h-8 items-center gap-0.5 rounded-full border border-border/60 bg-popover px-1.5 shadow-lg"
     onMouseDown={(e) => e.stopPropagation()}
-    onMouseLeave={onMouseLeave}
   >
     <button
       type="button"
@@ -853,17 +842,29 @@ const OutputSection = ({
   }
   const isJson = sheet !== null;
 
-  // Keyword hover state — only used in JSON renderer
-  const [keywordPicker, setKeywordPicker] = useState<{ text: string; rect: DOMRect; anchor: string } | null>(null);
-  const keywordHoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Keyword-click menu state — only used in JSON renderer. `top`/`left` are
+  // relative to the document container so the menu scrolls with the content.
+  const [keywordPicker, setKeywordPicker] = useState<{ text: string; anchor: string; top: number; left: number } | null>(null);
   const keywordPickerRef = useRef<HTMLDivElement>(null);
 
-  const handleKeywordHover = useCallback((keyword: string, rect: DOMRect, anchor: string) => {
-    if (keywordHoverTimer.current) clearTimeout(keywordHoverTimer.current);
-    keywordHoverTimer.current = setTimeout(() => {
-      setKeywordPicker({ text: keyword, rect, anchor });
-    }, 300);
+  // Convert a viewport rect into a position below the source, relative to the
+  // (position: relative) document container, with horizontal clamping so the
+  // ~250px menu never spills past the container edges.
+  const anchorMenuPos = useCallback((rect: DOMRect) => {
+    const c = ref.current?.getBoundingClientRect();
+    const rawLeft = rect.left + rect.width / 2 - (c?.left ?? 0);
+    return {
+      top: rect.bottom - (c?.top ?? 0) + 6,
+      left: Math.min(Math.max(125, rawLeft), (c?.width ?? rawLeft + 125) - 125),
+    };
   }, []);
+
+  const handleKeywordClick = useCallback(
+    (keyword: string, rect: DOMRect, anchor: string) => {
+      setKeywordPicker({ text: keyword, anchor, ...anchorMenuPos(rect) });
+    },
+    [anchorMenuPos]
+  );
 
   useEffect(() => {
     function handleOutsideClick(e: MouseEvent) {
@@ -891,8 +892,8 @@ const OutputSection = ({
     setKeywordPicker(null);
   };
 
-  // Selection-to-enhance state
-  const [selection, setSelection] = useState<{ text: string; rect: DOMRect; anchor: string } | null>(null);
+  // Selection-to-enhance state. `top`/`left` are container-relative (see above).
+  const [selection, setSelection] = useState<{ text: string; anchor: string; top: number; left: number } | null>(null);
   const selectionTooltipRef = useRef<HTMLDivElement>(null);
 
   const handleSelectionChange = useCallback(() => {
@@ -917,8 +918,8 @@ const OutputSection = ({
         ? range.startContainer
         : range.startContainer.parentElement;
     const rect = range.getBoundingClientRect();
-    setSelection({ text, rect, anchor: anchorFromElement(startEl) });
-  }, []);
+    setSelection({ text, anchor: anchorFromElement(startEl), ...anchorMenuPos(rect) });
+  }, [anchorMenuPos]);
 
   const fireSelectionEnhance = (kind: EnhanceKind) => {
     if (!selection) return;
@@ -1188,7 +1189,7 @@ const OutputSection = ({
   return (
     <div
       ref={ref}
-      className="space-y-4"
+      className="relative space-y-4"
       onMouseUp={handleSelectionChange}
       onTouchEnd={handleSelectionChange}
     >
@@ -1274,7 +1275,7 @@ const OutputSection = ({
                   {renderJsonText(
                     sheet[key] as string,
                     key,
-                    handleKeywordHover,
+                    handleKeywordClick,
                     renderInline,
                     collapsedByAnchor,
                     reopenEnhancement
@@ -1318,30 +1319,23 @@ const OutputSection = ({
 
       {renderNudgeAndDisclaimer(showNudge, setShowNudge, inputText, disclaimerCollapsed, toggleDisclaimer)}
 
-      {/* Floating action bubble — selection */}
+      {/* Anchored action menu — selection (below the highlighted text) */}
       {selection && (
         <EnhanceBubble
           innerRef={selectionTooltipRef}
-          top={Math.max(8, selection.rect.top - 42)}
-          left={Math.min(
-            Math.max(120, selection.rect.left + selection.rect.width / 2),
-            window.innerWidth - 120
-          )}
+          top={selection.top}
+          left={selection.left}
           onAction={fireSelectionEnhance}
         />
       )}
 
-      {/* Floating action bubble — bold keyword hover */}
+      {/* Anchored action menu — bold keyword click (below the keyword) */}
       {keywordPicker && !selection && (
         <EnhanceBubble
           innerRef={keywordPickerRef}
-          top={Math.max(8, keywordPicker.rect.top - 42)}
-          left={Math.min(
-            Math.max(120, keywordPicker.rect.left + keywordPicker.rect.width / 2),
-            window.innerWidth - 120
-          )}
+          top={keywordPicker.top}
+          left={keywordPicker.left}
           onAction={fireKeywordEnhance}
-          onMouseLeave={() => setKeywordPicker(null)}
         />
       )}
     </div>

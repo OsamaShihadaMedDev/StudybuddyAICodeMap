@@ -475,13 +475,15 @@
   }
 
   @keyframes enhance-bubble-in {
+    /* Keep the -50% X (matches the bubble's -translate-x-1/2) inside the keyframe
+       so horizontal centering survives the animation's fill-mode: both. */
     from {
       opacity: 0;
-      transform: translateY(4px);
+      transform: translate(-50%, 4px);
     }
     to {
       opacity: 1;
-      transform: translateY(0);
+      transform: translate(-50%, 0);
     }
   }
 
