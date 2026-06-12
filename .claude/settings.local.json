@@ -21,7 +21,42 @@
       "PowerShell(npm run build 2>&1)",
       "PowerShell(npx supabase functions deploy medical-notes --project-ref ebjfzdslgixhudswxeaz 2>&1)",
       "PowerShell($cmd = Get-Command supabase -ErrorAction SilentlyContinue; if \\($cmd\\) { $cmd.Source } else { \"not installed\" })",
-      "PowerShell(supabase functions deploy medical-notes --project-ref ebjfzdslgixhudswxeaz 2>&1)"
+      "PowerShell(supabase functions deploy medical-notes --project-ref ebjfzdslgixhudswxeaz 2>&1)",
+      "PowerShell(try { \\(Invoke-WebRequest -Uri \"http://localhost:8080\" -UseBasicParsing -TimeoutSec 5\\).StatusCode } catch { \"NOT RUNNING: $\\($_.Exception.Message\\)\" })",
+      "PowerShell(Get-ChildItem -Path src -Recurse -File | Select-Object -ExpandProperty FullName | ForEach-Object { $_.Replace\\(\\(Get-Location\\).Path + '\\\\', ''\\) })",
+      "mcp__playwright__browser_resize",
+      "mcp__playwright__browser_navigate",
+      "mcp__playwright__browser_take_screenshot",
+      "mcp__playwright__browser_evaluate",
+      "PowerShell(Add-Type -AssemblyName System.Drawing; @\\('before-landing.png','before-dashboard.png','before-welcome-modal.png'\\) | ForEach-Object { $img = [System.Drawing.Image]::FromFile\\(\\(Join-Path \\(Get-Location\\) $_\\)\\); \"$_ : $\\($img.Width\\)x$\\($img.Height\\)\"; $img.Dispose\\(\\) })",
+      "mcp__playwright__browser_click",
+      "PowerShell(python \"C:\\\\Users\\\\OsamaShihada\\\\.claude\\\\plugins\\\\cache\\\\ui-ux-pro-max-skill\\\\ui-ux-pro-max\\\\2.5.0\\\\.claude\\\\skills\\\\ui-ux-pro-max\\\\scripts\\\\search.py\" \"medical education exam prep SaaS dashboard minimal professional\" --design-system -p \"StudyBuddy\")",
+      "PowerShell(python \"C:\\\\Users\\\\OsamaShihada\\\\.claude\\\\plugins\\\\cache\\\\ui-ux-pro-max-skill\\\\ui-ux-pro-max\\\\2.5.0\\\\src\\\\ui-ux-pro-max\\\\scripts\\\\search.py\" \"medical education exam prep SaaS dashboard minimal professional\" --design-system -p \"StudyBuddy\")",
+      "PowerShell(\\(Select-String -Path \"src\\\\components\\\\SheetGenerator.tsx\" -Pattern 'uppercase tracking-wider|bg-background/60 border-border/50'\\).Line)",
+      "PowerShell(Set-Content *)",
+      "PowerShell(git checkout *)",
+      "mcp__playwright__browser_snapshot",
+      "PowerShell(\\(Select-String -Path \"src\\\\pages\\\\QBankSession.tsx\" -Pattern 'green-500/20|red-500/20|green-400|red-400|btn-gradient|bg-muted/20|bg-muted/30|glass-card rounded-2xl' | Select-Object LineNumber, Line | Format-Table -AutoSize -Wrap | Out-String\\).Trim\\(\\))",
+      "PowerShell(npm run *)",
+      "PowerShell(git stash *)",
+      "PowerShell(try { \\(Invoke-WebRequest -Uri \"http://localhost:8080\" -UseBasicParsing -TimeoutSec 3\\).StatusCode } catch { \"NOT RUNNING\" })",
+      "PowerShell(Out-File *)",
+      "PowerShell(\\(Get-Content package.json | ConvertFrom-Json\\).devDependencies.tailwindcss; \\(Get-Content package.json | ConvertFrom-Json\\).dependencies.tailwindcss)",
+      "PowerShell(Test-NetConnection *)",
+      "Bash(netstat -ano)",
+      "Bash(npx eslint *)",
+      "Read(//tmp/**)",
+      "mcp__playwright__browser_wait_for",
+      "Bash(git commit -m '@ *)",
+      "Bash(git commit *)",
+      "Bash(rm .git/COMMIT_PHASE2.txt)"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\OsamaShihada\\Desktop\\projects\\studybuddy\\.git"
     ]
-  }
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "playwright"
+  ]
 }
