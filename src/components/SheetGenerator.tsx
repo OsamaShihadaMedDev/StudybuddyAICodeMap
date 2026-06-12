@@ -74,6 +74,98 @@ const PillGroup = ({ label, options, value, onChange }: PillGroupProps) => (
   </div>
 );
 
+// ── Right-rail section navigator (lg+ only) ──────────────────────────────────
+
+const SECTION_NAV_ITEMS: { key: string; label: string }[] = [
+  { key: "overview", label: "Overview" },
+  { key: "memoryHooks", label: "Memory Hooks" },
+  { key: "clinicalApproach", label: "Clinical Approach" },
+  { key: "keyPoints", label: "Key Points" },
+  { key: "examTraps", label: "Exam Traps" },
+  { key: "flashcards", label: "Flashcards" },
+  { key: "referenceNote", label: "Reference Note" },
+];
+
+/** A section is worth listing only if it actually has content in the sheet. */
+function sectionHasContent(sheet: GeneratedSheet, key: string): boolean {
+  const v = (sheet as Record<string, unknown>)[key];
+  if (Array.isArray(v)) return v.length > 0;
+  if (typeof v === "string") return v.trim().length > 0;
+  return false;
+}
+
+/**
+ * Sticky right-rail navigator. Lists the sheet's non-empty sections, smooth-
+ * scrolls to a section on click, and highlights the section the reader is on
+ * via an IntersectionObserver watching each `[data-section-key]` card.
+ */
+const SheetSectionNav = ({ sheet }: { sheet: GeneratedSheet }) => {
+  const items = SECTION_NAV_ITEMS.filter((it) => sectionHasContent(sheet, it.key));
+  const [activeKey, setActiveKey] = useState<string>(items[0]?.key ?? "");
+
+  useEffect(() => {
+    const els = SECTION_NAV_ITEMS.map((it) =>
+      document.querySelector<HTMLElement>(`[data-section-key="${it.key}"]`)
+    ).filter((el): el is HTMLElement => !!el);
+    if (!els.length) return;
+
+    // A thin band near the top of the viewport acts as the "you are here" line;
+    // whichever section card crosses it (topmost, if several) becomes active.
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries.filter((e) => e.isIntersecting);
+        if (!visible.length) return;
+        const topmost = visible.reduce((a, b) =>
+          a.boundingClientRect.top < b.boundingClientRect.top ? a : b
+        );
+        const key = topmost.target.getAttribute("data-section-key");
+        if (key) setActiveKey(key);
+      },
+      { rootMargin: "-12% 0px -78% 0px", threshold: 0 }
+    );
+    els.forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
+  }, [sheet]);
+
+  const scrollToSection = (key: string) => {
+    document
+      .querySelector(`[data-section-key="${key}"]`)
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  if (!items.length) return null;
+
+  return (
+    <div className="space-y-2">
+      <p className="px-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+        On this sheet
+      </p>
+      <nav className="flex flex-col">
+        {items.map((it) => {
+          const active = activeKey === it.key;
+          return (
+            <button
+              key={it.key}
+              type="button"
+              onClick={() => scrollToSection(it.key)}
+              aria-current={active ? "true" : undefined}
+              className={`border-l-2 py-1.5 pl-3 text-left text-[13px] leading-tight transition-colors ${
+                active
+                  ? "border-l-primary font-medium text-primary"
+                  : "border-l-border/40 text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {it.label}
+            </button>
+          );
+        })}
+      </nav>
+      {/* TODO(Phase 1+): "Saved highlights" subsection — list collapsed
+          enhancements with their kind icon, click to jump to the gold mark. */}
+    </div>
+  );
+};
+
 const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
   const [notes, setNotes] = useState(prefill?.input ?? "");
   const [difficulty, setDifficulty] = useState(prefill?.modeInfo?.difficulty ?? "Basic");
@@ -601,17 +693,17 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
   return (
     <>
     <div className="flex flex-col gap-6 lg:flex-row lg:gap-0 lg:items-start">
-      {/* ── Left pane: configurator (static on mobile + desktop, drawer on tablet) ── */}
-      <div className="min-w-0 md:max-lg:hidden lg:sticky lg:top-6 lg:self-start lg:w-[280px] lg:min-w-[280px] lg:max-w-[280px] lg:shrink-0 lg:pr-5">
+      {/* ── Left pane: configurator (35% on desktop, drawer on tablet) ── */}
+      <div className="min-w-0 md:max-lg:hidden lg:sticky lg:top-6 lg:self-start lg:w-[35%] lg:min-w-[320px] lg:max-w-[480px] lg:shrink-0 lg:pr-5">
         {configurator}
       </div>
 
-      {/* ── 1px divider between panes ── */}
+      {/* ── 1px divider between config and document ── */}
       <div aria-hidden className="hidden lg:block lg:w-px lg:shrink-0 lg:self-stretch bg-border" />
 
-      {/* ── Right pane: living document ── */}
-      <div ref={outputRef} className="min-w-0 lg:flex-1 lg:pl-8">
-      <div className="mx-auto w-full max-w-[720px] space-y-6">
+      {/* ── Middle pane: living document (fluid, fills its lane) ── */}
+      <div ref={outputRef} className="min-w-0 lg:flex-1 lg:px-8">
+      <div className="w-full space-y-6">
       {loading && !sheet && !legacyOutput && (
         <div className="space-y-6 animate-fade-in">
           <div className="flex items-center gap-2.5 px-1">
@@ -727,7 +819,19 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
         </div>
       )}
       </div>
-      </div>{/* end right pane */}
+      </div>{/* end middle pane */}
+
+      {/* ── Right pane: section navigator. Only at 2xl+ (≥1536px), where the
+          content area is wide enough that a third column doesn't squeeze the
+          document — below that we stay 2-column (config + fluid document). ── */}
+      {sheet && (
+        <>
+          <div aria-hidden className="hidden 2xl:block 2xl:w-px 2xl:shrink-0 2xl:self-stretch bg-border" />
+          <div className="hidden 2xl:block 2xl:w-[240px] 2xl:shrink-0 2xl:sticky 2xl:top-6 2xl:self-start 2xl:pl-6">
+            <SheetSectionNav key={sheet.topic ?? "sheet"} sheet={sheet} />
+          </div>
+        </>
+      )}
     </div>
 
     {/* ── Tablet-only (768–1023px): floating configure button ── */}

@@ -1235,7 +1235,8 @@ const OutputSection = ({
           <Card
             key={key}
             ref={isReference ? referenceNoteRef : undefined}
-            className={`glass-card animate-fade-in overflow-hidden rounded-md border-l-2 border-l-primary/25 ${config.className}`}
+            data-section-key={key}
+            className={`glass-card animate-fade-in overflow-hidden rounded-md border-l-2 border-l-primary/25 scroll-mt-20 ${config.className}`}
             style={{ animationDelay: `${idx * 200}ms`, animationFillMode: "backwards" }}
           >
             <div className="px-6 pt-5 pb-2 flex items-center justify-between gap-2">
