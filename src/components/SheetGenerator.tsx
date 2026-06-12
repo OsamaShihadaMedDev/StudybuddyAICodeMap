@@ -24,7 +24,8 @@ import CitationCTABanner from "@/components/CitationCTABanner";
 import AuthModal from "@/components/AuthModal";
 import GoProModal from "@/components/GoProModal";
 import { startTopProgress, finishTopProgress } from "@/components/TopProgressBar";
-import type { StudyHistoryItem } from "@/hooks/use-study-history";
+import { useStudyHistory, type StudyHistoryItem } from "@/hooks/use-study-history";
+import { timeAgo } from "@/lib/utils";
 
 export interface SheetGeneratorPrefill {
   input: string;
@@ -162,6 +163,123 @@ const SheetSectionNav = ({ sheet }: { sheet: GeneratedSheet }) => {
       </nav>
       {/* TODO(Phase 1+): "Saved highlights" subsection — list collapsed
           enhancements with their kind icon, click to jump to the gold mark. */}
+    </div>
+  );
+};
+
+// ── Empty state ──────────────────────────────────────────────────────────────
+
+const QUICKSTART_TOPICS = ["Heart Failure", "Pneumonia", "Diabetic Ketoacidosis"];
+
+const QuickstartChips = ({ onStartTopic }: { onStartTopic: (label: string) => void }) => (
+  <div className="flex flex-wrap justify-center gap-2">
+    {QUICKSTART_TOPICS.map((label) => (
+      <button
+        key={label}
+        type="button"
+        onClick={() => onStartTopic(label)}
+        className="cursor-pointer rounded-md border border-border bg-transparent px-3 py-1.5 text-[13px] font-medium text-muted-foreground transition-colors hover:border-primary/50 hover:text-primary"
+      >
+        {label}
+      </button>
+    ))}
+  </div>
+);
+
+interface SheetsEmptyStateProps {
+  onStartTopic: (label: string) => void;
+  onSelectHistory: (item: StudyHistoryItem) => void;
+}
+
+/**
+ * First-visit empty state. New users see the topic-picker CTA. Returning users
+ * with saved sheets see those sheets up front (continue studying) plus a lighter
+ * "start fresh" path, so we surface their library instead of only pushing a new
+ * generation.
+ */
+const SheetsEmptyState = ({ onStartTopic, onSelectHistory }: SheetsEmptyStateProps) => {
+  const { history, isLoading } = useStudyHistory();
+
+  // While history loads, show skeleton cards only (no separator/chips) so the
+  // layout doesn't jump once we know whether there's any history to show.
+  if (isLoading) {
+    return (
+      <div className="animate-fade-in space-y-3">
+        <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+          Continue studying
+        </p>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {[0, 1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="h-[92px] animate-pulse rounded-xl border border-border bg-muted/40"
+            />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // New users (no history): the original topic-picker empty state.
+  if (history.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-5 rounded-xl border border-dashed border-border px-6 py-20 text-center animate-fade-in">
+        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
+          <Stethoscope className="h-6 w-6 text-primary" />
+        </div>
+        <div className="space-y-1">
+          <p className="text-sm font-medium text-foreground">
+            Pick a topic to generate your study sheet
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Your sheet will build here, section by section.
+          </p>
+        </div>
+        <QuickstartChips onStartTopic={onStartTopic} />
+      </div>
+    );
+  }
+
+  // Returning users: recent sheets first, then a lighter "start fresh" path.
+  const recent = history.slice(0, 4);
+  return (
+    <div className="animate-fade-in space-y-6">
+      <div className="space-y-3">
+        <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+          Continue studying
+        </p>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {recent.map((item) => {
+            const chips = [item.modeInfo?.examMode, item.modeInfo?.difficulty]
+              .filter(Boolean)
+              .join(" · ");
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => onSelectHistory(item)}
+                className="group flex cursor-pointer flex-col gap-1.5 rounded-xl border border-border bg-card p-4 text-left transition-all hover:border-foreground/20 hover:shadow-sm motion-safe:hover:-translate-y-0.5"
+              >
+                <p className="truncate text-sm font-medium text-foreground">{item.topic}</p>
+                {chips && <p className="truncate text-[11px] text-muted-foreground">{chips}</p>}
+                <p className="mt-auto pt-1 text-[11px] text-muted-foreground/70">
+                  {timeAgo(item.timestamp)}
+                </p>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="flex items-center gap-3">
+        <div className="h-px flex-1 bg-border" />
+        <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
+          or start fresh
+        </span>
+        <div className="h-px flex-1 bg-border" />
+      </div>
+
+      <QuickstartChips onStartTopic={onStartTopic} />
     </div>
   );
 };
@@ -456,6 +574,34 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
     generate(label);
   };
 
+  // Load a saved sheet straight from history (no regeneration) — mirrors how the
+  // `prefill` prop hydrates the generator on mount.
+  const loadHistoryItem = (item: StudyHistoryItem) => {
+    if (item.modeInfo) {
+      setExamMode(item.modeInfo.examMode || "General");
+      setDifficulty(item.modeInfo.difficulty || "Basic");
+      setFocus(item.modeInfo.focus || "Quick Revision");
+      setLength(item.modeInfo.length || "Concise");
+    }
+    setNotes(item.input);
+    setShowTextarea(false);
+    setConfigDrawerOpen(false);
+    setDeckSaved(false);
+    setModelUsed(undefined);
+    setCitationState("idle");
+    setCitations([]);
+    if (isJsonSheet(item.output)) {
+      setSheet(parseStoredSheet(item.output));
+      setLegacyOutput("");
+    } else {
+      setSheet(null);
+      setLegacyOutput(item.output);
+    }
+    setTimeout(() => {
+      outputRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 80);
+  };
+
   const configurator = (
       <Card className="glass-card animate-fade-in rounded-xl">
         <CardContent className="px-4 py-5 space-y-4">
@@ -731,31 +877,7 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
       )}
 
       {!loading && !sheet && !legacyOutput && (
-        <div className="flex flex-col items-center justify-center gap-5 rounded-xl border border-dashed border-border py-20 px-6 text-center animate-fade-in">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-            <Stethoscope className="h-6 w-6 text-primary" />
-          </div>
-          <div className="space-y-1">
-            <p className="text-sm font-medium text-foreground">
-              Pick a topic to generate your study sheet
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Your sheet will build here, section by section.
-            </p>
-          </div>
-          <div className="flex flex-wrap justify-center gap-2">
-            {["Heart Failure", "Pneumonia", "Diabetic Ketoacidosis"].map((label) => (
-              <button
-                key={label}
-                type="button"
-                onClick={() => startTopic(label)}
-                className="px-3 py-1.5 rounded-md text-[13px] font-medium border border-border bg-transparent text-muted-foreground hover:border-primary/50 hover:text-primary transition-colors cursor-pointer"
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
+        <SheetsEmptyState onStartTopic={startTopic} onSelectHistory={loadHistoryItem} />
       )}
 
       {(sheet || legacyOutput) && (
