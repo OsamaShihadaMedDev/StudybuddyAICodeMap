@@ -28,3 +28,8 @@ dist-ssr
 graphify-out/
 .playwright-mcp/
 design-review/
+
+# Local Claude Code tooling — kept out of the repo, retained on disk
+.claude/
+.mcp.json
+CLAUDE.md
