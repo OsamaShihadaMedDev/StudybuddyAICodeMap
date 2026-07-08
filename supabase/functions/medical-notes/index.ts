@@ -22,6 +22,30 @@ serve(async (req) => {
   }
 
   try {
+    // ── JWT verification ───────────────────────────────────────────────────
+    // Reject missing/invalid tokens before doing any work. The client sends the
+    // user's Supabase access token as the Authorization bearer.
+    const authHeader = req.headers.get("Authorization") ?? "";
+    const token = authHeader.replace(/^Bearer\s+/i, "").trim();
+    if (!token) {
+      return new Response(
+        JSON.stringify({ error: "invalid_token" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
+    const authClient = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+    const { data: { user }, error: authError } = await authClient.auth.getUser(token);
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: "invalid_token" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const { notes, difficulty, focus, length, examMode, cardsOnly, cardCount, focusCard,
             explainMode, userId, isAnonymous, isPro, preferredModel,
             enhanceMode, itemText, sectionKey, sectionItems, enhanceTopic } = await req.json();

@@ -10,6 +10,7 @@ import GoProModal from "@/components/GoProModal";
 import { getCitationsForTopic } from "@/lib/citation-store";
 import CitationBadgeList from "@/components/CitationBadgeList";
 import { startTopProgress, finishTopProgress } from "@/components/TopProgressBar";
+import { callMedicalNotes } from "@/lib/callMedicalNotes";
 
 interface StudyModeProps {
   dueCards: Card[];
@@ -372,17 +373,7 @@ export const ExplainPanel = ({ open, scope, card, onClose }: ExplainPanelProps) 
               examMode: "General",
               explainMode: true,
             };
-        const response = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/medical-notes`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-            },
-            body: JSON.stringify(body),
-          }
-        );
+        const response = await callMedicalNotes(body);
         if (!response.ok) {
           const err = await response.json().catch(() => ({}));
           throw new Error(err.error || `Error: ${response.status}`);

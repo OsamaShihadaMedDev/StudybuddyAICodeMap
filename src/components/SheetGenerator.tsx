@@ -11,6 +11,7 @@ import { useCitationUsage } from "@/hooks/use-citation-usage";
 import { usePremiumHook } from "@/hooks/use-premium-hook";
 import { useModelPreference } from "@/hooks/use-model-preference";
 import { useAuth } from "@/hooks/use-auth";
+import { callMedicalNotes } from "@/lib/callMedicalNotes";
 import { useFlashcardDeck } from "@/hooks/use-flashcard-deck";
 import { parseFlashcardsFromOutput } from "@/lib/parse-flashcards";
 import { sanitizeJsonOutput } from "@/lib/sanitize-json";
@@ -376,27 +377,17 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
     try {
       await incrementSheet();
 
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/medical-notes`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
-          body: JSON.stringify({
-            notes: activeNotes,
-            difficulty,
-            focus,
-            length,
-            examMode,
-            userId: user?.id ?? null,
-            isAnonymous: isAnonymous ?? false,
-            isPro: pro,
-            preferredModel: pro ? preferredModel : undefined,
-          }),
-        }
-      );
+      const response = await callMedicalNotes({
+        notes: activeNotes,
+        difficulty,
+        focus,
+        length,
+        examMode,
+        userId: user?.id ?? null,
+        isAnonymous: isAnonymous ?? false,
+        isPro: pro,
+        preferredModel: pro ? preferredModel : undefined,
+      });
 
       const xModel = response.headers.get("X-Model-Used") ?? "";
       const resolvedModel = xModel.includes("gpt-oss")
