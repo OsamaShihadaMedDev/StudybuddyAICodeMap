@@ -121,6 +121,53 @@ export type Database = {
         }
         Relationships: []
       }
+      curriculum_topics: {
+        Row: {
+          created_at: string
+          generator_prompt: string | null
+          id: string
+          is_active: boolean
+          level: number
+          parent_id: string | null
+          sort_order: number
+          system: string
+          title: string
+          yield_tier: string
+        }
+        Insert: {
+          created_at?: string
+          generator_prompt?: string | null
+          id?: string
+          is_active?: boolean
+          level?: number
+          parent_id?: string | null
+          sort_order?: number
+          system: string
+          title: string
+          yield_tier?: string
+        }
+        Update: {
+          created_at?: string
+          generator_prompt?: string | null
+          id?: string
+          is_active?: boolean
+          level?: number
+          parent_id?: string | null
+          sort_order?: number
+          system?: string
+          title?: string
+          yield_tier?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "curriculum_topics_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "curriculum_topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pro_codes: {
         Row: {
           code: string
@@ -213,6 +260,7 @@ export type Database = {
       study_history: {
         Row: {
           created_at: string
+          curriculum_topic_id: string | null
           difficulty: string | null
           exam_mode: string | null
           focus: string | null
@@ -225,6 +273,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          curriculum_topic_id?: string | null
           difficulty?: string | null
           exam_mode?: string | null
           focus?: string | null
@@ -237,6 +286,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          curriculum_topic_id?: string | null
           difficulty?: string | null
           exam_mode?: string | null
           focus?: string | null
@@ -247,7 +297,15 @@ export type Database = {
           topic?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "study_history_curriculum_topic_id_fkey"
+            columns: ["curriculum_topic_id"]
+            isOneToOne: false
+            referencedRelation: "curriculum_topics"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       usage_records: {
         Row: {

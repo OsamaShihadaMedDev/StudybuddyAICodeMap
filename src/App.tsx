@@ -13,6 +13,7 @@ import Dashboard from "./pages/Dashboard.tsx";
 import Library from "./pages/Library.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import ResetPassword from "./pages/ResetPassword.tsx";
+import Roadmap from "./pages/Roadmap.tsx";
 import Sheets from "./pages/Sheets.tsx";
 import Flashcards from "./pages/Flashcards.tsx";
 import QBank from "./pages/QBank.tsx";
@@ -54,6 +55,7 @@ const AppRoutes = () => {
       <Routes location={displayLocation}>
         <Route path="/" element={<Index />} />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/roadmap" element={<Roadmap />} />
         <Route path="/sheets" element={<Sheets />} />
         <Route path="/flashcards" element={<Flashcards />} />
         <Route element={<QBankProvider><Outlet /></QBankProvider>}>
