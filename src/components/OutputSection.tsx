@@ -1,5 +1,6 @@
 import { useRef, useEffect, useState, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
+import { callMedicalNotes } from "@/lib/callMedicalNotes";
 import {
   BookOpen,
   Check,
@@ -632,27 +633,19 @@ const InlineEnhancement = ({
     setError(null);
 
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/medical-notes`,
+      const response = await callMedicalNotes(
         {
-          method: "POST",
-          signal: abortRef.current.signal,
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
-          body: JSON.stringify({
-            enhanceMode: mode,
-            itemText: enhancement.sourceText,
-            sectionKey: enhancement.anchor,
-            sectionItems: [],
-            enhanceTopic: topic,
-            isPro,
-            userId,
-            isAnonymous,
-            notes: enhancement.sourceText,
-          }),
-        }
+          enhanceMode: mode,
+          itemText: enhancement.sourceText,
+          sectionKey: enhancement.anchor,
+          sectionItems: [],
+          enhanceTopic: topic,
+          isPro,
+          userId,
+          isAnonymous,
+          notes: enhancement.sourceText,
+        },
+        { signal: abortRef.current.signal }
       );
 
       if (!response.ok) throw new Error("Enhancement failed");

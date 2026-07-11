@@ -17,6 +17,7 @@ import { useCitationUsage } from "@/hooks/use-citation-usage";
 import { usePremiumHook } from "@/hooks/use-premium-hook";
 import { useModelPreference } from "@/hooks/use-model-preference";
 import { useAuth } from "@/hooks/use-auth";
+import { callMedicalNotes } from "@/lib/callMedicalNotes";
 import { parseFlashcardsFromOutput } from "@/lib/parse-flashcards";
 import { fetchBestCitation, type CitationResult } from "@/lib/citation";
 import { saveCitationsForTopic } from "@/lib/citation-store";
@@ -120,29 +121,19 @@ const FlashcardsGenerator = ({ onGeneratingChange, onGenerated }: FlashcardsGene
     try {
       await incrementCards();
 
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/medical-notes`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
-          body: JSON.stringify({
-            notes: activeTopic,
-            examMode,
-            difficulty: "Basic",
-            focus: "Quick Revision",
-            length: "Concise",
-            cardsOnly: true,
-            cardCount: activeCardCount,
-            userId: user?.id ?? null,
-            isAnonymous: isAnonymous ?? false,
-            isPro: pro,
-            preferredModel: pro ? preferredModel : undefined,
-          }),
-        }
-      );
+      const response = await callMedicalNotes({
+        notes: activeTopic,
+        examMode,
+        difficulty: "Basic",
+        focus: "Quick Revision",
+        length: "Concise",
+        cardsOnly: true,
+        cardCount: activeCardCount,
+        userId: user?.id ?? null,
+        isAnonymous: isAnonymous ?? false,
+        isPro: pro,
+        preferredModel: pro ? preferredModel : undefined,
+      });
 
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));
