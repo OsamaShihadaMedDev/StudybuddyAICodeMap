@@ -23,6 +23,19 @@ const GoProModal = ({ open, onOpenChange }: GoProModalProps) => {
               <Sparkles className="h-5 w-5 text-primary-foreground" />
             </div>
           </div>
+          <div
+            style={{
+              fontFamily: "var(--font-mono)",
+              fontSize: 11,
+              fontWeight: 500,
+              letterSpacing: "0.14em",
+              textTransform: "uppercase",
+              color: "var(--accent)",
+              marginBottom: 8,
+            }}
+          >
+            StudyBuddy AI · Pro
+          </div>
           <DialogTitle className="text-xl font-semibold tracking-tight">Go Pro</DialogTitle>
           <div className="pt-1">
             <p className="text-2xl font-semibold tracking-tight text-foreground">

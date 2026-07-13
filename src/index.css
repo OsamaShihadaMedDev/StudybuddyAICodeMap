@@ -33,8 +33,12 @@
     --muted: 43 22% 84%;
     --muted-foreground: 38 14% 37%;
 
-    /* Accent: --teal-600 #0D6E6E */
-    --accent: 180 79% 24%;
+    /* Accent: --teal-600 #0D6E6E.
+       Namespaced --sb-*: openmed-tokens.css owns the raw --accent / --border
+       names (as hex), and this file loads after it. Reusing those names here
+       would overwrite the hex with an HSL triplet and break every raw
+       var(--accent) / var(--border) consumer, openmed-components.css included. */
+    --sb-accent: 180 79% 24%;
     --accent-foreground: 0 0% 100%;
 
     /* Destructive: --coral-600 #C5453A */
@@ -42,7 +46,7 @@
     --destructive-foreground: 0 0% 100%;
 
     /* Borders: --stone-100 #E4DECE */
-    --border: 43 22% 84%;
+    --sb-border: 43 22% 84%;
     --input: 43 22% 84%;
     --ring: 180 79% 24%;
 
@@ -89,13 +93,13 @@
     --muted: 220 18% 13%;
     --muted-foreground: 43 10% 58%;
 
-    --accent: 180 28% 57%;
+    --sb-accent: 180 28% 57%;
     --accent-foreground: 220 14% 6%;
 
     --destructive: 3 54% 35%;
     --destructive-foreground: 46 24% 90%;
 
-    --border: 220 18% 17%;
+    --sb-border: 220 18% 17%;
     --input: 220 18% 17%;
     --ring: 180 28% 57%;
 
@@ -187,7 +191,7 @@
   }
 
   .section-keypoints {
-    box-shadow: 0 4px 16px -4px hsl(var(--border) / 0.5);
+    box-shadow: 0 4px 16px -4px hsl(var(--sb-border) / 0.5);
   }
 
   .section-visuals {
@@ -236,7 +240,7 @@
 
   .hover-lift:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 24px -8px hsl(var(--border) / 0.6);
+    box-shadow: 0 8px 24px -8px hsl(var(--sb-border) / 0.6);
   }
 
   /* OpenMed bg-grid — light default, dark override */
