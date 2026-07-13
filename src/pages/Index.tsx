@@ -4,16 +4,16 @@ import {
   ArrowRight,
   ArrowUpRight,
   BarChart3,
-  BookOpen,
-  Brain,
+  BookMarked,
   Check,
+  FileText,
   Laptop,
+  Layers,
   ListChecks,
-  MessageCircle,
   Moon,
   Smartphone,
+  Sparkles,
   Sun,
-  Trophy,
   Users,
 } from "lucide-react";
 import "@/styles/openmed-tokens.css";
@@ -31,7 +31,13 @@ const APP_STORAGE_KEYS = [
 const hasUsedAppBefore = () =>
   APP_STORAGE_KEYS.some((key) => localStorage.getItem(key) !== null);
 
-const CONTACT_EMAIL = "mailto:Osama200az@gmail.com";
+const CONTACT_EMAIL = "mailto:osama200az@gmail.com";
+
+const SOCIALS = {
+  instagram: "https://www.instagram.com/getstudybuddyai/",
+  linkedin: "https://www.linkedin.com/company/studdybuddyai",
+  telegram: "https://t.me/studybuddyai",
+};
 
 const NAV_LINKS = [
   { href: "#playground", label: "How it works" },
@@ -43,20 +49,20 @@ const NAV_LINKS = [
 
 const STEPS = [
   {
-    name: "Pick your topic",
-    desc: "Type any subject — we map it to the concepts that actually get examined",
+    name: "Enter a topic",
+    desc: "Type any medical topic — no PDF upload needed. StudyBuddy AI maps it to your curriculum automatically.",
   },
   {
-    name: "Get a study sheet",
-    desc: "Structured notes with memory hooks, exam traps, and PubMed citations",
+    name: "Get your study sheet",
+    desc: "A structured clinical sheet with overview, pathophysiology, diagnosis, and management — in seconds.",
   },
   {
-    name: "Drill the QBank",
-    desc: "Adaptive MCQs that track which domains you keep getting wrong",
+    name: "Practice with the QBank",
+    desc: "Single-best-answer vignettes for the topic you just studied. The engine tracks what you get wrong.",
   },
   {
-    name: "Review with AI",
-    desc: "Instant explanations tied to evidence, plus flashcards on spaced repetition",
+    name: "Review and repeat",
+    desc: "Spaced repetition surfaces weak spots. Inline Enhance deepens any concept. PubMed links verify the evidence.",
   },
 ];
 
@@ -86,40 +92,40 @@ const RUNTIMES = [
 
 const FEATURES = [
   {
-    icon: Brain,
-    title: "AI study sheets",
-    desc: "Type a topic, get exam-focused notes with memory hooks and high-yield traps — not a wall of text.",
-    tags: ["Structured", "Clinical"],
+    icon: FileText,
+    title: "AI Study Sheets",
+    desc: "Topic name in — structured clinical sheet out. Covers overview, pathophysiology, diagnosis, and management.",
+    tags: ["GPT-OSS 20B", "Instant"],
   },
   {
     icon: ListChecks,
     title: "Smart QBank",
-    desc: "USMLE-style MCQs with domain filters and session resume. Your weak spots surface on their own.",
-    tags: ["Adaptive", "Spaced rep"],
+    desc: "Single-best-answer clinical vignettes with full explanations. Adaptive — the engine tracks your weak spots.",
+    tags: ["Adaptive", "SM-2"],
   },
   {
-    icon: BookOpen,
-    title: "Curriculum roadmap",
-    desc: "A structured spine through each system, so you always know what to study next.",
-    tags: ["Guided", "Sequenced"],
+    icon: Layers,
+    title: "Flashcard Decks",
+    desc: "Generate decks from any topic or import your own. Spaced repetition surfaces cards when retention is lowest.",
+    tags: ["Spaced rep", "Auto-gen"],
+  },
+  {
+    icon: BookMarked,
+    title: "PubMed Citations",
+    desc: "Every study sheet links to real PubMed sources via NIH E-utilities. Evidence-grounded, not hallucinated.",
+    tags: ["Pro", "NIH API"],
   },
   {
     icon: BarChart3,
-    title: "Progress tracking",
-    desc: "Every session is scored and stored. See accuracy by domain across your whole history.",
-    tags: ["Analytics", "Weak spots"],
+    title: "Progress Analytics",
+    desc: "Session history, subject coverage, and accuracy trends. See exactly where your knowledge gaps are.",
+    tags: ["Dashboard", "Heatmap"],
   },
   {
-    icon: MessageCircle,
-    title: "AI explanations",
-    desc: "Ask why an answer is right. Explanations cite peer-reviewed literature from PubMed.",
-    tags: ["Evidence-based", "Instant"],
-  },
-  {
-    icon: Trophy,
-    title: "Flashcard decks",
-    desc: "Auto-generated from any sheet, scheduled with SM-2 spaced repetition and an exam mode.",
-    tags: ["Auto-built", "Exam mode"],
+    icon: Sparkles,
+    title: "Inline Enhance",
+    desc: "Highlight any term in a study sheet to pull up a deep-dive sidebar — like AMBOSS, built in.",
+    tags: ["Pro", "Streaming"],
   },
 ];
 
@@ -135,67 +141,60 @@ const SUBJECT_FILTERS = [
 const SUBJECTS = [
   {
     name: "Cardiology",
-    count: "320 questions",
+    arch: "ECG · Heart failure · Arrhythmias",
     tags: ["ECG", "Heart failure", "Arrhythmias"],
-    answered: "2.1K",
-    featured: true,
   },
   {
     name: "Pharmacology",
-    count: "280 questions",
+    arch: "Mechanisms · Drug interactions · Toxicology",
     tags: ["Mechanisms", "Drug interactions"],
-    answered: "1.8K",
   },
   {
     name: "Pathology",
-    count: "240 questions",
+    arch: "Histology · Systemic · Neoplasia",
     tags: ["Histology", "Systemic"],
-    answered: "1.4K",
   },
   {
     name: "Surgery",
-    count: "190 questions",
+    arch: "Pre-op assessment · Post-op care · Trauma",
     tags: ["Pre-op", "Post-op", "Trauma"],
-    answered: "890",
   },
   {
     name: "Microbiology",
-    count: "210 questions",
+    arch: "Bacteriology · Virology · Parasitology",
     tags: ["Bacteria", "Viruses", "Parasites"],
-    answered: "1.1K",
   },
   {
     name: "Anatomy",
-    count: "160 questions",
+    arch: "Gross anatomy · Neuroanatomy · Embryology",
     tags: ["Gross", "Neuroanatomy"],
-    answered: "720",
   },
 ];
 
 const FAQS = [
   {
     q: "What is StudyBuddy AI?",
-    a: "An AI-powered study platform for medical students. You type a topic and get a structured study sheet, a flashcard deck on spaced repetition, and USMLE-style practice questions — each generation backed by PubMed-cited literature rather than an unsourced summary.",
+    a: "StudyBuddy AI is an AI-powered study platform built for medical students. Enter any topic and get a structured clinical study sheet, practice questions, and flashcard decks — all in one place. Built by a final-year medical student in Gaza, priced for MENA.",
   },
   {
     q: "Is it aligned with USMLE?",
-    a: "Yes. Questions are written in USMLE Step 1 style — clinical vignette, single best answer, plausible distractors — and grounded in standard review material. Sheets and flashcards are tuned to what gets examined, not to what is merely true.",
+    a: "Yes. The QBank is written in USMLE Step 1 style — clinical vignette, single best answer, plausible distractors — and questions are tagged by subject and domain so you can target your practice sessions. Arab Board tagging is on the roadmap.",
   },
   {
     q: "How is this different from Anki or Amboss?",
-    a: "Anki gives you scheduling but you write every card yourself. Amboss gives you a fixed library you cannot change. StudyBuddy generates the sheet, the deck, and the questions from whatever topic you are actually studying this week, then schedules the review for you.",
+    a: "StudyBuddy AI generates content from any topic you name — no pre-made decks to buy, no textbook to upload. The Inline Enhance feature works like AMBOSS but is built directly into your study sheets. And it's designed for MENA pricing, not US pricing.",
   },
   {
     q: "Is my data private?",
-    a: "Your study history and generated content are tied to your own account and are not shared with other users or sold. You can use the app anonymously — no email required — and your work is preserved if you later create an account.",
+    a: "Your study sheets, decks, and session history sync to your account via Supabase. We don't sell your data or share it with third parties. PubMed citations pull from NIH's public API.",
   },
   {
     q: "Can I use it on my phone?",
-    a: "Yes. The web app is fully responsive, so sheets, flashcards, and QBank sessions all work in a mobile browser. A QBank session that gets interrupted is saved and can be resumed later.",
+    a: "Yes — StudyBuddy AI is fully mobile-optimized. A native app is on the roadmap.",
   },
   {
     q: "Is there a free plan?",
-    a: "Yes. The free plan includes the study-sheet generator, flashcards, and QBank with a daily generation limit. Pro lifts the limits and unlocks the premium model.",
+    a: "Yes. The free plan includes the full AI study sheet generator and QBank access with no credit card required. Pro ($5/mo) unlocks unlimited usage, PubMed citations, the Inline Enhance sidebar, and the Claude Haiku model tier.",
   },
 ];
 
@@ -267,7 +266,7 @@ const Index = () => {
       <header className={menuOpen ? "nav menu-open" : "nav"}>
         <div className="container nav-inner">
           <Link to="/" className="logo" aria-label="StudyBuddy home">
-            <span className="wordmark">StudyBuddy</span>
+            <span className="wordmark">StudyBuddy AI</span>
             <span className="version-tag">Beta</span>
           </Link>
 
@@ -358,13 +357,15 @@ const Index = () => {
               </div>
 
               <div className="hero-meta">
-                <span className="pip">AI study sheets</span>
+                <span className="pip">AI Study Sheets</span>
                 <span>·</span>
                 <span className="pip">Smart QBank</span>
                 <span>·</span>
-                <span className="pip">USMLE-focused</span>
+                <span className="pip">USMLE-aligned</span>
                 <span>·</span>
-                <span className="pip">PubMed-cited</span>
+                <span className="pip">Built by an MD</span>
+                <span>·</span>
+                <span className="pip">Free to start</span>
               </div>
             </div>
 
@@ -421,40 +422,23 @@ D. Pericarditis`}
         <section className="statband" aria-label="Traction stats">
           <div className="container">
             <div className="statband-head">
-              <span className="statband-eyebrow">Traction</span>
+              <span className="statband-eyebrow">Built for medical students</span>
               <span className="statband-desc">
-                Growing across MENA, one study session at a time.
+                One workflow: study, practice, review — across every subject.
               </span>
-              <span className="statband-meta">Updated July 2026</span>
             </div>
-            <div className="statband-grid">
-              <div className="statband-cell">
-                <div className="statband-num">2,400+</div>
-                <div className="statband-label">Active students</div>
-              </div>
-              <div className="statband-cell">
-                <div className="statband-num">18K+</div>
-                <div className="statband-label">Questions answered</div>
-              </div>
-              <div className="statband-cell">
-                <div className="statband-num">94%</div>
-                <div className="statband-label">Reported improvement</div>
-              </div>
-              <div className="statband-cell">
-                <div className="statband-num">&lt;5min</div>
-                <div className="statband-label">To first study sheet</div>
-              </div>
-            </div>
-            <div className="statband-grid statband-grid--secondary">
-              <div className="statband-cell">
-                <div className="statband-num statband-num--sm">12</div>
-                <div className="statband-label">Subjects covered</div>
-              </div>
-              <div className="statband-cell">
-                <div className="statband-num statband-num--sm">USMLE</div>
-                <div className="statband-label">Exam track, with more on the way</div>
-              </div>
-            </div>
+            <p
+              className="body-lg"
+              style={{
+                color: "var(--fg-on-inverse-muted)",
+                maxWidth: "58ch",
+                margin: "32px auto 40px",
+                textAlign: "center",
+              }}
+            >
+              Growing across MENA — medical students using StudyBuddy AI to study smarter,
+              practice better, and walk into exams with confidence.
+            </p>
             <div className="statband-foot">
               <span className="statband-meta">Every subject, one workflow</span>
               <span className="statband-pills">
@@ -659,11 +643,10 @@ D. Pericarditis`}
             </div>
 
             <div className="models-grid">
-              {visibleSubjects.map(({ name, count, tags, answered, featured }) => (
+              {visibleSubjects.map(({ name, arch, tags }) => (
                 <Link className="model-cell" to="/qbank" key={name}>
-                  {featured && <span className="model-featured">New</span>}
                   <div className="heading-sm model-name">{name}</div>
-                  <div className="model-arch">{count}</div>
+                  <div className="model-arch">{arch}</div>
                   <div className="model-tags">
                     {tags.map((tag) => (
                       <span className="tag" key={tag}>
@@ -672,11 +655,8 @@ D. Pericarditis`}
                     ))}
                   </div>
                   <div className="model-foot">
-                    <span className="dl">
-                      <strong>{answered}</strong> answered
-                    </span>
                     <span className="open">
-                      Start
+                      Open
                       <ArrowUpRight className="icon" size={12} strokeWidth={1.6} />
                     </span>
                   </div>
@@ -726,12 +706,13 @@ D. Pericarditis`}
               <div className="product-card dark">
                 <div className="product-card-top">
                   <div className="product-wordmark">Pro</div>
-                  <span className="product-badge">Contact for pricing</span>
+                  <span className="product-badge">$5/mo</span>
                 </div>
                 <h3>Unlimited everything</h3>
                 <p className="pdesc">
-                  Unlimited sheets and questions, the premium Claude model on every
-                  generation, full analytics, and new subjects first.
+                  Unlimited AI case generation, full QBank access, spaced repetition
+                  analytics, PubMed citations, priority model tier (Claude Haiku), and new
+                  subjects as they ship.
                 </p>
                 <div className="product-built">
                   Powered by <b>Claude Haiku 4.5</b> on every generation.
@@ -744,17 +725,11 @@ D. Pericarditis`}
             </div>
 
             <div className="deploy-strip">
-              <div>
-                <div className="eyebrow muted" style={{ marginBottom: 6 }}>
-                  Institutions
-                </div>
-                <p className="body-sm" style={{ maxWidth: "62ch" }}>
-                  Teaching a whole cohort? Medical schools and study groups can get
-                  StudyBuddy for their students.
-                </p>
-              </div>
+              <span className="body-sm">
+                Institutional pricing available for medical schools and NGOs.
+              </span>
               <a className="btn btn-outline" href={CONTACT_EMAIL}>
-                Contact for institution pricing
+                Contact us
                 <ArrowUpRight className="icon" size={16} strokeWidth={1.6} />
               </a>
             </div>
@@ -791,28 +766,36 @@ D. Pericarditis`}
             </div>
             <div className="research-stats">
               <div className="research-stat">
-                <div className="num">
-                  94<span className="suf">%</span>
+                <div className="num" style={{ fontSize: "var(--fs-display-md)" }}>
+                  USMLE
                 </div>
-                <div className="lbl">Better retention</div>
-                <div className="sub">reported, vs passive reading</div>
-              </div>
-              <div className="research-stat">
-                <div className="num">
-                  3<span className="suf">×</span>
+                <div className="lbl">Step 1 &amp; 2 style</div>
+                <div className="sub">
+                  Questions tagged by subject and domain out of the box
                 </div>
-                <div className="lbl">More practice volume</div>
-                <div className="sub">per study hour</div>
               </div>
               <div className="research-stat">
-                <div className="num">USMLE</div>
-                <div className="lbl">Exam track</div>
-                <div className="sub">built-in question tagging by domain</div>
+                <div className="num" style={{ fontSize: "var(--fs-display-md)" }}>
+                  Adaptive
+                </div>
+                <div className="lbl">Spaced repetition engine</div>
+                <div className="sub">SM-2 algorithm surfaces your weak spots automatically</div>
               </div>
               <div className="research-stat">
-                <div className="num">Gaza</div>
-                <div className="lbl">Origin story</div>
-                <div className="sub">built in a conflict zone, shipped anyway</div>
+                <div className="num" style={{ fontSize: "var(--fs-display-md)" }}>
+                  Free tier
+                </div>
+                <div className="lbl">No credit card required</div>
+                <div className="sub">
+                  Start with the full sheet generator and QBank, no payment needed
+                </div>
+              </div>
+              <div className="research-stat">
+                <div className="num" style={{ fontSize: "var(--fs-display-md)" }}>
+                  MENA-first
+                </div>
+                <div className="lbl">Built in Gaza</div>
+                <div className="sub">Priced and designed for students in underserved markets</div>
               </div>
             </div>
           </div>
@@ -858,12 +841,13 @@ D. Pericarditis`}
           <div className="container">
             <div className="eyebrow">Open invitation</div>
             <h2 className="display-lg contribute-title">
-              2,400 students and counting.{" "}
+              Growing across MENA.{" "}
               <span className="serif-italic">Built in the open.</span>
             </h2>
             <p className="body-lg contribute-desc">
-              StudyBuddy started in Gaza and grew across MENA. If you're a medical student
-              who wants better tools, start studying — or tell us what's missing.
+              StudyBuddy AI started in Gaza and is growing across the Arab world. If you're
+              a medical student who wants better tools — join the early access list or
+              follow the build on Instagram.
             </p>
             <div className="contribute-ctas">
               <button
@@ -873,8 +857,13 @@ D. Pericarditis`}
                 Get early access
                 <ArrowRight className="icon" size={18} strokeWidth={1.6} />
               </button>
-              <a className="btn btn-outline btn-lg" href={CONTACT_EMAIL}>
-                Tell us what's missing
+              <a
+                className="btn btn-outline btn-lg"
+                href={SOCIALS.instagram}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Follow on Instagram
                 <ArrowUpRight className="icon" size={18} strokeWidth={1.6} />
               </a>
             </div>
@@ -887,7 +876,7 @@ D. Pericarditis`}
           <div className="footer-grid">
             <div className="footer-col">
               <div className="footer-brand">
-                <span className="wordmark">StudyBuddy</span>
+                <span className="wordmark">StudyBuddy AI</span>
               </div>
               <p className="body-sm" style={{ maxWidth: "38ch" }}>
                 AI-powered study tools for medical students in MENA and beyond.
@@ -934,19 +923,29 @@ D. Pericarditis`}
               <div className="footer-col-head">Connect</div>
               <ul>
                 <li>
-                  <a href={CONTACT_EMAIL}>Email us</a>
+                  <a href={SOCIALS.instagram} target="_blank" rel="noopener noreferrer">
+                    Instagram
+                  </a>
                 </li>
                 <li>
-                  <a href="https://wa.me/972592823030" target="_blank" rel="noopener noreferrer">
-                    WhatsApp
+                  <a href={SOCIALS.linkedin} target="_blank" rel="noopener noreferrer">
+                    LinkedIn
                   </a>
+                </li>
+                <li>
+                  <a href={SOCIALS.telegram} target="_blank" rel="noopener noreferrer">
+                    Telegram
+                  </a>
+                </li>
+                <li>
+                  <a href={CONTACT_EMAIL}>Email us</a>
                 </li>
               </ul>
             </div>
           </div>
 
           <div className="footer-foot">
-            <span>© {new Date().getFullYear()} StudyBuddy AI · For educational use only</span>
+            <span>© {new Date().getFullYear()} StudyBuddy AI</span>
             <span>Built by Osama Shihada · Gaza</span>
           </div>
         </div>
