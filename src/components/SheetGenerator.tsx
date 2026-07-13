@@ -304,7 +304,9 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
   const [deckSaved, setDeckSaved] = useState(false);
   const [loadingMsg, setLoadingMsg] = useState("");
   const [pendingOutput, setPendingOutput] = useState<string | null>(null);
-  const [showTextarea, setShowTextarea] = useState(false);
+  // A prefilled topic (e.g. a Roadmap chip) must land in a visible textarea —
+  // otherwise the picker renders and silently overwrites it on the next click.
+  const [showTextarea, setShowTextarea] = useState(!!prefill?.input);
   const [citationState, setCitationState] = useState<CitationState>("idle");
   const [citations, setCitations] = useState<CitationResult[]>([]);
   const [authModalOpen, setAuthModalOpen] = useState(false);

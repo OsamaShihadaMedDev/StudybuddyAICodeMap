@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Library as LibraryIcon,
+  Map as MapIcon,
   FileText,
   Layers,
   FlaskConical,
@@ -82,6 +83,7 @@ const DashboardSidebar = ({
 
   const navItems = [
     { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { to: "/roadmap", label: "Roadmap", icon: MapIcon },
     { to: "/sheets", label: "Study Sheet", icon: FileText },
     { to: "/flashcards", label: "Flashcards", icon: Layers },
     { to: "/qbank", label: "QBank", icon: FlaskConical },
