@@ -18,6 +18,7 @@ import { useQBankContext } from "@/contexts/QBankContext";
 import type { OptionKey, QuestionMedia } from "@/hooks/use-qbank";
 
 function renderMarkdown(text: string): string {
+  if (text == null || text === "") return "";
   return text
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.+?)\*/g, '<em>$1</em>');
@@ -233,7 +234,7 @@ const ExplanationContent = ({
       </p>
       <p
         className="text-xs leading-[1.8] text-muted-foreground whitespace-pre-line [&_strong]:text-foreground [&_strong]:font-bold"
-        dangerouslySetInnerHTML={{ __html: renderMarkdown(explanation) }}
+        dangerouslySetInnerHTML={{ __html: renderMarkdown(explanation ?? "") }}
       />
     </div>
 
@@ -243,7 +244,7 @@ const ExplanationContent = ({
       </p>
       <p
         className="text-xs leading-relaxed text-foreground/80"
-        dangerouslySetInnerHTML={{ __html: renderMarkdown(teachingPoint) }}
+        dangerouslySetInnerHTML={{ __html: renderMarkdown(teachingPoint ?? "") }}
       />
     </div>
 
