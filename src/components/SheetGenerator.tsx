@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from "react";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { History, Loader2, PenLine, Settings2, Sparkles, Stethoscope, X } from "lucide-react";
@@ -49,11 +48,22 @@ interface PillGroupProps {
 
 /** Inline pill toggle group — all options visible, tap to select. */
 const PillGroup = ({ label, options, value, onChange }: PillGroupProps) => (
-  <div className="space-y-1">
-    <label className="block text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+  <div style={{ marginBottom: 4 }}>
+    <label
+      style={{
+        display: "block",
+        fontFamily: "var(--font-mono)",
+        fontSize: 11,
+        fontWeight: 500,
+        letterSpacing: "0.12em",
+        textTransform: "uppercase",
+        color: "var(--fg-muted)",
+        marginBottom: 6,
+      }}
+    >
       {label}
     </label>
-    <div className="flex flex-wrap gap-1.5">
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
       {options.map((opt) => {
         const active = value === opt.value;
         return (
@@ -62,11 +72,33 @@ const PillGroup = ({ label, options, value, onChange }: PillGroupProps) => (
             type="button"
             onClick={() => onChange(opt.value)}
             aria-pressed={active}
-            className={`inline-flex h-7 items-center px-2.5 rounded-md border text-xs font-medium transition-colors cursor-pointer ${
-              active
-                ? "bg-primary/10 border-primary/40 text-primary"
-                : "bg-card border-border text-muted-foreground hover:border-primary/30 hover:text-foreground"
-            }`}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              height: 28,
+              padding: "0 10px",
+              borderRadius: "var(--radius-sm)",
+              border: active
+                ? "1px solid var(--accent)"
+                : "1px solid var(--border)",
+              background: active ? "var(--accent-soft)" : "var(--bg-elevated)",
+              color: active ? "var(--accent)" : "var(--fg-muted)",
+              fontFamily: "var(--font-sans)",
+              fontSize: 12,
+              fontWeight: 500,
+              cursor: "pointer",
+              transition: "all var(--dur-micro) var(--ease-out)",
+            }}
+            onMouseEnter={(e) => {
+              if (active) return;
+              e.currentTarget.style.borderColor = "var(--border-strong)";
+              e.currentTarget.style.color = "var(--fg)";
+            }}
+            onMouseLeave={(e) => {
+              if (active) return;
+              e.currentTarget.style.borderColor = "var(--border)";
+              e.currentTarget.style.color = "var(--fg-muted)";
+            }}
           >
             {opt.label}
           </button>
@@ -138,11 +170,22 @@ const SheetSectionNav = ({ sheet }: { sheet: GeneratedSheet }) => {
   if (!items.length) return null;
 
   return (
-    <div className="space-y-2">
-      <p className="px-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+    <div style={{ paddingTop: 4 }}>
+      <p
+        style={{
+          fontFamily: "var(--font-mono)",
+          fontSize: 11,
+          fontWeight: 500,
+          letterSpacing: "0.14em",
+          textTransform: "uppercase",
+          color: "var(--fg-muted)",
+          marginBottom: 12,
+          paddingLeft: 12,
+        }}
+      >
         On this sheet
       </p>
-      <nav className="flex flex-col">
+      <nav style={{ display: "flex", flexDirection: "column" }}>
         {items.map((it) => {
           const active = activeKey === it.key;
           return (
@@ -151,11 +194,29 @@ const SheetSectionNav = ({ sheet }: { sheet: GeneratedSheet }) => {
               type="button"
               onClick={() => scrollToSection(it.key)}
               aria-current={active ? "true" : undefined}
-              className={`border-l-2 py-1.5 pl-3 text-left text-[13px] leading-tight transition-colors ${
-                active
-                  ? "border-l-primary font-medium text-primary"
-                  : "border-l-border/40 text-muted-foreground hover:text-foreground"
-              }`}
+              style={{
+                border: "none",
+                borderLeft: active
+                  ? "2px solid var(--accent)"
+                  : "2px solid var(--border)",
+                padding: "6px 0 6px 12px",
+                textAlign: "left",
+                fontFamily: "var(--font-sans)",
+                fontSize: 13,
+                lineHeight: 1.3,
+                fontWeight: active ? 500 : 400,
+                color: active ? "var(--accent)" : "var(--fg-muted)",
+                background: "transparent",
+                cursor: "pointer",
+                transition:
+                  "color var(--dur-micro) var(--ease-out), border-color var(--dur-micro) var(--ease-out)",
+              }}
+              onMouseEnter={(e) => {
+                if (!active) e.currentTarget.style.color = "var(--fg)";
+              }}
+              onMouseLeave={(e) => {
+                if (!active) e.currentTarget.style.color = "var(--fg-muted)";
+              }}
             >
               {it.label}
             </button>
@@ -179,7 +240,27 @@ const QuickstartChips = ({ onStartTopic }: { onStartTopic: (label: string) => vo
         key={label}
         type="button"
         onClick={() => onStartTopic(label)}
-        className="cursor-pointer rounded-md border border-border bg-transparent px-3 py-1.5 text-[13px] font-medium text-muted-foreground transition-colors hover:border-primary/50 hover:text-primary"
+        style={{
+          padding: "8px 16px",
+          borderRadius: "var(--radius-md)",
+          border: "1px solid var(--border)",
+          background: "transparent",
+          fontFamily: "var(--font-sans)",
+          fontSize: 13,
+          fontWeight: 500,
+          color: "var(--fg-muted)",
+          cursor: "pointer",
+          transition:
+            "border-color var(--dur-micro) var(--ease-out), color var(--dur-micro) var(--ease-out)",
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.borderColor = "var(--accent)";
+          e.currentTarget.style.color = "var(--accent)";
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.borderColor = "var(--border)";
+          e.currentTarget.style.color = "var(--fg-muted)";
+        }}
       >
         {label}
       </button>
@@ -224,15 +305,46 @@ const SheetsEmptyState = ({ onStartTopic, onSelectHistory }: SheetsEmptyStatePro
   // New users (no history): the original topic-picker empty state.
   if (history.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center gap-5 rounded-xl border border-dashed border-border px-6 py-20 text-center animate-fade-in">
-        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-          <Stethoscope className="h-6 w-6 text-primary" />
+      <div
+        className="animate-fade-in"
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 20,
+          borderRadius: "var(--radius-lg)",
+          border: "1px dashed var(--border-strong)",
+          padding: "80px 24px",
+          textAlign: "center",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: 48,
+            height: 48,
+            borderRadius: "var(--radius-lg)",
+            background: "var(--accent-soft)",
+          }}
+        >
+          <Stethoscope style={{ width: 24, height: 24, color: "var(--accent)" }} />
         </div>
-        <div className="space-y-1">
-          <p className="text-sm font-medium text-foreground">
+        <div>
+          <p
+            style={{
+              fontFamily: "var(--font-sans)",
+              fontSize: 14,
+              fontWeight: 500,
+              color: "var(--fg)",
+              marginBottom: 4,
+            }}
+          >
             Pick a topic to generate your study sheet
           </p>
-          <p className="text-xs text-muted-foreground">
+          <p style={{ fontSize: 13, color: "var(--fg-muted)" }}>
             Your sheet will build here, section by section.
           </p>
         </div>
@@ -259,11 +371,37 @@ const SheetsEmptyState = ({ onStartTopic, onSelectHistory }: SheetsEmptyStatePro
                 key={item.id}
                 type="button"
                 onClick={() => onSelectHistory(item)}
-                className="group flex cursor-pointer flex-col gap-1.5 rounded-xl border border-border bg-card p-4 text-left transition-all hover:border-foreground/20 hover:shadow-sm motion-safe:hover:-translate-y-0.5"
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 6,
+                  borderRadius: "var(--radius-md)",
+                  border: "1px solid var(--border)",
+                  background: "var(--bg-elevated)",
+                  padding: "14px 16px",
+                  textAlign: "left",
+                  cursor: "pointer",
+                  transition:
+                    "border-color var(--dur-micro) var(--ease-out), transform var(--dur-micro) var(--ease-out)",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = "var(--border-strong)";
+                  e.currentTarget.style.transform = "translateY(-2px)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = "var(--border)";
+                  e.currentTarget.style.transform = "none";
+                }}
               >
-                <p className="truncate text-sm font-medium text-foreground">{item.topic}</p>
-                {chips && <p className="truncate text-[11px] text-muted-foreground">{chips}</p>}
-                <p className="mt-auto pt-1 text-[11px] text-muted-foreground/70">
+                <p className="truncate" style={{ fontSize: 13, fontWeight: 500, color: "var(--fg)" }}>
+                  {item.topic}
+                </p>
+                {chips && (
+                  <p className="truncate" style={{ fontSize: 11, color: "var(--fg-muted)" }}>
+                    {chips}
+                  </p>
+                )}
+                <p style={{ fontSize: 11, color: "var(--fg-subtle)", marginTop: "auto", paddingTop: 4 }}>
                   {timeAgo(item.timestamp)}
                 </p>
               </button>
@@ -272,12 +410,20 @@ const SheetsEmptyState = ({ onStartTopic, onSelectHistory }: SheetsEmptyStatePro
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
-        <div className="h-px flex-1 bg-border" />
-        <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
+        <span
+          style={{
+            fontFamily: "var(--font-mono)",
+            fontSize: 11,
+            letterSpacing: "0.1em",
+            textTransform: "uppercase",
+            color: "var(--fg-muted)",
+          }}
+        >
           or start fresh
         </span>
-        <div className="h-px flex-1 bg-border" />
+        <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
       </div>
 
       <QuickstartChips onStartTopic={onStartTopic} />
@@ -600,21 +746,55 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
   };
 
   const configurator = (
-      <Card className="glass-card animate-fade-in rounded-xl">
-        <CardContent className="px-4 py-5 space-y-4">
+      <div
+        className="animate-fade-in"
+        style={{
+          border: "1px solid var(--border)",
+          borderRadius: "var(--radius-lg)",
+          background: "var(--bg-elevated)",
+          padding: "20px 20px 24px",
+        }}
+      >
+        <div className="space-y-4">
           {!isLoggedIn && (
             <CitationCTABanner onSignInClick={() => setAuthModalOpen(true)} />
           )}
           <div className="space-y-1.5">
-            <label className="block text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+            <label
+              style={{
+                display: "block",
+                fontFamily: "var(--font-mono)",
+                fontSize: 11,
+                fontWeight: 500,
+                letterSpacing: "0.14em",
+                textTransform: "uppercase",
+                color: "var(--fg-muted)",
+                marginBottom: 8,
+              }}
+            >
               Medical Notes
             </label>
             {!showTextarea ? (
-              <div className="rounded-lg border border-border bg-background p-3 space-y-2.5">
-                <p className="text-xs font-medium text-muted-foreground">
+              <div
+                style={{
+                  borderRadius: "var(--radius-md)",
+                  border: "1px solid var(--border)",
+                  background: "var(--bg)",
+                  padding: "12px 12px 14px",
+                }}
+              >
+                <p
+                  style={{
+                    fontFamily: "var(--font-mono)",
+                    fontSize: 11,
+                    color: "var(--fg-muted)",
+                    marginBottom: 10,
+                    letterSpacing: "0.06em",
+                  }}
+                >
                   Pick a topic to start — or type your own
                 </p>
-                <div className="flex flex-wrap gap-1.5">
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                   {[
                     { emoji: "❤️", label: "Heart Failure" },
                     { emoji: "🫁", label: "Pneumonia" },
@@ -626,7 +806,31 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
                       key={label}
                       type="button"
                       onClick={() => startTopic(label)}
-                      className="inline-flex h-7 items-center gap-1.5 px-2.5 rounded-md text-xs font-medium border border-border bg-card text-foreground/80 hover:border-primary/50 hover:text-primary transition-colors cursor-pointer"
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 6,
+                        height: 28,
+                        padding: "0 10px",
+                        borderRadius: "var(--radius-sm)",
+                        border: "1px solid var(--border)",
+                        background: "var(--bg)",
+                        color: "var(--fg)",
+                        fontFamily: "var(--font-sans)",
+                        fontSize: 12,
+                        fontWeight: 500,
+                        cursor: "pointer",
+                        transition:
+                          "border-color var(--dur-micro) var(--ease-out), color var(--dur-micro) var(--ease-out)",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = "var(--accent)";
+                        e.currentTarget.style.color = "var(--accent)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = "var(--border)";
+                        e.currentTarget.style.color = "var(--fg)";
+                      }}
                     >
                       <span aria-hidden>{emoji}</span>
                       <span>{label}</span>
@@ -635,9 +839,33 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
                   <button
                     type="button"
                     onClick={() => setShowTextarea(true)}
-                    className="inline-flex h-7 items-center gap-1.5 px-2.5 rounded-md text-xs font-medium border border-dashed border-border bg-transparent text-muted-foreground hover:border-primary/40 hover:text-primary transition-colors cursor-pointer"
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 6,
+                      height: 28,
+                      padding: "0 10px",
+                      borderRadius: "var(--radius-sm)",
+                      border: "1px dashed var(--border-strong)",
+                      background: "transparent",
+                      color: "var(--fg-muted)",
+                      fontFamily: "var(--font-sans)",
+                      fontSize: 12,
+                      fontWeight: 500,
+                      cursor: "pointer",
+                      transition:
+                        "border-color var(--dur-micro) var(--ease-out), color var(--dur-micro) var(--ease-out)",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = "var(--accent)";
+                      e.currentTarget.style.color = "var(--accent)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = "var(--border-strong)";
+                      e.currentTarget.style.color = "var(--fg-muted)";
+                    }}
                   >
-                    <PenLine className="h-3.5 w-3.5" />
+                    <PenLine style={{ width: 12, height: 12 }} />
                     Type my own topic
                   </button>
                 </div>
@@ -790,38 +1018,103 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
             </div>
           )}
 
-          <Button
-            className="w-full h-10 text-sm font-medium rounded-lg"
+          <button
+            type="button"
             onClick={handleGenerate}
             disabled={loading}
+            style={{
+              width: "100%",
+              height: 44,
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+              borderRadius: "var(--radius-md)",
+              border: "1px solid transparent",
+              background: loading ? "var(--stone-300)" : "var(--fg)",
+              color: "var(--bg)",
+              fontFamily: "var(--font-sans)",
+              fontSize: 14,
+              fontWeight: 500,
+              cursor: loading ? "not-allowed" : "pointer",
+              opacity: loading ? 0.7 : 1,
+              transition: "background var(--dur-micro) var(--ease-out)",
+              marginTop: 4,
+            }}
           >
             {loading ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="animate-spin" style={{ width: 16, height: 16 }} />
                 Generating…
               </>
             ) : (
               <>
-                <Sparkles className="mr-2 h-4 w-4" />
+                <Sparkles style={{ width: 15, height: 15 }} />
                 Generate Study Material
               </>
             )}
-          </Button>
+          </button>
 
           {recentTopics.length > 0 && (
-            <div className="space-y-1.5 pt-1 border-t border-border">
-              <p className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground pt-2.5">
-                <History className="h-3 w-3" />
+            <div style={{ paddingTop: 16, borderTop: "1px solid var(--border)", marginTop: 8 }}>
+              <p
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  fontFamily: "var(--font-mono)",
+                  fontSize: 11,
+                  fontWeight: 500,
+                  letterSpacing: "0.12em",
+                  textTransform: "uppercase",
+                  color: "var(--fg-muted)",
+                  marginBottom: 8,
+                  paddingTop: 8,
+                }}
+              >
+                <History style={{ width: 12, height: 12 }} />
                 Recent
               </p>
-              <div className="flex flex-wrap gap-1.5 max-h-16 overflow-y-auto">
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: 6,
+                  maxHeight: 64,
+                  overflowY: "auto",
+                }}
+              >
                 {recentTopics.map((topic) => (
                   <button
                     key={topic}
                     type="button"
                     disabled={loading}
                     onClick={() => startTopic(topic)}
-                    className="max-w-full truncate px-2.5 py-1 rounded-md text-xs font-medium border border-border bg-card text-muted-foreground hover:border-primary/40 hover:text-primary transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-default"
+                    className="truncate"
+                    style={{
+                      maxWidth: "100%",
+                      padding: "4px 10px",
+                      borderRadius: "var(--radius-sm)",
+                      border: "1px solid var(--border)",
+                      background: "var(--bg)",
+                      color: "var(--fg-muted)",
+                      fontFamily: "var(--font-sans)",
+                      fontSize: 12,
+                      fontWeight: 500,
+                      cursor: loading ? "default" : "pointer",
+                      opacity: loading ? 0.5 : 1,
+                      transition:
+                        "border-color var(--dur-micro) var(--ease-out), color var(--dur-micro) var(--ease-out)",
+                    }}
+                    onMouseEnter={(e) => {
+                      if (loading) return;
+                      e.currentTarget.style.borderColor = "var(--accent)";
+                      e.currentTarget.style.color = "var(--accent)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = "var(--border)";
+                      e.currentTarget.style.color = "var(--fg-muted)";
+                    }}
                   >
                     {topic}
                   </button>
@@ -829,8 +1122,8 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
               </div>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
   );
 
   return (
@@ -842,19 +1135,34 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
       </div>
 
       {/* ── 1px divider between config and document ── */}
-      <div aria-hidden className="hidden lg:block lg:w-px lg:shrink-0 lg:self-stretch bg-border" />
+      <div
+        aria-hidden
+        className="hidden lg:block lg:w-px lg:shrink-0 lg:self-stretch"
+        style={{ background: "var(--border)" }}
+      />
 
       {/* ── Middle pane: living document (fluid, fills its lane) ── */}
       <div ref={outputRef} className="min-w-0 lg:flex-1 lg:px-8">
       <div className="w-full space-y-6">
       {loading && !sheet && !legacyOutput && (
         <div className="space-y-6 animate-fade-in">
-          <div className="flex items-center gap-2.5 px-1">
-            <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
-            <p className="text-sm font-medium text-foreground transition-all duration-300">
+          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "0 4px" }}>
+            <Loader2
+              className="animate-spin"
+              style={{ width: 14, height: 14, color: "var(--accent)" }}
+            />
+            <p
+              style={{
+                fontFamily: "var(--font-sans)",
+                fontSize: 14,
+                fontWeight: 500,
+                color: "var(--fg)",
+                transition: "all 300ms",
+              }}
+            >
               {loadingMsg}
             </p>
-            <p className="text-xs text-muted-foreground/50">
+            <p style={{ fontSize: 12, color: "var(--fg-subtle)" }}>
               Takes a little longer during peak hours — hang tight
             </p>
           </div>
@@ -945,7 +1253,11 @@ const SheetGenerator = ({ prefill }: SheetGeneratorProps) => {
           document — below that we stay 2-column (config + fluid document). ── */}
       {sheet && (
         <>
-          <div aria-hidden className="hidden 2xl:block 2xl:w-px 2xl:shrink-0 2xl:self-stretch bg-border" />
+          <div
+            aria-hidden
+            className="hidden 2xl:block 2xl:w-px 2xl:shrink-0 2xl:self-stretch"
+            style={{ background: "var(--border)" }}
+          />
           <div className="hidden 2xl:block 2xl:w-[240px] 2xl:shrink-0 2xl:sticky 2xl:top-6 2xl:self-start 2xl:pl-6">
             <SheetSectionNav key={sheet.topic ?? "sheet"} sheet={sheet} />
           </div>

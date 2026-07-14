@@ -1,5 +1,4 @@
 import { BookOpen } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 interface CitationCTABannerProps {
   onSignInClick: () => void;
@@ -7,21 +6,71 @@ interface CitationCTABannerProps {
 
 const CitationCTABanner = ({ onSignInClick }: CitationCTABannerProps) => {
   return (
-    <div className="flex items-center gap-3 px-4 py-2.5 rounded-lg border border-border bg-background">
-      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-border bg-card">
-        <BookOpen className="h-3.5 w-3.5 text-primary" />
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
+        padding: "10px 14px",
+        borderRadius: "var(--radius-md)",
+        border: "1px solid var(--border)",
+        borderLeft: "3px solid var(--accent)",
+        background: "var(--bg)",
+        marginBottom: 16,
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          width: 28,
+          height: 28,
+          borderRadius: "var(--radius-sm)",
+          border: "1px solid var(--border)",
+          background: "var(--bg-elevated)",
+          flexShrink: 0,
+        }}
+      >
+        <BookOpen style={{ width: 14, height: 14, color: "var(--accent)" }} />
       </div>
-      <p className="flex-1 text-xs text-muted-foreground leading-snug">
+      <p
+        style={{
+          flex: 1,
+          fontFamily: "var(--font-sans)",
+          fontSize: 12,
+          color: "var(--fg-muted)",
+          lineHeight: 1.4,
+          margin: 0,
+        }}
+      >
         Try it free — get 1 cited generation today, no account needed
       </p>
-      <Button
-        size="sm"
-        variant="outline"
+      <button
+        type="button"
         onClick={onSignInClick}
-        className="h-8 px-3 text-xs font-medium"
+        style={{
+          padding: "6px 12px",
+          borderRadius: "var(--radius-sm)",
+          border: "1px solid var(--border-strong)",
+          background: "var(--bg-elevated)",
+          color: "var(--fg)",
+          fontFamily: "var(--font-sans)",
+          fontSize: 12,
+          fontWeight: 500,
+          cursor: "pointer",
+          flexShrink: 0,
+          transition: "border-color var(--dur-micro) var(--ease-out)",
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.borderColor = "var(--fg)";
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.borderColor = "var(--border-strong)";
+        }}
       >
         Sign In
-      </Button>
+      </button>
     </div>
   );
 };
