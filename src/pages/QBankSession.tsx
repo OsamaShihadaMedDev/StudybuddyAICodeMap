@@ -11,7 +11,6 @@ import {
   Flag,
   SkipForward,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import PageLoader from "@/components/PageLoader";
 import { useQBankContext } from "@/contexts/QBankContext";
@@ -44,6 +43,37 @@ const formatElapsed = (ms: number): string => {
 };
 
 type Difficulty = "Easy" | "Medium" | "Hard";
+
+// ── OpenMed token styles ────────────────────────────────────────────────────
+
+const MONO_EYEBROW: React.CSSProperties = {
+  fontFamily: "var(--font-mono)",
+  fontSize: 11,
+  fontWeight: 500,
+  letterSpacing: "0.14em",
+  textTransform: "uppercase",
+  color: "var(--fg-muted)",
+};
+
+/** Dark CTA — the OpenMed primary button (ink on light, parchment on dark). */
+const darkButtonStyle = (disabled = false): React.CSSProperties => ({
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 6,
+  height: 40,
+  padding: "0 20px",
+  borderRadius: "var(--radius-md)",
+  border: "1px solid transparent",
+  background: "var(--fg)",
+  color: "var(--bg)",
+  fontFamily: "var(--font-sans)",
+  fontSize: 14,
+  fontWeight: 500,
+  cursor: disabled ? "not-allowed" : "pointer",
+  opacity: disabled ? 0.6 : 1,
+  transition: "opacity var(--dur-micro) var(--ease-out)",
+});
 
 interface QuestionCounterProps {
   total: number;
@@ -81,30 +111,44 @@ const QuestionCounter = ({
           const isSkipped = q ? skippedIds.includes(q.id) : false;
           const isFlaggedQ = q ? flaggedIds.has(q.id) : false;
 
-          let bg = "bg-muted/30 text-muted-foreground/40";
-          let border = "border-border/20";
-          let cursor = "cursor-default";
-
-          if (isCurrent) {
-            bg = "bg-primary/20 text-primary";
-            border = "border-primary/50";
-          } else if (isReviewing) {
-            bg = "bg-primary/30 text-primary";
-            border = "border-primary";
-          } else if (isAnswered) {
-            if (isCorrect) {
-              bg = "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400";
-              border = "border-green-500/40";
-            } else {
-              bg = "bg-red-500/15 text-red-600 dark:text-red-400";
-              border = "border-red-500/40";
-            }
-            cursor = "cursor-pointer hover:opacity-80 transition-opacity";
-          } else if (isSkipped) {
-            bg = "bg-amber-500/20 text-amber-400";
-            border = "border-amber-500/40";
-            cursor = "cursor-pointer hover:opacity-80 transition-opacity";
-          }
+          const dotStyle: React.CSSProperties = isCurrent
+            ? {
+                background: "var(--accent-soft)",
+                color: "var(--accent)",
+                border: "1px solid var(--accent)",
+              }
+            : isReviewing
+            ? {
+                background: "var(--accent-soft)",
+                color: "var(--accent)",
+                border: "2px solid var(--accent)",
+              }
+            : isAnswered && isCorrect
+            ? {
+                background: "rgba(5,150,105,0.15)",
+                color: "#059669",
+                border: "1px solid rgba(5,150,105,0.4)",
+                cursor: "pointer",
+              }
+            : isAnswered
+            ? {
+                background: "rgba(220,38,38,0.12)",
+                color: "#dc2626",
+                border: "1px solid rgba(220,38,38,0.35)",
+                cursor: "pointer",
+              }
+            : isSkipped
+            ? {
+                background: "rgba(217,119,6,0.15)",
+                color: "#d97706",
+                border: "1px solid rgba(217,119,6,0.35)",
+                cursor: "pointer",
+              }
+            : {
+                background: "var(--bg-elevated)",
+                color: "var(--fg-subtle)",
+                border: "1px solid var(--border)",
+              };
 
           const canClick = isAnswered || (isSkipped && !isCurrent);
 
@@ -116,7 +160,19 @@ const QuestionCounter = ({
                 if (isAnswered) onReview(i);
                 else if (isSkipped && !isCurrent) onNavigate(i);
               }}
-              className={`relative w-7 h-7 rounded-lg border text-[10px] font-bold flex items-center justify-center shrink-0 ${bg} ${border} ${cursor}`}
+              className="relative shrink-0 transition-opacity hover:opacity-80"
+              style={{
+                ...dotStyle,
+                width: 28,
+                height: 28,
+                borderRadius: "var(--radius-sm)",
+                fontFamily: "var(--font-mono)",
+                fontSize: 10,
+                fontWeight: 700,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
               title={
                 isAnswered
                   ? `Q${i + 1} — click to review`
@@ -206,53 +262,80 @@ const ExplanationContent = ({
   <div className="flex flex-col gap-4">
     <div className="flex items-center justify-between">
       <div
-        className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${
-          isCorrect
-            ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
-            : "bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/30"
-        }`}
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 6,
+          padding: "4px 12px",
+          borderRadius: "var(--radius-pill)",
+          border: isCorrect ? "1px solid var(--accent)" : "1px solid var(--signal)",
+          background: isCorrect ? "var(--accent-soft)" : "rgba(197,69,58,0.08)",
+          color: isCorrect ? "var(--accent)" : "var(--signal)",
+          fontFamily: "var(--font-sans)",
+          fontSize: 12,
+          fontWeight: 500,
+        }}
       >
         {isCorrect ? (
-          <CheckCircle className="h-3.5 w-3.5" />
+          <CheckCircle style={{ width: 13, height: 13 }} />
         ) : (
-          <XCircle className="h-3.5 w-3.5" />
+          <XCircle style={{ width: 13, height: 13 }} />
         )}
         {isCorrect ? "Correct" : "Incorrect"}
       </div>
       <StethoscopePulse difficulty={difficulty} />
     </div>
 
-    <div className="h-px bg-border/40" />
+    <div style={{ height: 1, background: "var(--border)" }} />
 
     {media && media.length > 0 && (
       <MediaBlock media={media} context="explanation" onOpen={onOpenLightbox} />
     )}
 
     <div>
-      <p className="text-[11px] font-semibold tracking-wider text-primary uppercase mb-2">
+      <p style={{ ...MONO_EYEBROW, color: "var(--accent)", marginBottom: 8 }}>
         Explanation
       </p>
       <p
-        className="text-xs leading-[1.8] text-muted-foreground whitespace-pre-line [&_strong]:text-foreground [&_strong]:font-bold"
+        className="whitespace-pre-line [&_strong]:text-foreground [&_strong]:font-bold"
+        style={{ fontSize: 12, lineHeight: 1.8, color: "var(--fg-muted)" }}
         dangerouslySetInnerHTML={{ __html: renderMarkdown(explanation ?? "") }}
       />
     </div>
 
-    <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 space-y-1">
-      <p className="text-[11px] font-semibold tracking-wider text-primary uppercase">
+    <div
+      style={{
+        borderRadius: "var(--radius-md)",
+        border: "1px solid var(--border)",
+        borderLeft: "3px solid var(--accent)",
+        background: "var(--accent-soft)",
+        padding: "12px 16px",
+      }}
+    >
+      <p style={{ ...MONO_EYEBROW, color: "var(--accent)", marginBottom: 6 }}>
         Key teaching point
       </p>
       <p
-        className="text-xs leading-relaxed text-foreground/80"
+        style={{ fontSize: 13, lineHeight: 1.6, color: "var(--fg)" }}
         dangerouslySetInnerHTML={{ __html: renderMarkdown(teachingPoint ?? "") }}
       />
     </div>
 
     <div className="flex items-center gap-2 pt-1">
-      <span className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
-        Domain
-      </span>
-      <span className="inline-flex items-center rounded-full border border-border bg-muted px-3 py-1 text-[11px] font-medium text-muted-foreground">
+      <span style={MONO_EYEBROW}>Domain</span>
+      <span
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          padding: "4px 10px",
+          borderRadius: "var(--radius-pill)",
+          border: "1px solid var(--border)",
+          background: "var(--bg-elevated)",
+          fontFamily: "var(--font-mono)",
+          fontSize: 11,
+          color: "var(--fg-muted)",
+        }}
+      >
         {domain}
       </span>
     </div>
@@ -279,42 +362,77 @@ const OptionTile = ({ letter, text, answerState, pendingKey, onSelect }: OptionT
   const isDimmed   = isAnswered && !isSelected && !isCorrect;
 
   const isPending = answerState.status === "selected" && pendingKey === letter;
-  const isOtherPending = answerState.status === "selected" && pendingKey !== null && pendingKey !== letter;
 
-  const tileStyle = isCorrect
-    ? "border-emerald-500/60 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+  const tileStyle: React.CSSProperties = isCorrect
+    ? { border: "1px solid var(--accent)", background: "var(--accent-soft)", color: "var(--accent)" }
     : isWrong
-    ? "border-red-500/60 bg-red-500/10 text-red-700 dark:text-red-300"
+    ? { border: "1px solid var(--signal)", background: "rgba(197,69,58,0.08)", color: "var(--signal)" }
     : isDimmed
-    ? "border-border bg-card text-muted-foreground/40 cursor-default"
+    ? {
+        border: "1px solid var(--border)",
+        background: "var(--bg-elevated)",
+        color: "var(--fg-subtle)",
+        cursor: "default",
+      }
     : isPending
-    ? "border-primary bg-primary/10 text-foreground cursor-pointer"
-    : isOtherPending
-    ? "border-border bg-card text-muted-foreground cursor-pointer hover:border-primary/40"
-    : "border-border bg-card hover:border-primary/50 text-foreground cursor-pointer";
+    ? {
+        border: "1px solid var(--accent)",
+        background: "var(--accent-soft)",
+        color: "var(--fg)",
+        cursor: "pointer",
+      }
+    : {
+        border: "1px solid var(--border)",
+        background: "var(--bg-elevated)",
+        color: "var(--fg)",
+        cursor: "pointer",
+      };
 
-  const letterStyle = isCorrect
-    ? "bg-emerald-500 text-white"
+  const letterStyle: React.CSSProperties = isCorrect
+    ? { background: "var(--accent)", color: "var(--bg)" }
     : isWrong
-    ? "bg-red-500 text-white"
+    ? { background: "var(--signal)", color: "#fff" }
     : isDimmed
-    ? "bg-muted text-muted-foreground/40"
+    ? { background: "var(--border)", color: "var(--fg-subtle)" }
     : isPending
-    ? "bg-primary text-primary-foreground"
-    : isOtherPending
-    ? "bg-muted text-muted-foreground group-hover:bg-primary/15 group-hover:text-primary"
-    : "bg-muted text-muted-foreground group-hover:bg-primary/15 group-hover:text-primary";
+    ? { background: "var(--accent)", color: "var(--bg)" }
+    : { background: "var(--border)", color: "var(--fg-muted)" };
 
   return (
     <button
+      type="button"
       onClick={() => !isAnswered && onSelect(letter)}
       disabled={isAnswered}
-      className={`group w-full flex items-start gap-3 rounded-lg border p-4 text-left transition-colors duration-150 ${tileStyle}`}
+      style={{
+        width: "100%",
+        display: "flex",
+        alignItems: "flex-start",
+        gap: 12,
+        padding: "14px 16px",
+        borderRadius: "var(--radius-md)",
+        textAlign: "left",
+        transition: "all var(--dur-micro) var(--ease-out)",
+        ...tileStyle,
+      }}
     >
-      <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-xs font-semibold transition-colors ${letterStyle}`}>
+      <span
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          width: 28,
+          height: 28,
+          borderRadius: "var(--radius-sm)",
+          fontFamily: "var(--font-mono)",
+          fontSize: 12,
+          fontWeight: 600,
+          flexShrink: 0,
+          ...letterStyle,
+        }}
+      >
         {LETTER_LABELS[letter]}
       </span>
-      <span className="text-sm leading-relaxed pt-0.5">{text}</span>
+      <span style={{ fontSize: 14, lineHeight: 1.6, paddingTop: 2 }}>{text}</span>
     </button>
   );
 };
@@ -918,21 +1036,40 @@ const QBankSession = () => {
 
             {/* Animated session progress fill */}
             {effectiveTotalQuestions > 0 && (
-              <div className="h-1 w-full rounded-full bg-muted overflow-hidden" aria-hidden>
+              <div
+                className="h-1 w-full rounded-full overflow-hidden"
+                style={{ background: "var(--border)" }}
+                aria-hidden
+              >
                 <div
-                  className="h-full rounded-full bg-primary transition-all duration-500 ease-out"
+                  className="h-full rounded-full transition-all duration-500 ease-out"
                   style={{
                     width: `${(sessionAnswers.length / effectiveTotalQuestions) * 100}%`,
+                    background: "var(--accent)",
                   }}
                 />
               </div>
             )}
 
-            <div className="glass-card rounded-xl p-5">
-              <p className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase mb-3">
-                Clinical vignette
-              </p>
-              <p className="text-[15px] leading-7 text-foreground whitespace-pre-line">
+            <div
+              style={{
+                border: "1px solid var(--border)",
+                borderLeft: "3px solid var(--accent)",
+                borderRadius: "var(--radius-md)",
+                background: "var(--bg-elevated)",
+                padding: "20px 20px 24px",
+              }}
+            >
+              <p style={{ ...MONO_EYEBROW, marginBottom: 12 }}>Clinical vignette</p>
+              <p
+                style={{
+                  fontFamily: "var(--font-sans)",
+                  fontSize: 15,
+                  lineHeight: 1.75,
+                  color: "var(--fg)",
+                  whiteSpace: "pre-line",
+                }}
+              >
                 {displayQuestion!.question_text}
               </p>
             </div>
@@ -941,12 +1078,12 @@ const QBankSession = () => {
               <MediaBlock media={displayQuestion!.media} context="stem" onOpen={openLightbox} />
             )}
 
-            <div className="flex items-center gap-3">
-              <div className="h-px flex-1 bg-border/40" />
-              <span className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
+              <span style={{ ...MONO_EYEBROW, letterSpacing: "0.1em" }}>
                 Select one answer
               </span>
-              <div className="h-px flex-1 bg-border/40" />
+              <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
             </div>
 
             <div className="space-y-2.5">
@@ -965,10 +1102,25 @@ const QBankSession = () => {
             {answerState.status === "unanswered" && !isReviewing && !isLastQuestion && (
               <div className="flex justify-start pt-1">
                 <button
+                  type="button"
                   onClick={skipQuestion}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-4 h-10 text-sm font-medium text-muted-foreground hover:border-amber-500/40 hover:text-amber-600 dark:hover:text-amber-400 transition-colors"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
+                    height: 40,
+                    padding: "0 16px",
+                    borderRadius: "var(--radius-md)",
+                    border: "1px solid var(--border)",
+                    background: "transparent",
+                    color: "var(--fg-muted)",
+                    fontFamily: "var(--font-sans)",
+                    fontSize: 14,
+                    fontWeight: 500,
+                    cursor: "pointer",
+                  }}
                 >
-                  <SkipForward className="h-4 w-4" />
+                  <SkipForward style={{ width: 16, height: 16 }} />
                   Skip for now
                 </button>
               </div>
@@ -976,14 +1128,15 @@ const QBankSession = () => {
 
             {effectiveAnswerState.status === "selected" && !isReviewing && (
               <div className="flex justify-end pt-1 animate-fade-in">
-                <Button
+                <button
+                  type="button"
                   onClick={handleConfirm}
                   disabled={submitting}
-                  className="h-10 px-5 rounded-lg font-medium text-sm gap-2"
+                  style={darkButtonStyle(submitting)}
                 >
-                  <CheckCircle className="h-4 w-4" />
+                  <CheckCircle style={{ width: 16, height: 16 }} />
                   {submitting ? "Checking…" : "Confirm Answer"}
-                </Button>
+                </button>
               </div>
             )}
 
@@ -1001,21 +1154,15 @@ const QBankSession = () => {
                 </div>
               ) : unansweredCount === 0 ? (
                 <div className="flex justify-end pt-1 animate-fade-in">
-                  <Button
-                    onClick={handleNext}
-                    className="h-10 px-5 rounded-lg font-medium text-sm gap-2"
-                  >
-                    Finish Session <ChevronRight className="h-4 w-4" />
-                  </Button>
+                  <button type="button" onClick={handleNext} style={darkButtonStyle()}>
+                    Finish Session <ChevronRight style={{ width: 16, height: 16 }} />
+                  </button>
                 </div>
               ) : (
                 <div className="flex justify-end pt-1 animate-fade-in">
-                  <Button
-                    onClick={handleNext}
-                    className="h-10 px-5 rounded-lg font-medium text-sm gap-2"
-                  >
-                    Next Question <ArrowRight className="h-4 w-4" />
-                  </Button>
+                  <button type="button" onClick={handleNext} style={darkButtonStyle()}>
+                    Next Question <ArrowRight style={{ width: 16, height: 16 }} />
+                  </button>
                 </div>
               )
             )}
@@ -1027,7 +1174,15 @@ const QBankSession = () => {
             }`}
           >
             {isAnsweredEffective && effectiveAnswerState.status === "answered" && (
-              <div className="glass-card rounded-xl p-5 animate-fade-in sticky top-6">
+              <div
+                className="animate-fade-in sticky top-6"
+                style={{
+                  border: "1px solid var(--border)",
+                  borderRadius: "var(--radius-lg)",
+                  background: "var(--bg-elevated)",
+                  padding: 20,
+                }}
+              >
                 <ExplanationContent
                   explanation={displayQuestion!.explanation}
                   teachingPoint={displayQuestion!.teaching_point}
@@ -1096,19 +1251,21 @@ const QBankSession = () => {
                     </p>
                   </div>
                 ) : unansweredCount === 0 ? (
-                  <Button
+                  <button
+                    type="button"
                     onClick={handleNext}
-                    className="w-full h-11 rounded-lg font-medium text-sm gap-2"
+                    style={{ ...darkButtonStyle(), width: "100%", height: 44 }}
                   >
-                    Finish Session <ChevronRight className="h-4 w-4" />
-                  </Button>
+                    Finish Session <ChevronRight style={{ width: 16, height: 16 }} />
+                  </button>
                 ) : (
-                  <Button
+                  <button
+                    type="button"
                     onClick={handleNext}
-                    className="w-full h-11 rounded-lg font-medium text-sm gap-2"
+                    style={{ ...darkButtonStyle(), width: "100%", height: 44 }}
                   >
-                    Next Question <ArrowRight className="h-4 w-4" />
-                  </Button>
+                    Next Question <ArrowRight style={{ width: 16, height: 16 }} />
+                  </button>
                 )}
               </div>
             </div>
