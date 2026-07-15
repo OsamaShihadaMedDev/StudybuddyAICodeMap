@@ -1,0 +1,1113 @@
+/* =============================================================================
+   OpenMed component classes — copied verbatim from openmed.life/assets/style.css.
+   Every selector is prefixed with `.openmed` to sandbox it from Tailwind, which
+   emits its own `.container`, `.tag`, `.chip`-adjacent utilities app-wide.
+   Declarations inside each rule are unchanged from source.
+
+   Source classes for sections StudyBuddy does not use (.sage-*, .welna-*,
+   .agent-shot, .agent-callout, .clarity-strip) are intentionally not copied.
+   ============================================================================= */
+
+/* ---------- Nav ----------------------------------------------------------- */
+.openmed .nav {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: color-mix(in srgb, var(--bg) 82%, transparent);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--border);
+}
+.openmed .nav-inner {
+    height: var(--nav-h);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+.openmed .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+}
+.openmed .wordmark {
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: 22px;
+    color: var(--fg);
+    letter-spacing: -0.02em;
+    line-height: 1;
+}
+.openmed .version-tag {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--fg-muted);
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    margin-left: 8px;
+    padding: 2px 6px;
+    border: 1px solid var(--border-strong);
+    border-radius: 4px;
+}
+.openmed .nav-links {
+    display: flex;
+    gap: 28px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+.openmed .nav-links a {
+    font-family: var(--font-sans);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--fg-muted);
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    padding-bottom: 3px;
+    transition: color var(--dur-micro) var(--ease-out), border-color var(--dur-micro) var(--ease-out);
+}
+.openmed .nav-links a:hover { color: var(--fg); border-bottom-color: var(--border-strong); }
+.openmed .nav-links a.active { color: var(--fg); border-bottom-color: var(--accent); }
+.openmed .nav-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-shrink: 0;
+}
+.openmed .star-pill {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--fg-muted);
+    padding: 5px 10px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-pill);
+    white-space: nowrap;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: color var(--dur-micro), border-color var(--dur-micro), background var(--dur-micro);
+}
+.openmed .star-pill:hover {
+    color: var(--fg);
+    border-color: var(--fg);
+    background: var(--bg-panel);
+}
+.openmed .theme-toggle {
+    width: 36px;
+    height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    color: var(--fg);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-pill);
+    cursor: pointer;
+    transition: background var(--dur-micro) var(--ease-out), border-color var(--dur-micro) var(--ease-out);
+}
+.openmed .theme-toggle:hover {
+    background: var(--bg-panel);
+    border-color: var(--fg);
+}
+.openmed .nav-toggle {
+    display: none;
+    width: 36px;
+    height: 36px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    background: transparent;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-pill);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background var(--dur-micro) var(--ease-out), border-color var(--dur-micro) var(--ease-out);
+}
+.openmed .nav-toggle:hover {
+    background: var(--bg-panel);
+    border-color: var(--fg);
+}
+.openmed .nav-toggle-bar {
+    display: block;
+    width: 14px;
+    height: 1.5px;
+    background: var(--fg);
+    border-radius: 1px;
+    transition: transform var(--dur-base) var(--ease-out), opacity var(--dur-base) var(--ease-out);
+}
+.openmed .nav.menu-open .nav-toggle-bar:nth-child(1) { transform: translateY(5.5px) rotate(45deg); }
+.openmed .nav.menu-open .nav-toggle-bar:nth-child(2) { opacity: 0; }
+.openmed .nav.menu-open .nav-toggle-bar:nth-child(3) { transform: translateY(-5.5px) rotate(-45deg); }
+.openmed .nav-links-mobile-only { display: none; }
+
+/* ---------- Buttons ------------------------------------------------------- */
+.openmed .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-family: var(--font-sans);
+    font-weight: 500;
+    font-size: 14px;
+    padding: 9px 14px;
+    border-radius: var(--radius-md);
+    border: 1px solid transparent;
+    cursor: pointer;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: background var(--dur-micro) var(--ease-out),
+                color var(--dur-micro) var(--ease-out),
+                border-color var(--dur-micro) var(--ease-out),
+                transform var(--dur-micro) var(--ease-out);
+}
+.openmed .btn:active { transform: translateY(1px); }
+.openmed .btn-lg { font-size: 15px; padding: 12px 20px; }
+.openmed .btn-primary {
+    background: var(--fg);
+    color: var(--bg);
+    border-color: var(--fg);
+}
+.openmed .btn-primary:hover { background: var(--stone-600); }
+[data-theme="dark"] .openmed .btn-primary:hover,
+.dark .openmed .btn-primary:hover { background: var(--stone-200); color: var(--ink); }
+.openmed .btn-accent {
+    background: var(--accent);
+    color: #fff;
+    border-color: transparent;
+}
+.openmed .btn-accent:hover { background: var(--accent-hover); }
+.openmed .btn-outline {
+    background: transparent;
+    color: var(--fg);
+    border-color: var(--border-strong);
+}
+.openmed .btn-outline:hover { background: var(--bg-panel); border-color: var(--fg); }
+.openmed .btn-ghost {
+    background: transparent;
+    color: var(--fg);
+    border-color: transparent;
+}
+.openmed .btn-ghost:hover { background: var(--bg-panel); }
+.openmed .btn-link {
+    color: var(--accent);
+    border-bottom: 1px solid var(--accent);
+    border-radius: 0;
+    padding: 6px 0;
+    background: transparent;
+}
+
+.openmed .link-arrow {
+    color: var(--accent);
+    font-family: var(--font-sans);
+    font-weight: 500;
+    font-size: 14px;
+    text-decoration: none;
+    border-bottom: 1px solid var(--accent);
+    align-self: flex-start;
+    padding-bottom: 2px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.openmed .link-arrow:hover { color: var(--accent-hover); border-color: var(--accent-hover); }
+
+.openmed .icon {
+    display: inline-block;
+    vertical-align: -3px;
+}
+
+/* ---------- Hero ---------------------------------------------------------- */
+.openmed .hero {
+    position: relative;
+    padding: 88px 0 64px;
+}
+.openmed .hero-grid {
+    display: grid;
+    grid-template-columns: 1.1fr .9fr;
+    gap: 56px;
+    align-items: center;
+}
+.openmed .hero-title { margin: 16px 0 20px; }
+.openmed .hero-desc { max-width: 54ch; margin-bottom: 28px; }
+.openmed .hero-ctas {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 32px;
+}
+.openmed .hero-meta {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items: center;
+    color: var(--fg-muted);
+    font-family: var(--font-mono);
+    font-size: 12px;
+}
+.openmed .hero-meta .pip { display: flex; align-items: center; gap: 6px; }
+.openmed .hero-caption {
+    margin-top: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--fg-muted);
+    letter-spacing: .06em;
+    text-transform: uppercase;
+}
+.openmed .hero-caption .play { color: var(--accent); }
+
+/* ---------- Question card (source: PHI demo card) ------------------------- */
+.openmed .phi-card {
+    background: var(--surface-inverse);
+    border-radius: var(--radius-lg);
+    color: var(--fg-on-inverse);
+    font-family: var(--font-mono);
+    overflow: hidden;
+    border: 1px solid var(--surface-inverse-2);
+    box-shadow: var(--shadow-ink);
+}
+.openmed .phi-head {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border-on-inverse);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.openmed .phi-head-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.openmed .phi-head-left span {
+    font-size: 12px;
+    color: var(--fg-on-inverse-muted);
+}
+.openmed .phi-count {
+    font-size: 11px;
+    color: var(--accent-on-inverse);
+    padding: 2px 8px;
+    border: 1px solid var(--border-on-inverse);
+    border-radius: 999px;
+}
+.openmed .phi-body {
+    margin: 0;
+    padding: 18px 20px;
+    font-size: 13px;
+    line-height: 1.8;
+    white-space: pre-wrap;
+    color: var(--fg-on-inverse);
+    font-family: var(--font-mono);
+}
+.openmed .phi-token {
+    padding: 0;
+    border-radius: 3px;
+    transition: background 300ms var(--ease-out), color 300ms var(--ease-out), padding 300ms var(--ease-out);
+    border-bottom: 1px dashed var(--stone-500);
+}
+.openmed .phi-token.revealed {
+    border-bottom: none;
+    padding: 1px 5px;
+}
+/* The card is the dark inverse surface in both themes, so token colors are
+   fixed rather than theme-flipping. */
+.openmed .phi-token[data-k="NAME"].revealed { background: #C5453A; color: #fff; }
+.openmed .phi-token[data-k="DATE"].revealed { background: #0D6E6E; color: #fff; }
+.openmed .phi-token[data-k="ID"].revealed { background: #F5E27A; color: #0E1116; }
+.openmed .phi-foot {
+    padding: 12px 18px;
+    border-top: 1px solid var(--border-on-inverse);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    color: var(--fg-on-inverse-muted);
+}
+.openmed .phi-foot .lang-val { color: var(--highlight); }
+.openmed .phi-foot-right { display: flex; align-items: center; gap: 6px; }
+.openmed .phi-foot-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: var(--accent-on-inverse);
+    box-shadow: 0 0 8px var(--accent-on-inverse);
+}
+
+/* ---------- Stat band (ink) ----------------------------------------------- */
+.openmed .statband {
+    background: var(--surface-inverse);
+    padding: 52px 0 36px;
+}
+.openmed .statband-head {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 10px 18px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border-on-inverse);
+}
+.openmed .statband-eyebrow {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--accent-on-inverse);
+}
+.openmed .statband-desc {
+    font-family: var(--font-sans);
+    font-size: 15px;
+    color: var(--stone-200);
+}
+.openmed .statband-meta {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    font-weight: 500;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--fg-on-inverse-muted);
+}
+.openmed .statband-head .statband-meta { margin-left: auto; }
+.openmed .statband-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+}
+.openmed .statband-cell {
+    padding: 46px 28px 38px;
+    border-right: 1px solid var(--border-on-inverse);
+}
+.openmed .statband-cell:first-child { padding-left: 0; }
+.openmed .statband-cell:last-child { border-right: none; padding-right: 0; }
+.openmed .statband-num {
+    font-family: var(--font-display);
+    font-size: clamp(52px, 6.5vw, 92px);
+    font-weight: 500;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    color: var(--fg-on-inverse);
+    font-variation-settings: "opsz" 72;
+}
+.openmed .statband-label {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    font-weight: 500;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--fg-on-inverse-muted);
+    margin-top: 20px;
+    line-height: 1.7;
+}
+.openmed .statband-grid--secondary {
+    grid-template-columns: repeat(2, 1fr);
+    border-top: 1px solid var(--border-on-inverse);
+}
+.openmed :where(.statband-grid--secondary) .statband-cell { padding: 30px 28px 26px; }
+.openmed .statband-num--sm {
+    font-size: clamp(34px, 3.6vw, 54px);
+    font-variation-settings: "opsz" 48;
+}
+.openmed .statband-grid--secondary .statband-label { margin-top: 12px; }
+.openmed .statband-foot {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px 20px;
+    padding-top: 22px;
+    border-top: 1px solid var(--border-on-inverse);
+}
+.openmed .statband-pills { display: flex; flex-wrap: wrap; gap: 10px; }
+.openmed .statband-pill {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    color: var(--fg-on-inverse);
+    border: 1px solid #323843;
+    border-radius: var(--radius-pill);
+    padding: 8px 18px;
+    line-height: 1;
+}
+
+/* ---------- Section headings ---------------------------------------------- */
+.openmed .section-head { margin-bottom: 48px; }
+.openmed .section-head h2 { margin: 16px 0 12px; }
+.openmed .section-head .tail {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: 24px;
+}
+
+/* ---------- Runtime trio -------------------------------------------------- */
+.openmed .runtime-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    background: var(--bg-elevated);
+}
+.openmed .runtime-cell {
+    padding: 28px 28px 24px;
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+}
+.openmed .runtime-cell:last-child { border-right: none; }
+.openmed .runtime-cell .cell-icon {
+    margin-bottom: 24px;
+    color: var(--accent);
+}
+.openmed .runtime-cell h3 { margin: 12px 0 12px; }
+.openmed .runtime-cell .body-sm { flex: 1; margin-bottom: 18px; }
+
+/* ---------- Feature grid (source: de-ID grid) ----------------------------- */
+.openmed .deid-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+.openmed .deid-cell {
+    padding: 28px 26px;
+    border-right: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-elevated);
+}
+.openmed .deid-cell:nth-child(3n) { border-right: none; }
+.openmed .deid-cell:nth-last-child(-n+3) { border-bottom: none; }
+.openmed .deid-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 4px;
+    background: var(--accent-soft);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--accent);
+    margin-bottom: 18px;
+}
+.openmed .deid-cell h3 { margin-bottom: 10px; }
+.openmed .deid-cell .body-sm { margin-bottom: 14px; }
+.openmed .tag-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.openmed .tag {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: var(--radius-pill);
+    background: var(--bg-panel);
+    color: var(--fg-muted);
+}
+
+/* ---------- Subject grid (source: models grid) ---------------------------- */
+.openmed .bg-panel-section {
+    background: var(--bg-panel);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+}
+.openmed .chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 28px; }
+.openmed .chip {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    padding: 6px 12px;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--border-strong);
+    background: transparent;
+    color: var(--fg);
+    cursor: pointer;
+    transition: all var(--dur-micro) var(--ease-out);
+}
+.openmed .chip:hover { border-color: var(--fg); }
+.openmed .chip.active { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+
+.openmed .models-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    background: var(--bg-elevated);
+}
+.openmed .model-cell {
+    padding: 22px 24px;
+    border-right: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    position: relative;
+    transition: background var(--dur-micro) var(--ease-out);
+    text-decoration: none;
+    color: inherit;
+    display: flex;
+    flex-direction: column;
+}
+.openmed .model-cell:nth-child(3n) { border-right: none; }
+.openmed .model-cell:nth-last-child(-n+3) { border-bottom: none; }
+.openmed .model-cell:hover { background: color-mix(in srgb, var(--accent) 6%, transparent); }
+.openmed .model-cell:hover .open { color: var(--accent-hover); }
+.openmed .model-featured {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    font-family: var(--font-sans);
+    font-weight: 600;
+    font-size: 10px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    /* fixed high-contrast colors; the chip semantics are the same in both themes */
+    background: #F5E27A;
+    color: #0E1116;
+    padding: 3px 7px;
+    border-radius: 3px;
+}
+.openmed .model-name { padding-right: 70px; margin-bottom: 6px; }
+.openmed .model-arch {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--fg-muted);
+    margin-bottom: 14px;
+}
+.openmed .model-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 18px; }
+.openmed .model-foot {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 14px;
+    margin-top: auto;
+    border-top: 1px solid var(--border);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--fg-muted);
+}
+.openmed .model-foot .dl strong { color: var(--fg); font-weight: 500; }
+.openmed .model-foot .open {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--accent);
+}
+
+/* ---------- How it works (source: code playground) ------------------------ */
+.openmed .playground-grid {
+    display: grid;
+    grid-template-columns: 1fr 1.4fr;
+    gap: 56px;
+    align-items: flex-start;
+}
+.openmed .playground-lead h2 { margin: 16px 0 16px; max-width: 16ch; }
+.openmed .playground-lead p { margin-bottom: 22px; }
+.openmed .playground-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 28px;
+    display: grid;
+    gap: 12px;
+}
+.openmed .playground-list li {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+}
+.openmed .playground-check { margin-top: 2px; color: var(--accent); flex-shrink: 0; }
+
+.openmed .code-panel {
+    background: var(--surface-inverse);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-ink);
+}
+.openmed .code-head {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border-on-inverse);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.openmed .code-dots { display: flex; gap: 6px; }
+.openmed .code-dot { width: 11px; height: 11px; border-radius: 999px; opacity: .8; }
+.openmed .code-dot.red { background: #C5453A; }
+.openmed .code-dot.yellow { background: #F5E27A; }
+.openmed .code-dot.green { background: #0D6E6E; }
+.openmed .code-title {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--fg-on-inverse-muted);
+}
+.openmed .code-copy {
+    background: transparent;
+    border: 1px solid var(--border-on-inverse);
+    color: var(--fg-on-inverse-muted);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: color var(--dur-micro), border-color var(--dur-micro);
+}
+.openmed .code-copy:hover { color: var(--fg-on-inverse); border-color: var(--fg-on-inverse); }
+.openmed .code-copy.copied { color: var(--accent-on-inverse); border-color: var(--accent-on-inverse); }
+
+.openmed .code-install {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border-on-inverse);
+    background: rgba(255, 255, 255, .02);
+}
+.openmed .code-install-prompt {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--accent-on-inverse);
+    user-select: none;
+}
+.openmed .code-install-cmd {
+    flex: 1;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--fg-on-inverse);
+    letter-spacing: .01em;
+}
+
+.openmed .code-tabs {
+    display: flex;
+    gap: 2px;
+    padding: 10px 12px 0;
+    background: var(--surface-inverse);
+    border-bottom: 1px solid var(--border-on-inverse);
+}
+.openmed .code-tab {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    padding: 8px 14px;
+    background: transparent;
+    color: var(--fg-on-inverse-muted);
+    border: none;
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
+    border-bottom: 1px solid transparent;
+    cursor: pointer;
+    transition: all var(--dur-micro) var(--ease-out);
+}
+.openmed .code-tab:hover { color: var(--fg-on-inverse); }
+.openmed .code-tab.active {
+    background: var(--surface-inverse-2);
+    color: var(--fg-on-inverse);
+    border-bottom-color: var(--accent-on-inverse);
+}
+.openmed .code-body {
+    margin: 0;
+    padding: 22px 22px 26px;
+    color: var(--fg-on-inverse);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    line-height: 1.7;
+    overflow-x: auto;
+    white-space: pre-wrap;
+}
+.openmed .code-body .kw { color: var(--highlight); }
+.openmed .code-body .str { color: var(--teal-300); }
+.openmed .code-body .cm { color: var(--stone-300); }
+.openmed .code-body .num { color: var(--coral-100); }
+
+/* ---------- Pricing (source: products duo) -------------------------------- */
+.openmed .product-duo {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+}
+.openmed .product-card {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    padding: 30px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-lg);
+    background: var(--bg-elevated);
+    text-decoration: none;
+    color: inherit;
+    transition: border-color var(--dur-micro) var(--ease-out), transform var(--dur-micro) var(--ease-out);
+}
+.openmed .product-card:hover { border-color: var(--fg); transform: translateY(-2px); }
+.openmed .product-card.dark {
+    background: var(--surface-inverse);
+    color: var(--fg-on-inverse);
+    border-color: var(--surface-inverse-2);
+}
+.openmed .product-card-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.openmed .product-wordmark {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-weight: 500;
+    font-size: 30px;
+    line-height: 1;
+    letter-spacing: -0.01em;
+}
+.openmed .product-badge {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--border-strong);
+    color: var(--fg-muted);
+    white-space: nowrap;
+}
+.openmed .product-card.dark .product-badge { border-color: var(--border-on-inverse); color: var(--fg-on-inverse-muted); }
+.openmed .product-card h3 {
+    font-family: var(--font-sans);
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 1.3;
+    letter-spacing: -0.01em;
+    margin: 0;
+}
+.openmed .product-card .pdesc { font-size: 14px; line-height: 1.55; color: var(--fg-muted); margin: 0; }
+.openmed .product-card.dark .pdesc { color: var(--fg-on-inverse-muted); }
+.openmed .product-built {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--fg-muted);
+    padding-top: 4px;
+}
+.openmed .product-built b { color: var(--accent); font-weight: 500; }
+.openmed .product-card.dark .product-built { color: var(--fg-on-inverse-muted); }
+.openmed .product-card.dark .product-built b { color: var(--accent-on-inverse); }
+.openmed .product-cta {
+    margin-top: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    align-self: flex-start;
+    font-family: var(--font-sans);
+    font-weight: 500;
+    font-size: 14px;
+    padding: 10px 16px;
+    border-radius: var(--radius-md);
+    background: var(--fg);
+    color: var(--bg);
+    transition: background var(--dur-micro) var(--ease-out);
+}
+.openmed .product-card:hover .product-cta { background: var(--stone-600); }
+[data-theme="dark"] .openmed .product-card:not(.dark):hover .product-cta,
+.dark .openmed .product-card:not(.dark):hover .product-cta { background: var(--stone-200); color: var(--ink); }
+.openmed .product-card.dark .product-cta { background: var(--fg-on-inverse); color: var(--surface-inverse); }
+.openmed .product-card.dark:hover .product-cta { background: #fff; }
+
+.openmed .deploy-strip {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 24px;
+    flex-wrap: wrap;
+    margin-top: 24px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+}
+.openmed .deploy-strip .btn { flex-shrink: 0; }
+
+/* ---------- Research (dark ink block) ------------------------------------- */
+.openmed .research {
+    background: var(--surface-inverse);
+    color: var(--fg-on-inverse);
+}
+.openmed .research-grid {
+    display: grid;
+    grid-template-columns: 1fr 1.3fr;
+    gap: 56px;
+    align-items: center;
+}
+.openmed .research-eyebrow {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--accent-on-inverse);
+    letter-spacing: .14em;
+    text-transform: uppercase;
+}
+.openmed .research h2 { margin: 20px 0 16px; color: var(--fg-on-inverse); }
+.openmed .research p {
+    color: var(--fg-on-inverse-muted);
+    margin: 0;
+}
+.openmed .research-ctas {
+    display: flex;
+    gap: 12px;
+    margin-top: 28px;
+    flex-wrap: wrap;
+}
+.openmed .research-btn-solid {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border-radius: var(--radius-md);
+    background: var(--fg-on-inverse);
+    color: var(--surface-inverse);
+    font-family: var(--font-sans);
+    font-weight: 500;
+    font-size: 14px;
+    text-decoration: none;
+}
+.openmed .research-btn-outline {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-on-inverse);
+    color: var(--fg-on-inverse);
+    font-family: var(--font-sans);
+    font-weight: 500;
+    font-size: 14px;
+    text-decoration: none;
+}
+.openmed .research-btn-outline:hover { border-color: var(--fg-on-inverse); }
+
+.openmed .research-stats {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    border: 1px solid var(--border-on-inverse);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+.openmed .research-stat {
+    padding: 28px 26px;
+    border-right: 1px solid var(--border-on-inverse);
+    border-bottom: 1px solid var(--border-on-inverse);
+}
+.openmed .research-stat:nth-child(2n) { border-right: none; }
+.openmed .research-stat:nth-last-child(-n+2) { border-bottom: none; }
+.openmed .research-stat .num {
+    font-family: var(--font-display);
+    font-size: var(--fs-display-md);
+    font-weight: 500;
+    color: var(--fg-on-inverse);
+    line-height: 1.1;
+}
+.openmed .research-stat .suf {
+    color: var(--accent-on-inverse);
+    font-size: 24px;
+    vertical-align: super;
+    margin-left: 2px;
+}
+.openmed .research-stat .lbl {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--accent-on-inverse);
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    margin-top: 10px;
+}
+.openmed .research-stat .sub {
+    font-family: var(--font-sans);
+    font-size: var(--fs-body-sm);
+    color: var(--fg-on-inverse-muted);
+    margin-top: 6px;
+    line-height: 1.55;
+}
+
+/* ---------- FAQ ----------------------------------------------------------- */
+.openmed .faq-grid {
+    display: grid;
+    grid-template-columns: 1fr 1.6fr;
+    gap: 64px;
+}
+.openmed .faq-lead h2 { margin: 16px 0; }
+.openmed .faq-list { border-top: 1px solid var(--border); }
+.openmed .faq-item {
+    border-bottom: 1px solid var(--border);
+    padding: 22px 0;
+    cursor: pointer;
+}
+.openmed .faq-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 24px;
+    width: 100%;
+    background: transparent;
+    border: none;
+    padding: 0;
+    text-align: left;
+    cursor: pointer;
+    font: inherit;
+    color: inherit;
+}
+.openmed .faq-plus {
+    font-family: var(--font-mono);
+    font-size: 16px;
+    color: var(--fg-muted);
+    transition: transform var(--dur-base) var(--ease-out);
+}
+.openmed .faq-item.open .faq-plus { transform: rotate(45deg); }
+.openmed .faq-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height var(--dur-slow) var(--ease-out);
+}
+.openmed .faq-item.open .faq-body { max-height: 400px; }
+.openmed .faq-body p {
+    color: var(--fg-muted);
+    margin-top: 14px;
+    max-width: 68ch;
+    line-height: 1.6;
+}
+
+/* ---------- Community CTA (source: contribute) ---------------------------- */
+.openmed .contribute { text-align: center; }
+.openmed .contribute-title {
+    margin: 16px auto 16px;
+    max-width: 24ch;
+}
+.openmed .contribute-desc {
+    max-width: 56ch;
+    margin: 0 auto 32px;
+}
+.openmed .contribute-ctas {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+/* ---------- Footer -------------------------------------------------------- */
+.openmed .footer {
+    padding: 64px 0 40px;
+    background: var(--bg-panel);
+    border-top: 1px solid var(--border);
+}
+.openmed .footer-grid {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr 1fr 1fr;
+    gap: 48px;
+    margin-bottom: 48px;
+}
+.openmed .footer-brand { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+.openmed .footer-col-head {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--fg-muted);
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+}
+.openmed .footer-col ul { list-style: none; margin: 0; padding: 0; }
+.openmed .footer-col li { margin-bottom: 10px; }
+.openmed .footer-col a {
+    color: var(--fg);
+    text-decoration: none;
+    font-size: 14px;
+}
+.openmed .footer-col a:hover { color: var(--accent); }
+.openmed .footer-foot {
+    padding-top: 28px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--fg-muted);
+}
+.openmed .footer-foot a { color: inherit; }
+.openmed .footer-tag {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    padding: 1px 6px;
+    margin-left: 6px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-pill);
+    color: var(--fg-muted);
+    vertical-align: 1px;
+}
+
+/* ---------- Responsive ---------------------------------------------------- */
+@media (max-width: 1100px) {
+    .openmed { --fs-display-xl: 56px; --fs-display-lg: 44px; --fs-display-md: 34px; }
+    .openmed .hero-grid { grid-template-columns: 1fr; gap: 40px; }
+    .openmed .research-grid { grid-template-columns: 1fr; gap: 40px; }
+    .openmed .playground-grid { grid-template-columns: 1fr; gap: 40px; }
+    .openmed .faq-grid { grid-template-columns: 1fr; gap: 32px; }
+    .openmed .runtime-grid,
+    .openmed .models-grid,
+    .openmed .deid-grid { grid-template-columns: repeat(2, 1fr); }
+    .openmed .runtime-cell:nth-child(even),
+    .openmed .deid-cell:nth-child(even),
+    .openmed .model-cell:nth-child(3n) { border-right: 1px solid var(--border); }
+    .openmed .runtime-cell:nth-child(2n),
+    .openmed .model-cell:nth-child(2n) { border-right: none; }
+    .openmed .deid-cell:nth-child(2n) { border-right: none; }
+    .openmed .runtime-cell:last-child,
+    .openmed .deid-cell:last-child,
+    .openmed .model-cell:last-child { border-bottom: none; }
+    .openmed .statband-grid { grid-template-columns: repeat(2, 1fr); }
+    .openmed .statband-cell { padding: 34px 24px 28px; }
+    .openmed .statband-cell:nth-child(odd) { padding-left: 0; }
+    .openmed .statband-cell:nth-child(2n) { border-right: none; }
+    .openmed .statband-cell:nth-child(n+3) { border-top: 1px solid var(--border-on-inverse); }
+    .openmed .footer-grid { grid-template-columns: 1fr 1fr; }
+    .openmed .product-duo { grid-template-columns: 1fr; }
+}
+@media (max-width: 720px) {
+    .openmed { --fs-display-xl: 44px; --fs-display-lg: 34px; --fs-display-md: 28px; --gutter: 16px; }
+    .openmed .nav-inner { gap: 10px; }
+    .openmed .nav-toggle { display: inline-flex; }
+    .openmed .nav-actions { gap: 6px; }
+    .openmed .nav-actions .btn.docs-btn { display: none; }
+    .openmed .nav-menu {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        display: none;
+        background: var(--bg);
+        border-bottom: 1px solid var(--border);
+        box-shadow: var(--shadow-2);
+    }
+    .openmed .nav.menu-open .nav-menu { display: block; }
+    .openmed .nav-links {
+        flex-direction: column;
+        gap: 0;
+        padding: 6px var(--gutter) 10px;
+    }
+    .openmed .nav-links li { border-bottom: 1px solid var(--border); }
+    .openmed .nav-links li:last-child { border-bottom: none; }
+    .openmed .nav-links a {
+        display: block;
+        padding: 13px 0;
+        font-size: 15px;
+        border-bottom: none;
+    }
+    .openmed .nav-links a.active { color: var(--accent); }
+    .openmed .nav-links-mobile-only { display: block; }
+    .openmed .hero { padding: 56px 0 40px; }
+    .openmed section[data-screen] { padding: 64px 0; }
+    .openmed .runtime-grid,
+    .openmed .models-grid,
+    .openmed .deid-grid,
+    .openmed .research-stats { grid-template-columns: 1fr; }
+    .openmed .runtime-cell,
+    .openmed .deid-cell,
+    .openmed .model-cell,
+    .openmed .research-stat { border-right: none; }
+    .openmed .statband-grid { grid-template-columns: 1fr; }
+    .openmed .statband-cell { border-right: none; padding: 26px 0 22px; }
+    .openmed .statband-cell:nth-child(n+2) { border-top: 1px solid var(--border-on-inverse); }
+    .openmed .statband-head .statband-meta { margin-left: 0; }
+    .openmed .footer-grid { grid-template-columns: 1fr; gap: 32px; }
+}
+@media (max-width: 480px) {
+    .openmed .version-tag { display: none; }
+    .openmed .nav-actions .btn-primary .btn-label { display: none; }
+    .openmed .nav-actions .btn-primary { padding: 9px 10px; }
+    .openmed .wordmark { font-size: 20px; }
+}
