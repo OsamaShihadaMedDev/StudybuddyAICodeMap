@@ -1,5 +1,4 @@
 import { useRef, useEffect, useState, useCallback } from "react";
-import { Card, CardContent } from "@/components/ui/card";
 import { callMedicalNotes } from "@/lib/callMedicalNotes";
 import {
   BookOpen,
@@ -20,7 +19,6 @@ import {
   RotateCcw,
   X,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import CopyButton from "@/components/CopyButton";
 import FlashcardsSection from "@/components/FlashcardsSection";
 import SaveButton from "@/components/SaveButton";
@@ -59,6 +57,86 @@ const ENH_MARK_STYLE: React.CSSProperties = {
   borderRadius: "2px",
   padding: "0 2px",
   cursor: "pointer",
+};
+
+/** Section card chrome — shared by the legacy and JSON renderers. */
+const SECTION_CARD_STYLE: React.CSSProperties = {
+  border: "1px solid var(--border)",
+  borderLeft: "3px solid var(--accent)",
+  borderRadius: "var(--radius-md)",
+  background: "var(--bg-elevated)",
+  overflow: "hidden",
+};
+
+const SECTION_HEADER_STYLE: React.CSSProperties = {
+  padding: "20px 24px 8px",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 8,
+};
+
+const SECTION_BODY_STYLE: React.CSSProperties = { padding: "4px 24px 20px" };
+
+const SECTION_ICON_STYLE: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  width: 28,
+  height: 28,
+  borderRadius: "var(--radius-sm)",
+  border: "1px solid var(--border)",
+  background: "var(--bg)",
+  flexShrink: 0,
+};
+
+const SECTION_TITLE_STYLE: React.CSSProperties = {
+  fontFamily: "var(--font-sans)",
+  fontSize: 14,
+  fontWeight: 600,
+  letterSpacing: "-0.004em",
+  color: "var(--fg)",
+  margin: 0,
+};
+
+const MODE_BAR_STYLE: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 8,
+  fontFamily: "var(--font-mono)",
+  fontSize: 11,
+  fontWeight: 500,
+  color: "var(--fg-muted)",
+  border: "1px solid var(--border)",
+  borderRadius: "var(--radius-sm)",
+  padding: "6px 12px",
+  background: "var(--bg-elevated)",
+  letterSpacing: "0.04em",
+};
+
+/** Mode info bar — same markup in both renderers. */
+const ModeInfoBar = ({
+  modeInfo,
+}: {
+  modeInfo: { examMode: string; difficulty: string; focus: string; length: string };
+}) => {
+  const dot = (
+    <span style={{ margin: "0 6px", opacity: 0.3, color: "var(--fg)" }}>·</span>
+  );
+  return (
+    <div style={MODE_BAR_STYLE}>
+      <Settings2 style={{ width: 13, height: 13, color: "var(--accent)" }} />
+      <span>
+        <span style={{ color: "var(--fg)" }}>{modeInfo.examMode}</span>
+        {dot}
+        <span>{modeInfo.difficulty}</span>
+        {dot}
+        <span>{modeInfo.focus}</span>
+        {dot}
+        <span>{modeInfo.length}</span>
+      </span>
+    </div>
+  );
 };
 
 /** Backend mode for a presentational kind — the edge function only knows expand/clinical. */
@@ -423,7 +501,19 @@ function renderArraySection(
             className="text-sm text-muted-foreground leading-relaxed"
           >
             <span className="flex gap-2.5">
-              <span className="shrink-0 font-bold text-primary/60 tabular-nums w-5 text-right">
+              <span
+                style={{
+                  flexShrink: 0,
+                  fontFamily: "var(--font-mono)",
+                  fontWeight: 500,
+                  fontSize: 12,
+                  color: "var(--accent)",
+                  opacity: 0.7,
+                  width: 20,
+                  textAlign: "right",
+                  fontVariantNumeric: "tabular-nums",
+                }}
+              >
                 {i + 1}.
               </span>
               <span className="flex-1">
@@ -477,33 +567,34 @@ function resolveSavedAnchor(sheet: GeneratedSheet, sourceText: string): string |
 // ─── Shared sub-components ─────────────────────────────────────────────────
 
 function ModelBadge({ model, isPro }: { model: "flash" | "gpt-oss" | "claude"; isPro: boolean }) {
-  if (isPro && model === "claude") {
-    return (
-      <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium bg-primary/10 text-primary border border-primary/20 ml-2">
-        <Zap className="h-3 w-3" />
-        Claude Haiku 4.5
-      </span>
-    );
-  }
-  if (isPro && model === "gpt-oss") {
-    return (
-      <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium bg-primary/10 text-primary border border-primary/20 ml-2">
-        <Zap className="h-3 w-3" />
-        GPT-OSS 20B
-      </span>
-    );
-  }
-  if (model === "claude") {
-    return (
-      <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium bg-violet-500/10 text-violet-600 dark:text-violet-400 border border-violet-500/30 ml-2">
-        <Zap className="h-3 w-3" />
-        Premium AI
-      </span>
-    );
-  }
+  const label =
+    isPro && model === "claude"
+      ? "Claude Haiku 4.5"
+      : isPro && model === "gpt-oss"
+      ? "GPT-OSS 20B"
+      : model === "claude"
+      ? "Premium AI"
+      : "GPT-OSS 20B";
+
   return (
-    <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium bg-muted text-muted-foreground border border-border ml-2">
-      GPT-OSS 20B
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 4,
+        padding: "2px 8px",
+        borderRadius: "var(--radius-pill)",
+        border: "1px solid var(--border-strong)",
+        background: "var(--bg)",
+        fontFamily: "var(--font-mono)",
+        fontSize: 11,
+        fontWeight: 500,
+        color: "var(--fg-muted)",
+        marginLeft: 8,
+      }}
+    >
+      <Zap style={{ width: 10, height: 10 }} />
+      {label}
     </span>
   );
 }
@@ -513,10 +604,26 @@ function EvidenceBadge({ onClick }: { onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 hover:bg-amber-500/20 transition-colors cursor-pointer ml-2"
       title="This section is backed by peer-reviewed sources — see below"
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 4,
+        padding: "2px 8px",
+        borderRadius: "var(--radius-pill)",
+        border: "1px solid var(--border)",
+        borderLeft: "2px solid var(--accent)",
+        background: "var(--accent-soft)",
+        fontFamily: "var(--font-mono)",
+        fontSize: 11,
+        fontWeight: 500,
+        color: "var(--accent)",
+        cursor: "pointer",
+        marginLeft: 8,
+        transition: "background var(--dur-micro) var(--ease-out)",
+      }}
     >
-      <Zap className="h-3 w-3" />
+      <Zap style={{ width: 10, height: 10 }} />
       Evidence-backed
     </button>
   );
@@ -549,38 +656,69 @@ interface EnhanceBubbleProps {
 
 // Anchored to the scrolling document container (its parent is `position: relative`),
 // so the menu travels with the source text as the user scrolls — no scroll listeners.
+const BUBBLE_BUTTON_STYLE: React.CSSProperties = {
+  height: 24,
+  padding: "0 8px",
+  borderRadius: "var(--radius-pill)",
+  border: "none",
+  background: "transparent",
+  fontFamily: "var(--font-sans)",
+  fontSize: 11,
+  fontWeight: 600,
+  cursor: "pointer",
+  whiteSpace: "nowrap",
+  transition: "background var(--dur-micro) var(--ease-out)",
+};
+
+const BubbleDivider = () => (
+  <span
+    style={{ width: 1, height: 14, background: "var(--border-strong)" }}
+    aria-hidden
+  />
+);
+
 const EnhanceBubble = ({ top, left, onAction, innerRef }: EnhanceBubbleProps) => (
   <div
     ref={innerRef}
-    style={
-      {
-        "--sb-bubble-top": `${top}px`,
-        "--sb-bubble-left": `${left}px`,
-      } as React.CSSProperties
-    }
-    className="enhance-bubble-in absolute top-[var(--sb-bubble-top)] left-[var(--sb-bubble-left)] -translate-x-1/2 z-[60] flex h-8 items-center gap-0.5 rounded-full border border-border/60 bg-popover px-1.5 shadow-lg"
+    style={{
+      position: "absolute",
+      top,
+      left,
+      transform: "translateX(-50%)",
+      zIndex: 60,
+      display: "flex",
+      alignItems: "center",
+      height: 32,
+      gap: 2,
+      borderRadius: "var(--radius-pill)",
+      border: "1px solid var(--border-strong)",
+      background: "var(--bg-elevated)",
+      padding: "0 6px",
+      boxShadow: "var(--shadow-2)",
+    }}
+    className="enhance-bubble-in"
     onMouseDown={(e) => e.stopPropagation()}
   >
     <button
       type="button"
       onClick={() => onAction("enhance")}
-      className="h-6 px-2 rounded-full text-[11px] font-semibold text-primary hover:bg-primary/10 transition-colors whitespace-nowrap"
+      style={{ ...BUBBLE_BUTTON_STYLE, color: "var(--accent)" }}
     >
       ✦ Enhance
     </button>
-    <span className="h-3.5 w-px bg-border/60" aria-hidden />
+    <BubbleDivider />
     <button
       type="button"
       onClick={() => onAction("expand")}
-      className="h-6 px-2 rounded-full text-[11px] font-semibold text-blue-500 dark:text-blue-400 hover:bg-blue-500/10 transition-colors whitespace-nowrap"
+      style={{ ...BUBBLE_BUTTON_STYLE, color: "var(--fg)" }}
     >
       ↗ Expand
     </button>
-    <span className="h-3.5 w-px bg-border/60" aria-hidden />
+    <BubbleDivider />
     <button
       type="button"
       onClick={() => onAction("clinical")}
-      className="h-6 px-2 rounded-full text-[11px] font-semibold text-teal-600 dark:text-teal-400 hover:bg-teal-500/10 transition-colors whitespace-nowrap"
+      style={{ ...BUBBLE_BUTTON_STYLE, color: "var(--accent)" }}
     >
       🔗 Clinical
     </button>
@@ -736,42 +874,108 @@ const InlineEnhancement = ({
     <span
       className={`block mt-3 ${closing ? "inline-enh-exit" : "inline-enh-enter"}`}
     >
-      <span className="block rounded-md border-l-2 border-l-primary/60 bg-muted/50 px-4 py-3">
-        <span className="flex items-start justify-between gap-2">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+      <span
+        className="block"
+        style={{
+          borderLeft: "3px solid var(--accent)",
+          borderRadius: "0 var(--radius-sm) var(--radius-sm) 0",
+          background: "var(--accent-soft)",
+          padding: "10px 16px 12px",
+        }}
+      >
+        <span
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            justifyContent: "space-between",
+            gap: 8,
+            marginBottom: 6,
+          }}
+        >
+          <span
+            style={{
+              fontFamily: "var(--font-mono)",
+              fontSize: 11,
+              fontWeight: 500,
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              color: "var(--accent)",
+            }}
+          >
             {kindLabel[enhancement.kind]}
           </span>
           <button
             type="button"
             onClick={handleClose}
-            className="shrink-0 -mt-0.5 -mr-1 p-1 rounded text-muted-foreground/40 hover:text-muted-foreground transition-colors"
             aria-label="Dismiss enhancement"
+            style={{
+              flexShrink: 0,
+              marginTop: -2,
+              marginRight: -4,
+              padding: 4,
+              borderRadius: "var(--radius-sm)",
+              background: "transparent",
+              border: "none",
+              color: "var(--fg-muted)",
+              cursor: "pointer",
+              opacity: 0.6,
+              transition: "opacity var(--dur-micro) var(--ease-out)",
+            }}
           >
-            <X className="h-3 w-3" />
+            <X style={{ width: 12, height: 12 }} />
           </button>
         </span>
 
         {loading && !result && (
-          <span className="block space-y-2 pt-2">
-            <span className="block animate-pulse bg-secondary/60 rounded h-2.5 w-11/12" />
-            <span className="block animate-pulse bg-secondary/60 rounded h-2.5 w-9/12" />
-            <span className="block animate-pulse bg-secondary/60 rounded h-2.5 w-10/12" />
+          <span className="block space-y-2 pt-1">
+            <span
+              className="block animate-pulse rounded"
+              style={{ height: 10, width: "91.666%", background: "var(--border-strong)" }}
+            />
+            <span
+              className="block animate-pulse rounded"
+              style={{ height: 10, width: "75%", background: "var(--border-strong)" }}
+            />
+            <span
+              className="block animate-pulse rounded"
+              style={{ height: 10, width: "83.333%", background: "var(--border-strong)" }}
+            />
           </span>
         )}
         {result && (
-          <span className="block text-sm text-muted-foreground leading-relaxed pt-1.5">
+          <span
+            style={{
+              display: "block",
+              fontFamily: "var(--font-sans)",
+              fontSize: 13,
+              color: "var(--fg-muted)",
+              lineHeight: 1.6,
+              paddingTop: 4,
+            }}
+          >
             {renderFormattedContent(result)}
           </span>
         )}
         {error && !loading && (
-          <span className="flex items-center gap-2 pt-1.5">
-            <span className="text-xs text-destructive flex-1">{error}</span>
+          <span style={{ display: "flex", alignItems: "center", gap: 8, paddingTop: 6 }}>
+            <span style={{ fontSize: 12, color: "var(--signal)", flex: 1 }}>{error}</span>
             <button
               type="button"
               onClick={runEnhance}
-              className="inline-flex items-center gap-1 text-xs text-primary hover:underline shrink-0"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 4,
+                fontSize: 12,
+                color: "var(--accent)",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                textDecoration: "underline",
+                flexShrink: 0,
+              }}
             >
-              <RotateCcw className="h-3 w-3" /> Retry
+              <RotateCcw style={{ width: 11, height: 11 }} /> Retry
             </button>
           </span>
         )}
@@ -1020,13 +1224,19 @@ const OutputSection = ({
     if (sections.length === 0) {
       return (
         <div ref={ref}>
-          <Card className="glass-card animate-fade-in">
-            <CardContent className="p-6">
-              <div className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
-                {output}
-              </div>
-            </CardContent>
-          </Card>
+          <div
+            className="animate-fade-in"
+            style={{
+              border: "1px solid var(--border)",
+              borderRadius: "var(--radius-md)",
+              background: "var(--bg-elevated)",
+              padding: 24,
+            }}
+          >
+            <div className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
+              {output}
+            </div>
+          </div>
         </div>
       );
     }
@@ -1036,20 +1246,7 @@ const OutputSection = ({
     return (
       <div ref={ref} className="space-y-4">
         <div className="animate-fade-in flex items-center justify-between">
-          {modeInfo && (
-            <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground bg-card border border-border rounded-md px-3 py-2">
-              <Settings2 className="h-3.5 w-3.5 text-primary" />
-              <span>
-                <span className="text-foreground">{modeInfo.examMode}</span>
-                <span className="mx-1.5 opacity-40">|</span>
-                <span>{modeInfo.difficulty}</span>
-                <span className="mx-1.5 opacity-40">|</span>
-                <span>{modeInfo.focus}</span>
-                <span className="mx-1.5 opacity-40">|</span>
-                <span>{modeInfo.length}</span>
-              </span>
-            </div>
-          )}
+          {modeInfo && <ModeInfoBar modeInfo={modeInfo} />}
           <SaveButton input={inputText || ""} output={output} modeInfo={modeInfo} />
         </div>
 
@@ -1061,20 +1258,22 @@ const OutputSection = ({
             citationState === "found" && EVIDENCE_SECTIONS_LEGACY.includes(title);
 
           return (
-            <Card
+            <div
               key={title}
               ref={isReference ? referenceNoteRef : undefined}
-              className={`glass-card animate-fade-in overflow-hidden rounded-md border-l-2 border-l-primary/25 ${config.className}`}
-              style={{ animationDelay: `${idx * 200}ms`, animationFillMode: "backwards" }}
+              className="animate-fade-in"
+              style={{
+                ...SECTION_CARD_STYLE,
+                animationDelay: `${idx * 200}ms`,
+                animationFillMode: "backwards",
+              }}
             >
-              <div className="px-6 pt-5 pb-2 flex items-center justify-between gap-2">
+              <div style={SECTION_HEADER_STYLE}>
                 <div className="flex items-center gap-2.5 flex-wrap">
-                  <div className="flex items-center justify-center h-7 w-7 rounded-md border border-border bg-background">
-                    <Icon className="h-3.5 w-3.5 text-primary" />
+                  <div style={SECTION_ICON_STYLE}>
+                    <Icon style={{ width: 14, height: 14, color: "var(--accent)" }} />
                   </div>
-                  <h3 className="text-sm font-semibold tracking-tight text-foreground">
-                    {config.label}
-                  </h3>
+                  <h3 style={SECTION_TITLE_STYLE}>{config.label}</h3>
                   {showEvidenceBadge && <EvidenceBadge onClick={scrollToReference} />}
                   {title === "SUMMARY" && modelUsed && (
                     <ModelBadge model={modelUsed} isPro={isPro} />
@@ -1082,7 +1281,7 @@ const OutputSection = ({
                 </div>
                 <CopyButton text={content} />
               </div>
-              <CardContent className="px-6 pb-5 pt-2">
+              <div style={SECTION_BODY_STYLE}>
                 {title === "FLASHCARDS" ? (
                   <FlashcardsSection content={content} />
                 ) : (
@@ -1100,22 +1299,22 @@ const OutputSection = ({
                     />
                   </div>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           );
         })}
 
         {!hasReferenceSection && citationState && citationState !== "idle" && citationState !== "hidden" && (
-          <Card className="glass-card animate-fade-in overflow-hidden hover-lift section-reference">
-            <div className="px-6 pt-5 pb-2 flex items-center gap-2.5">
-              <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-primary/10">
-                <FileText className="h-4 w-4 text-primary" />
+          <div className="animate-fade-in" style={SECTION_CARD_STYLE}>
+            <div style={SECTION_HEADER_STYLE}>
+              <div className="flex items-center gap-2.5">
+                <div style={SECTION_ICON_STYLE}>
+                  <FileText style={{ width: 14, height: 14, color: "var(--accent)" }} />
+                </div>
+                <h3 style={SECTION_TITLE_STYLE}>📚 Reference Note</h3>
               </div>
-              <h3 className="text-sm font-semibold tracking-tight text-foreground">
-                📚 Reference Note
-              </h3>
             </div>
-            <CardContent className="px-6 pb-5 pt-2">
+            <div style={SECTION_BODY_STYLE}>
               <p className="text-sm text-muted-foreground leading-relaxed mb-3">
                 Based on standard medical references and clinical guidelines.
               </p>
@@ -1125,8 +1324,8 @@ const OutputSection = ({
                 onLockedClick={onCitationLockedClick}
                 isLoggedIn={citationIsLoggedIn}
               />
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         )}
 
         {renderNudgeAndDisclaimer(showNudge, setShowNudge, inputText, disclaimerCollapsed, toggleDisclaimer)}
@@ -1186,28 +1385,40 @@ const OutputSection = ({
       onMouseUp={handleSelectionChange}
       onTouchEnd={handleSelectionChange}
     >
-      {/* Persistent highlight-to-enhance hint — sticky at top of the document */}
-      <div className="sticky top-0 z-20 flex items-center gap-1.5 rounded-md border border-border bg-background/95 backdrop-blur px-3 py-2 text-[11px] text-muted-foreground animate-fade-in">
-        <Sparkles className="h-3 w-3 text-primary shrink-0" />
-        <span>Highlight any text on this sheet to expand or get a clinical tie</span>
+      {/* Persistent highlight-to-enhance hint — sticky below the top nav */}
+      <div
+        className="sticky animate-fade-in"
+        style={{
+          top: "var(--nav-h, 64px)",
+          zIndex: 20,
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+          borderRadius: "var(--radius-sm)",
+          border: "1px solid var(--border)",
+          background: "color-mix(in srgb, var(--bg) 90%, transparent)",
+          backdropFilter: "blur(10px)",
+          WebkitBackdropFilter: "blur(10px)",
+          padding: "6px 12px",
+          marginBottom: 4,
+        }}
+      >
+        <Sparkles style={{ width: 12, height: 12, color: "var(--accent)", flexShrink: 0 }} />
+        <span
+          style={{
+            fontFamily: "var(--font-mono)",
+            fontSize: 11,
+            color: "var(--fg-muted)",
+            letterSpacing: "0.02em",
+          }}
+        >
+          Highlight any text to expand or get a clinical tie
+        </span>
       </div>
 
       {/* Mode header + Save */}
       <div className="animate-fade-in flex items-center justify-between">
-        {modeInfo && (
-          <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground bg-card border border-border rounded-md px-3 py-2">
-            <Settings2 className="h-3.5 w-3.5 text-primary" />
-            <span>
-              <span className="text-foreground">{modeInfo.examMode}</span>
-              <span className="mx-1.5 opacity-40">|</span>
-              <span>{modeInfo.difficulty}</span>
-              <span className="mx-1.5 opacity-40">|</span>
-              <span>{modeInfo.focus}</span>
-              <span className="mx-1.5 opacity-40">|</span>
-              <span>{modeInfo.length}</span>
-            </span>
-          </div>
-        )}
+        {modeInfo && <ModeInfoBar modeInfo={modeInfo} />}
         <SaveButton input={inputText || ""} output={output} modeInfo={modeInfo} />
       </div>
 
@@ -1225,19 +1436,23 @@ const OutputSection = ({
             : (sheet[key] as string) ?? "";
 
         return (
-          <Card
+          <div
             key={key}
             ref={isReference ? referenceNoteRef : undefined}
             data-section-key={key}
-            className={`glass-card animate-fade-in overflow-hidden rounded-md border-l-2 border-l-primary/25 scroll-mt-20 ${config.className}`}
-            style={{ animationDelay: `${idx * 200}ms`, animationFillMode: "backwards" }}
+            className="animate-fade-in scroll-mt-20"
+            style={{
+              ...SECTION_CARD_STYLE,
+              animationDelay: `${idx * 200}ms`,
+              animationFillMode: "backwards",
+            }}
           >
-            <div className="px-6 pt-5 pb-2 flex items-center justify-between gap-2">
+            <div style={SECTION_HEADER_STYLE}>
               <div className="flex items-center gap-2.5 flex-wrap">
-                <div className="flex items-center justify-center h-7 w-7 rounded-md border border-border bg-background">
-                  <Icon className="h-3.5 w-3.5 text-primary" />
+                <div style={SECTION_ICON_STYLE}>
+                  <Icon style={{ width: 14, height: 14, color: "var(--accent)" }} />
                 </div>
-                <h3 className="text-sm font-semibold tracking-tight text-foreground">
+                <h3 style={SECTION_TITLE_STYLE}>
                   {config.label}
                   {key === "overview" && sheet.topicEmoji && (
                     <span className="ml-2 text-base">{sheet.topicEmoji}</span>
@@ -1261,7 +1476,7 @@ const OutputSection = ({
               </div>
             </div>
 
-            <CardContent className="px-6 pb-5 pt-2" data-enh-section={key}>
+            <div style={SECTION_BODY_STYLE} data-enh-section={key}>
               {key === "flashcards" ? (
                 <FlashcardsSection cards={sheet.flashcards} />
               ) : key === "overview" || key === "clinicalApproach" ? (
@@ -1301,8 +1516,8 @@ const OutputSection = ({
                 )
               )}
               {renderInline(`${key}:end`)}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         );
       })}
 
@@ -1349,15 +1564,49 @@ function renderNudgeAndDisclaimer(
     <>
       {showNudge && (
         <div className="mt-4 animate-fade-in">
-          <div className="rounded-xl border border-border bg-card p-5 text-center space-y-3">
-            <p className="text-sm font-semibold text-foreground">Your first sheet is ready</p>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              Now lock it in — generate a flashcard deck from this topic and start drilling the key
-              concepts with spaced repetition.
+          <div
+            style={{
+              borderRadius: "var(--radius-lg)",
+              border: "1px solid var(--border)",
+              borderLeft: "3px solid var(--accent)",
+              background: "var(--bg-elevated)",
+              padding: "20px 24px",
+              textAlign: "center",
+            }}
+          >
+            <p
+              style={{
+                fontFamily: "var(--font-sans)",
+                fontSize: 14,
+                fontWeight: 500,
+                color: "var(--fg)",
+                marginBottom: 6,
+              }}
+            >
+              Your first sheet is ready
             </p>
-            <div className="flex flex-col sm:flex-row gap-2 justify-center">
-              <Button
-                className="w-full sm:w-auto h-9 rounded-lg font-medium text-sm gap-2 px-5"
+            <p
+              style={{
+                fontFamily: "var(--font-sans)",
+                fontSize: 13,
+                color: "var(--fg-muted)",
+                lineHeight: 1.55,
+                marginBottom: 16,
+              }}
+            >
+              Now lock it in — generate a flashcard deck and start drilling with spaced
+              repetition.
+            </p>
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: 8,
+                justifyContent: "center",
+              }}
+            >
+              <button
+                type="button"
                 onClick={() => {
                   const topic = (inputText || "").trim();
                   if (!topic) return;
@@ -1368,28 +1617,68 @@ function renderNudgeAndDisclaimer(
                     })
                   );
                 }}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  height: 36,
+                  padding: "0 20px",
+                  borderRadius: "var(--radius-md)",
+                  border: "1px solid transparent",
+                  background: "var(--fg)",
+                  color: "var(--bg)",
+                  fontFamily: "var(--font-sans)",
+                  fontSize: 13,
+                  fontWeight: 500,
+                  cursor: "pointer",
+                }}
               >
-                <Layers className="h-4 w-4" />
-                Generate flashcards now
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-xs text-muted-foreground hover:text-foreground"
+                <Layers style={{ width: 14, height: 14 }} />
+                Generate flashcards
+              </button>
+              <button
+                type="button"
                 onClick={() => setShowNudge(false)}
+                style={{
+                  height: 36,
+                  padding: "0 16px",
+                  borderRadius: "var(--radius-md)",
+                  border: "1px solid var(--border)",
+                  background: "transparent",
+                  color: "var(--fg-muted)",
+                  fontFamily: "var(--font-sans)",
+                  fontSize: 13,
+                  cursor: "pointer",
+                }}
               >
                 Maybe later
-              </Button>
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      <div className="flex items-start justify-between gap-2 pt-1 animate-fade-in">
-        <div className="flex items-start gap-1.5 min-w-0">
+      <div
+        className="animate-fade-in"
+        style={{
+          display: "flex",
+          alignItems: "flex-start",
+          justifyContent: "space-between",
+          gap: 8,
+          paddingTop: 4,
+          marginTop: 8,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 6, minWidth: 0 }}>
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            className="h-3.5 w-3.5 text-muted-foreground/50 mt-0.5 shrink-0"
+            style={{
+              width: 13,
+              height: 13,
+              color: "var(--fg-subtle)",
+              marginTop: 1,
+              flexShrink: 0,
+            }}
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -1402,21 +1691,36 @@ function renderNudgeAndDisclaimer(
             <line x1="12" y1="16" x2="12.01" y2="16" />
           </svg>
           {!disclaimerCollapsed && (
-            <p className="text-[11px] text-muted-foreground/50 leading-snug">
-              AI-generated content · May contain errors · Not a substitute for clinical judgment
+            <p
+              style={{
+                fontFamily: "var(--font-mono)",
+                fontSize: 10,
+                color: "var(--fg-subtle)",
+                lineHeight: 1.5,
+                letterSpacing: "0.04em",
+              }}
+            >
+              AI-generated · May contain errors · Not a substitute for clinical judgment
             </p>
           )}
         </div>
         <button
           type="button"
           onClick={toggleDisclaimer}
-          className="shrink-0 text-muted-foreground/40 hover:text-muted-foreground/70 transition-colors"
           aria-label={disclaimerCollapsed ? "Expand disclaimer" : "Collapse disclaimer"}
+          style={{
+            flexShrink: 0,
+            background: "none",
+            border: "none",
+            color: "var(--fg-subtle)",
+            cursor: "pointer",
+            padding: 2,
+          }}
         >
           {disclaimerCollapsed ? (
-            <ChevronDown className="h-3.5 w-3.5" />
+            <ChevronDown style={{ width: 13, height: 13 }} />
           ) : (
-            <ChevronUp className="h-3.5 w-3.5" />
+            <ChevronUp style={{ width: 13, height: 13 }} />
           )}
         </button>
       </div>

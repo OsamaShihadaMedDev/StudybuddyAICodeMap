@@ -1,12 +1,7 @@
 import { ReactNode, useState } from "react";
-import { Menu } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
-import GradientBackground from "@/components/GradientBackground";
-import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
+import AppNav from "@/components/dashboard/AppNav";
 import AuthModal from "@/components/AuthModal";
 import AccountDashboard from "@/components/AccountDashboard";
-import { useSidebar } from "@/contexts/SidebarContext";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -14,72 +9,26 @@ interface DashboardLayoutProps {
 }
 
 const DashboardLayout = ({ children, wide = false }: DashboardLayoutProps) => {
-  const [drawerOpen, setDrawerOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [accountModalOpen, setAccountModalOpen] = useState(false);
-  const { collapsed: sidebarCollapsed, toggleCollapsed: setSidebarCollapsed } = useSidebar();
-
-  const handleOpenAuth = () => {
-    setAuthModalOpen(true);
-    setDrawerOpen(false);
-  };
-
-  const handleOpenAccount = () => {
-    setAccountModalOpen(true);
-    setDrawerOpen(false);
-  };
 
   return (
-    <div className="relative min-h-screen">
-      <GradientBackground />
-      <div className="relative z-10 flex min-h-screen">
-        {/* Desktop sidebar */}
+    <div style={{ minHeight: "100vh", background: "var(--bg)" }}>
+      <AppNav
+        onOpenAuth={() => setAuthModalOpen(true)}
+        onOpenAccount={() => setAccountModalOpen(true)}
+      />
+
+      <main style={{ padding: "40px 24px 80px" }}>
         <div
-          className={`hidden lg:flex lg:shrink-0 lg:border-r lg:border-border lg:bg-sidebar transition-all duration-300 ease-in-out ${
-            sidebarCollapsed ? "lg:w-[60px]" : "lg:w-[250px]"
-          }`}
+          style={{
+            maxWidth: wide ? "var(--max-w, 1280px)" : "860px",
+            margin: "0 auto",
+          }}
         >
-          <DashboardSidebar
-            onOpenAuth={handleOpenAuth}
-            onOpenAccount={handleOpenAccount}
-            collapsed={sidebarCollapsed}
-            onToggleCollapse={setSidebarCollapsed}
-          />
+          {children}
         </div>
-
-        {/* Mobile drawer */}
-        <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
-          <SheetContent side="left" className="w-[280px] p-0 border-r border-border bg-sidebar">
-            <DashboardSidebar
-              onNavigate={() => setDrawerOpen(false)}
-              onOpenAuth={handleOpenAuth}
-              onOpenAccount={handleOpenAccount}
-            />
-          </SheetContent>
-        </Sheet>
-
-        {/* Main content */}
-        <main className="flex-1 min-w-0 flex flex-col transition-all duration-300 ease-in-out">
-          <header className="lg:hidden sticky top-0 z-20 flex items-center justify-between border-b border-border bg-background/90 backdrop-blur px-4 py-2.5">
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label="Open menu"
-              onClick={() => setDrawerOpen(true)}
-            >
-              <Menu className="h-5 w-5" />
-            </Button>
-            <p className="text-sm font-semibold tracking-tight text-foreground">
-              StudyBuddy
-            </p>
-            <div className="w-9" aria-hidden />
-          </header>
-
-          <div className="flex-1 min-w-0 px-4 py-6 md:px-8 md:py-10">
-            <div className={wide ? "w-full" : "mx-auto max-w-2xl"}>{children}</div>
-          </div>
-        </main>
-      </div>
+      </main>
 
       <AuthModal open={authModalOpen} onOpenChange={setAuthModalOpen} />
       <AccountDashboard open={accountModalOpen} onOpenChange={setAccountModalOpen} />

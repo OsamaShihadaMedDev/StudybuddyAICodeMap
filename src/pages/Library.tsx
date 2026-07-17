@@ -119,22 +119,42 @@ const Library = () => {
       )}
 
       <div className="space-y-6">
-        <header className="flex items-start gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-card">
-            <LibraryIcon className="h-4 w-4 text-primary" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-              Library
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              Everything you've created
-            </p>
-          </div>
-        </header>
+        <div style={{ marginBottom: 28 }}>
+          <p style={{
+            fontFamily: "var(--font-mono)",
+            fontSize: 11,
+            fontWeight: 500,
+            letterSpacing: "0.14em",
+            textTransform: "uppercase",
+            color: "var(--accent)",
+            marginBottom: 8,
+          }}>
+            Library · Everything you've created
+          </p>
+          <h1 style={{
+            fontFamily: "var(--font-display)",
+            fontSize: "clamp(26px, 3.5vw, 36px)",
+            fontWeight: 500,
+            lineHeight: 1.1,
+            letterSpacing: "-0.012em",
+            color: "var(--fg)",
+            margin: 0,
+          }}>
+            Your saved{" "}
+            <span style={{ fontStyle: "italic", color: "var(--accent)" }}>sheets and decks.</span>
+          </h1>
+        </div>
 
         <Tabs defaultValue="decks" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList
+            className="grid w-full grid-cols-2"
+            style={{
+              background: "var(--bg)",
+              border: "1px solid var(--border)",
+              borderRadius: "var(--radius-md)",
+              padding: 3,
+            }}
+          >
             <TabsTrigger value="decks">Decks</TabsTrigger>
             <TabsTrigger value="sheets">Sheets</TabsTrigger>
           </TabsList>
@@ -146,28 +166,69 @@ const Library = () => {
                 placeholder="Search decks…"
                 value={deckSearch}
                 onChange={(e) => setDeckSearch(e.target.value)}
-                className="pl-9 h-10 rounded-lg"
+                className="pl-9 h-10"
+                style={{
+                  borderRadius: "var(--radius-md)",
+                  border: "1px solid var(--border)",
+                  background: "var(--bg-elevated)",
+                  fontFamily: "var(--font-sans)",
+                  fontSize: 13,
+                }}
               />
             </div>
             {totalDecks === 0 ? (
-              <Card className="glass-card">
-                <CardContent className="p-8 flex flex-col items-center text-center gap-3">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-lg border border-border bg-background">
-                    <Sparkles className="h-4 w-4 text-primary" />
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-base font-semibold text-foreground">
-                      No decks yet
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Generate flashcards from a topic to build your first deck.
-                    </p>
-                  </div>
-                  <Button asChild className="h-9 rounded-lg px-5 font-medium">
-                    <Link to="/dashboard">Create your first deck</Link>
-                  </Button>
-                </CardContent>
-              </Card>
+              <div style={{
+                border: "1px solid var(--border)",
+                borderRadius: "var(--radius-lg)",
+                background: "var(--bg-elevated)",
+                padding: "32px 24px",
+                display: "flex",
+                flexDirection: "column" as const,
+                alignItems: "center",
+                textAlign: "center" as const,
+                gap: 12,
+              }}>
+                <div style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: 44,
+                  height: 44,
+                  borderRadius: "var(--radius-lg)",
+                  border: "1px solid var(--border)",
+                  background: "var(--bg)",
+                }}>
+                  <Sparkles style={{ width: 18, height: 18, color: "var(--accent)" }} />
+                </div>
+                <div>
+                  <p style={{ fontSize: 14, fontWeight: 500, color: "var(--fg)", marginBottom: 4 }}>
+                    No decks yet
+                  </p>
+                  <p style={{ fontSize: 13, color: "var(--fg-muted)", lineHeight: 1.5 }}>
+                    Generate flashcards from a topic to build your first deck.
+                  </p>
+                </div>
+                <Link
+                  to="/dashboard"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    height: 36,
+                    padding: "0 20px",
+                    borderRadius: "var(--radius-md)",
+                    border: "1px solid transparent",
+                    background: "var(--fg)",
+                    color: "var(--bg)",
+                    fontFamily: "var(--font-sans)",
+                    fontSize: 13,
+                    fontWeight: 500,
+                    textDecoration: "none",
+                    marginTop: 4,
+                  }}
+                >
+                  Create your first deck
+                </Link>
+              </div>
             ) : (
               <>
                 <DeckList
@@ -178,13 +239,33 @@ const Library = () => {
                 />
                 {filteredTopics.length > visibleDecks && (
                   <div className="flex justify-center pt-2">
-                    <Button
-                      variant="outline"
-                      className="h-9 rounded-lg text-muted-foreground hover:text-foreground text-sm px-6"
+                    <button
+                      type="button"
                       onClick={() => setVisibleDecks((n) => n + 10)}
+                      style={{
+                        height: 36,
+                        padding: "0 24px",
+                        borderRadius: "var(--radius-md)",
+                        border: "1px solid var(--border)",
+                        background: "transparent",
+                        color: "var(--fg-muted)",
+                        fontFamily: "var(--font-sans)",
+                        fontSize: 13,
+                        fontWeight: 500,
+                        cursor: "pointer",
+                        transition: "border-color var(--dur-micro) var(--ease-out), color var(--dur-micro) var(--ease-out)",
+                      }}
+                      onMouseEnter={e => {
+                        (e.currentTarget as HTMLElement).style.borderColor = "var(--border-strong)";
+                        (e.currentTarget as HTMLElement).style.color = "var(--fg)";
+                      }}
+                      onMouseLeave={e => {
+                        (e.currentTarget as HTMLElement).style.borderColor = "var(--border)";
+                        (e.currentTarget as HTMLElement).style.color = "var(--fg-muted)";
+                      }}
                     >
                       Load more
-                    </Button>
+                    </button>
                   </div>
                 )}
               </>
@@ -198,28 +279,69 @@ const Library = () => {
                 placeholder="Search sheets…"
                 value={sheetSearch}
                 onChange={(e) => setSheetSearch(e.target.value)}
-                className="pl-9 h-10 rounded-lg"
+                className="pl-9 h-10"
+                style={{
+                  borderRadius: "var(--radius-md)",
+                  border: "1px solid var(--border)",
+                  background: "var(--bg-elevated)",
+                  fontFamily: "var(--font-sans)",
+                  fontSize: 13,
+                }}
               />
             </div>
             {history.length === 0 ? (
-              <Card className="glass-card">
-                <CardContent className="p-8 flex flex-col items-center text-center gap-3">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-lg border border-border bg-background">
-                    <FileText className="h-4 w-4 text-primary" />
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-base font-semibold text-foreground">
-                      No saved sheets yet
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Generate a study sheet and save it to see it here.
-                    </p>
-                  </div>
-                  <Button asChild className="h-9 rounded-lg px-5 font-medium">
-                    <Link to="/dashboard">Generate your first study sheet</Link>
-                  </Button>
-                </CardContent>
-              </Card>
+              <div style={{
+                border: "1px solid var(--border)",
+                borderRadius: "var(--radius-lg)",
+                background: "var(--bg-elevated)",
+                padding: "32px 24px",
+                display: "flex",
+                flexDirection: "column" as const,
+                alignItems: "center",
+                textAlign: "center" as const,
+                gap: 12,
+              }}>
+                <div style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: 44,
+                  height: 44,
+                  borderRadius: "var(--radius-lg)",
+                  border: "1px solid var(--border)",
+                  background: "var(--bg)",
+                }}>
+                  <FileText style={{ width: 18, height: 18, color: "var(--accent)" }} />
+                </div>
+                <div>
+                  <p style={{ fontSize: 14, fontWeight: 500, color: "var(--fg)", marginBottom: 4 }}>
+                    No saved sheets yet
+                  </p>
+                  <p style={{ fontSize: 13, color: "var(--fg-muted)", lineHeight: 1.5 }}>
+                    Generate a study sheet and save it to see it here.
+                  </p>
+                </div>
+                <Link
+                  to="/dashboard"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    height: 36,
+                    padding: "0 20px",
+                    borderRadius: "var(--radius-md)",
+                    border: "1px solid transparent",
+                    background: "var(--fg)",
+                    color: "var(--bg)",
+                    fontFamily: "var(--font-sans)",
+                    fontSize: 13,
+                    fontWeight: 500,
+                    textDecoration: "none",
+                    marginTop: 4,
+                  }}
+                >
+                  Generate your first study sheet
+                </Link>
+              </div>
             ) : (
               <div className="space-y-2">
                 {filteredSheets.slice(0, visibleSheets).map((item) => {
@@ -229,53 +351,106 @@ const Library = () => {
                       .trim()
                       .slice(0, 160) ?? "";
                   return (
-                    <Card
+                    <div
                       key={item.id}
-                      className="glass-card cursor-pointer hover:border-primary/30 transition-colors group"
+                      className="group"
                       onClick={() => setActiveSheet(item)}
+                      style={{
+                        position: "relative",
+                        border: "1px solid var(--border)",
+                        borderRadius: "var(--radius-md)",
+                        background: "var(--bg-elevated)",
+                        padding: "14px 16px",
+                        display: "flex",
+                        alignItems: "flex-start",
+                        gap: 12,
+                        cursor: "pointer",
+                        transition: "border-color var(--dur-micro) var(--ease-out)",
+                      }}
+                      onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = "var(--accent)"}
+                      onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"}
                     >
-                      <CardContent className="p-4 flex items-start gap-3">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-border bg-background">
-                          <FileText className="h-4 w-4 text-primary" />
-                        </div>
-                        <div className="flex-1 min-w-0 space-y-1">
-                          <p className="text-sm font-semibold text-foreground truncate">
-                            {item.topic}
-                          </p>
-                          <p className="text-xs text-muted-foreground line-clamp-2">
-                            {preview}
-                          </p>
-                          <p className="text-[11px] text-muted-foreground/80">
-                            {timeAgo(item.timestamp)}
-                            {item.modeInfo && (
-                              <span className="ml-1.5 opacity-60">
-                                · {item.modeInfo.examMode}
-                              </span>
-                            )}
-                          </p>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-                          onClick={(e) => handleDeleteSheet(item.id, e)}
-                          aria-label="Delete sheet"
-                        >
-                          <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
-                        </Button>
-                      </CardContent>
-                    </Card>
+                      <div style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        width: 36,
+                        height: 36,
+                        borderRadius: "var(--radius-sm)",
+                        border: "1px solid var(--border)",
+                        background: "var(--bg)",
+                        flexShrink: 0,
+                      }}>
+                        <FileText style={{ width: 16, height: 16, color: "var(--accent)" }} />
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ fontSize: 13, fontWeight: 500, color: "var(--fg)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>
+                          {item.topic}
+                        </p>
+                        <p style={{ fontSize: 12, color: "var(--fg-muted)", marginTop: 2, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const, overflow: "hidden" }}>
+                          {preview}
+                        </p>
+                        <p style={{ fontSize: 11, color: "var(--fg-subtle)", marginTop: 4 }}>
+                          {timeAgo(item.timestamp)}
+                          {item.modeInfo && (
+                            <span style={{ marginLeft: 6, opacity: 0.6 }}>· {item.modeInfo.examMode}</span>
+                          )}
+                        </p>
+                      </div>
+                      <button
+                        style={{
+                          opacity: 0,
+                          width: 32,
+                          height: 32,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          borderRadius: "var(--radius-sm)",
+                          border: "none",
+                          background: "transparent",
+                          cursor: "pointer",
+                          color: "var(--fg-muted)",
+                          transition: "opacity var(--dur-micro) var(--ease-out)",
+                          flexShrink: 0,
+                        }}
+                        className="group-hover:opacity-100"
+                        onClick={(e) => handleDeleteSheet(item.id, e)}
+                        aria-label="Delete sheet"
+                      >
+                        <Trash2 style={{ width: 14, height: 14 }} />
+                      </button>
+                    </div>
                   );
                 })}
                 {filteredSheets.length > visibleSheets && (
                   <div className="flex justify-center pt-2">
-                    <Button
-                      variant="outline"
-                      className="h-9 rounded-lg text-muted-foreground hover:text-foreground text-sm px-6"
+                    <button
+                      type="button"
                       onClick={() => setVisibleSheets((n) => n + 10)}
+                      style={{
+                        height: 36,
+                        padding: "0 24px",
+                        borderRadius: "var(--radius-md)",
+                        border: "1px solid var(--border)",
+                        background: "transparent",
+                        color: "var(--fg-muted)",
+                        fontFamily: "var(--font-sans)",
+                        fontSize: 13,
+                        fontWeight: 500,
+                        cursor: "pointer",
+                        transition: "border-color var(--dur-micro) var(--ease-out), color var(--dur-micro) var(--ease-out)",
+                      }}
+                      onMouseEnter={e => {
+                        (e.currentTarget as HTMLElement).style.borderColor = "var(--border-strong)";
+                        (e.currentTarget as HTMLElement).style.color = "var(--fg)";
+                      }}
+                      onMouseLeave={e => {
+                        (e.currentTarget as HTMLElement).style.borderColor = "var(--border)";
+                        (e.currentTarget as HTMLElement).style.color = "var(--fg-muted)";
+                      }}
                     >
                       Load more
-                    </Button>
+                    </button>
                   </div>
                 )}
               </div>

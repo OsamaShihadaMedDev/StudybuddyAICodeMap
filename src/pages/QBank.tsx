@@ -4,7 +4,6 @@ import { FlaskConical, LogIn, Zap, BookOpen, CheckCircle, History, ChevronRight,
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import PageLoader from "@/components/PageLoader";
-import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { useQBankContext } from "@/contexts/QBankContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -51,6 +50,64 @@ const getScoreBg = (score: number, total: number) => {
 };
 
 const PAGE_SIZE = 5;
+
+// ── OpenMed token styles ────────────────────────────────────────────────────
+
+const PANEL_STYLE: React.CSSProperties = {
+  border: "1px solid var(--border)",
+  borderRadius: "var(--radius-md)",
+  background: "var(--bg-elevated)",
+};
+
+const EYEBROW_STYLE: React.CSSProperties = {
+  fontFamily: "var(--font-mono)",
+  fontSize: 11,
+  fontWeight: 500,
+  letterSpacing: "0.12em",
+  textTransform: "uppercase",
+  color: "var(--fg-muted)",
+  marginBottom: 8,
+};
+
+const STAT_LABEL_STYLE: React.CSSProperties = {
+  fontFamily: "var(--font-mono)",
+  fontSize: 10,
+  color: "var(--fg-muted)",
+  marginTop: 4,
+  letterSpacing: "0.06em",
+};
+
+const chipStyle = (active: boolean): React.CSSProperties => ({
+  background: active ? "var(--accent-soft)" : "var(--bg)",
+  border: active ? "1px solid var(--accent)" : "1px solid var(--border)",
+  color: active ? "var(--accent)" : "var(--fg-muted)",
+  borderRadius: "var(--radius-sm)",
+  padding: "5px 12px",
+  fontFamily: "var(--font-sans)",
+  fontSize: 12,
+  fontWeight: 500,
+  cursor: "pointer",
+  transition: "all var(--dur-micro) var(--ease-out)",
+});
+
+/** Dark CTA — the OpenMed primary button (ink on light, parchment on dark). */
+const darkButtonStyle = (disabled = false): React.CSSProperties => ({
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 8,
+  height: 44,
+  borderRadius: "var(--radius-md)",
+  border: "1px solid transparent",
+  background: "var(--fg)",
+  color: "var(--bg)",
+  fontFamily: "var(--font-sans)",
+  fontSize: 14,
+  fontWeight: 500,
+  cursor: disabled ? "not-allowed" : "pointer",
+  opacity: disabled ? 0.4 : 1,
+  transition: "opacity var(--dur-micro) var(--ease-out)",
+});
 
 const QBank = () => {
   const navigate = useNavigate();
@@ -265,46 +322,102 @@ const QBank = () => {
     <DashboardLayout>
       <div className="flex flex-col items-center justify-center min-h-[70vh] px-4">
         <div className="w-full max-w-lg space-y-8 animate-fade-in">
-          <div className="flex flex-col items-center gap-4 text-center">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-border bg-card">
-              <FlaskConical className="h-6 w-6 text-primary" />
-            </div>
-            <div className="space-y-2">
-              <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-                QBank
-              </h1>
-              <p className="text-sm text-muted-foreground leading-relaxed max-w-sm mx-auto">
-                USMLE-style questions for Step 1 and Step 2 — built on NBME
-                blueprints and clinical guidelines. Generated using Anthropic's
-                latest AI models, then human-verified before publishing.
-              </p>
-            </div>
+          <div style={{ textAlign: "center" }}>
+            <p
+              style={{
+                fontFamily: "var(--font-mono)",
+                fontSize: 11,
+                fontWeight: 500,
+                letterSpacing: "0.14em",
+                textTransform: "uppercase",
+                color: "var(--accent)",
+                marginBottom: 8,
+              }}
+            >
+              QBank · USMLE-style
+            </p>
+            <h1
+              style={{
+                fontFamily: "var(--font-display)",
+                fontSize: "clamp(28px, 4vw, 40px)",
+                fontWeight: 500,
+                lineHeight: 1.1,
+                letterSpacing: "-0.012em",
+                color: "var(--fg)",
+                margin: "0 0 10px",
+              }}
+            >
+              Practice questions,{" "}
+              <span style={{ fontStyle: "italic", color: "var(--accent)" }}>
+                built to stick.
+              </span>
+            </h1>
+            <p
+              style={{
+                fontFamily: "var(--font-sans)",
+                fontSize: 14,
+                color: "var(--fg-muted)",
+                lineHeight: 1.55,
+                maxWidth: 400,
+                margin: "0 auto",
+              }}
+            >
+              NBME blueprints, clinical guidelines, human-verified. Instant feedback on
+              every answer.
+            </p>
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
-            <div className="glass-card rounded-xl p-3 text-center space-y-1">
-              <p className="text-2xl font-semibold tabular-nums text-primary">
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
+            <div style={{ ...PANEL_STYLE, padding: "12px 8px", textAlign: "center" }}>
+              <p
+                style={{
+                  fontFamily: "var(--font-display)",
+                  fontSize: 28,
+                  fontWeight: 500,
+                  color: "var(--accent)",
+                  margin: 0,
+                  lineHeight: 1,
+                }}
+              >
                 {questionCount}
               </p>
-              <p className="text-[11px] text-muted-foreground">
-                questions available
+              <p style={STAT_LABEL_STYLE}>questions</p>
+            </div>
+            <div style={{ ...PANEL_STYLE, padding: "12px 8px", textAlign: "center" }}>
+              <p
+                style={{
+                  fontFamily: "var(--font-display)",
+                  fontSize: 22,
+                  fontWeight: 500,
+                  color: "var(--fg)",
+                  margin: 0,
+                  lineHeight: 1,
+                }}
+              >
+                Step 1
               </p>
+              <p style={STAT_LABEL_STYLE}>&amp; Step 2</p>
             </div>
-            <div className="glass-card rounded-xl p-3 text-center space-y-1">
-              <p className="text-2xl font-semibold text-foreground">Step 1</p>
-              <p className="text-[11px] text-muted-foreground">& Step 2</p>
-            </div>
-            <div className="glass-card rounded-xl p-3 text-center space-y-1">
-              <p className="text-2xl font-semibold tabular-nums text-foreground">
+            <div style={{ ...PANEL_STYLE, padding: "12px 8px", textAlign: "center" }}>
+              <p
+                style={{
+                  fontFamily: "var(--font-display)",
+                  fontSize: 28,
+                  fontWeight: 500,
+                  color: "var(--fg)",
+                  margin: 0,
+                  lineHeight: 1,
+                }}
+              >
                 {availableSystems.length > 0 ? availableSystems.length : "—"}
               </p>
-              <p className="text-[11px] text-muted-foreground">
+              <p style={STAT_LABEL_STYLE}>
                 {availableSystems.length === 1 ? "system" : "systems"}
               </p>
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-2 justify-center">
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "center" }}>
             {[
               { icon: Zap, label: "Instant feedback" },
               { icon: BookOpen, label: "Full explanations" },
@@ -312,10 +425,25 @@ const QBank = () => {
             ].map(({ icon: Icon, label }) => (
               <div
                 key={label}
-                className="flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  border: "1px solid var(--border)",
+                  borderRadius: "var(--radius-pill)",
+                  background: "var(--bg-elevated)",
+                  padding: "6px 12px",
+                }}
               >
-                <Icon className="h-3.5 w-3.5 text-primary" />
-                <span className="text-xs font-medium text-muted-foreground">
+                <Icon style={{ width: 12, height: 12, color: "var(--accent)" }} />
+                <span
+                  style={{
+                    fontFamily: "var(--font-mono)",
+                    fontSize: 11,
+                    color: "var(--fg-muted)",
+                    letterSpacing: "0.04em",
+                  }}
+                >
                   {label}
                 </span>
               </div>
@@ -323,124 +451,196 @@ const QBank = () => {
           </div>
 
           {isAnonymous || !user ? (
-            <div className="glass-card rounded-xl p-6 space-y-4 text-center">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-background mx-auto">
-                <LogIn className="h-4 w-4 text-primary" />
+            <div
+              style={{
+                ...PANEL_STYLE,
+                borderRadius: "var(--radius-lg)",
+                padding: 24,
+                textAlign: "center",
+              }}
+              className="space-y-4"
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: 40,
+                  height: 40,
+                  borderRadius: "var(--radius-md)",
+                  border: "1px solid var(--border)",
+                  background: "var(--bg)",
+                  margin: "0 auto",
+                }}
+              >
+                <LogIn style={{ width: 16, height: 16, color: "var(--accent)" }} />
               </div>
               <div className="space-y-1">
-                <p className="text-sm font-semibold text-foreground">
+                <p style={{ fontSize: 14, fontWeight: 500, color: "var(--fg)" }}>
                   Sign in to access QBank
                 </p>
-                <p className="text-xs text-muted-foreground">
+                <p style={{ fontSize: 13, color: "var(--fg-muted)" }}>
                   Create a free account to start answering questions and track
                   your progress.
                 </p>
               </div>
-              <Button
-                className="w-full h-10 text-sm font-medium rounded-lg"
+              <button
+                type="button"
                 onClick={() => navigate("/dashboard")}
+                style={{ ...darkButtonStyle(), width: "100%" }}
               >
-                <LogIn className="h-4 w-4 mr-2" />
+                <LogIn style={{ width: 16, height: 16 }} />
                 Sign In to Start
-              </Button>
+              </button>
             </div>
           ) : (
             <>
               {hasSavedSession && savedSessionMeta && (
-                <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 space-y-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-primary/20 bg-background shrink-0">
-                        <History className="h-4 w-4 text-primary" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-foreground">
-                          Resume previous session
-                        </p>
-                        <p className="text-[11px] text-muted-foreground mt-0.5">
-                          {savedSessionMeta.system} · {savedSessionMeta.answered}/{savedSessionMeta.total} questions answered
-                        </p>
-                      </div>
+                <div
+                  className="space-y-3"
+                  style={{
+                    ...PANEL_STYLE,
+                    borderLeft: "3px solid var(--accent)",
+                    padding: "16px 18px",
+                  }}
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        width: 36,
+                        height: 36,
+                        borderRadius: "var(--radius-md)",
+                        border: "1px solid var(--border)",
+                        background: "var(--bg)",
+                        flexShrink: 0,
+                      }}
+                    >
+                      <History style={{ width: 16, height: 16, color: "var(--accent)" }} />
+                    </div>
+                    <div>
+                      <p style={{ fontSize: 14, fontWeight: 500, color: "var(--fg)" }}>
+                        Resume previous session
+                      </p>
+                      <p
+                        style={{
+                          fontFamily: "var(--font-mono)",
+                          fontSize: 11,
+                          color: "var(--fg-muted)",
+                          marginTop: 2,
+                        }}
+                      >
+                        {savedSessionMeta.system} · {savedSessionMeta.answered}/{savedSessionMeta.total} answered
+                      </p>
                     </div>
                   </div>
 
-                  <div className="w-full h-1 rounded-full bg-border overflow-hidden">
+                  <div
+                    style={{
+                      width: "100%",
+                      height: 4,
+                      borderRadius: 999,
+                      background: "var(--border)",
+                      overflow: "hidden",
+                    }}
+                  >
                     <div
-                      className="h-full rounded-full bg-primary transition-all"
+                      className="transition-all"
                       style={{
+                        height: "100%",
+                        borderRadius: 999,
+                        background: "var(--accent)",
                         width: `${savedSessionMeta.total > 0 ? (savedSessionMeta.answered / savedSessionMeta.total) * 100 : 0}%`,
                       }}
                     />
                   </div>
 
                   <div className="flex gap-2">
-                    <Button
+                    <button
+                      type="button"
                       onClick={handleResume}
-                      className="flex-1 h-9 text-sm font-medium rounded-lg"
+                      style={{ ...darkButtonStyle(), flex: 1, height: 38, fontSize: 13 }}
                     >
-                      <ChevronRight className="h-4 w-4 mr-1" />
+                      <ChevronRight style={{ width: 15, height: 15 }} />
                       Continue
-                    </Button>
-                    <Button
+                    </button>
+                    <button
+                      type="button"
                       onClick={handleDiscard}
-                      variant="outline"
-                      className="h-9 px-4 text-sm text-muted-foreground hover:text-foreground rounded-lg"
+                      style={{
+                        height: 38,
+                        padding: "0 16px",
+                        borderRadius: "var(--radius-md)",
+                        border: "1px solid var(--border)",
+                        background: "transparent",
+                        color: "var(--fg-muted)",
+                        fontFamily: "var(--font-sans)",
+                        fontSize: 13,
+                        fontWeight: 500,
+                        cursor: "pointer",
+                      }}
                     >
                       Discard
-                    </Button>
+                    </button>
                   </div>
                 </div>
               )}
 
-              <div className="glass-card rounded-xl p-5 space-y-5">
-                <div className="space-y-2">
-                  <p className="text-xs font-medium text-muted-foreground">
-                    System
-                  </p>
+              <div
+                className="space-y-5"
+                style={{
+                  ...PANEL_STYLE,
+                  borderRadius: "var(--radius-lg)",
+                  padding: "20px 20px 24px",
+                }}
+              >
+                <div>
+                  <p style={EYEBROW_STYLE}>System</p>
                   <div className="flex flex-wrap gap-2">
                     {availableSystems.length === 0 ? (
                       [100, 88].map((w) => (
                         <div
                           key={w}
-                          style={{ width: `${w}px` }}
-                          className="h-7 rounded-full bg-muted/20 animate-pulse"
+                          style={{ width: `${w}px`, background: "var(--border)" }}
+                          className="h-7 rounded-full animate-pulse"
                         />
                       ))
                     ) : (
-                      availableSystems.map((system) => {
-                        const isSelected = selectedSystem === system;
-                        return (
-                          <button
-                            key={system}
-                            type="button"
-                            onClick={() => handleSystemChange(system)}
-                            className={`rounded-md border px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer ${
-                              isSelected
-                                ? "bg-primary/10 border-primary/40 text-primary"
-                                : "bg-card border-border text-muted-foreground hover:border-primary/30 hover:text-foreground"
-                            }`}
-                          >
-                            {system}
-                          </button>
-                        );
-                      })
+                      availableSystems.map((system) => (
+                        <button
+                          key={system}
+                          type="button"
+                          onClick={() => handleSystemChange(system)}
+                          style={chipStyle(selectedSystem === system)}
+                        >
+                          {system}
+                        </button>
+                      ))
                     )}
                   </div>
                 </div>
 
                 {flaggedCount > 0 && (
-                  <div className="space-y-2">
-                    <p className="text-xs font-medium text-muted-foreground">
-                      Filter
-                    </p>
+                  <div>
+                    <p style={EYEBROW_STYLE}>Filter</p>
                     <button
                       type="button"
                       onClick={() => setFlaggedOnly((v) => !v)}
-                      className={`flex items-center gap-2 rounded-md border px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer ${
-                        flaggedOnly
-                          ? "bg-amber-500/10 border-amber-500/40 text-amber-600 dark:text-amber-400"
-                          : "bg-card border-border text-muted-foreground hover:border-amber-500/30 hover:text-amber-600 dark:hover:text-amber-400"
-                      }`}
+                      style={{
+                        ...chipStyle(false),
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        ...(flaggedOnly
+                          ? {
+                              background: "rgba(217,119,6,0.08)",
+                              border: "1px solid #d97706",
+                              color: "#d97706",
+                            }
+                          : {}),
+                      }}
                     >
                       <Flag className="h-3 w-3" fill={flaggedOnly ? "currentColor" : "none"} />
                       Flagged only ({flaggedCount})
@@ -448,17 +648,15 @@ const QBank = () => {
                   </div>
                 )}
 
-                <div className={`space-y-2 ${flaggedOnly ? "opacity-50 pointer-events-none" : ""}`}>
-                  <p className="text-xs font-medium text-muted-foreground">
-                    Domain
-                  </p>
+                <div className={flaggedOnly ? "opacity-50 pointer-events-none" : ""}>
+                  <p style={EYEBROW_STYLE}>Domain</p>
                   <div className="flex flex-wrap gap-2">
                     {availableDomains.length === 0 ? (
                       [80, 96, 72, 88].map((w) => (
                         <div
                           key={w}
-                          style={{ width: `${w}px` }}
-                          className="h-7 rounded-full bg-muted/20 animate-pulse"
+                          style={{ width: `${w}px`, background: "var(--border)" }}
+                          className="h-7 rounded-full animate-pulse"
                         />
                       ))
                     ) : (
@@ -466,31 +664,20 @@ const QBank = () => {
                         <button
                           type="button"
                           onClick={selectAll}
-                          className={`rounded-md border px-3 py-1 text-xs font-medium transition-colors cursor-pointer ${
-                            selectedDomains.length === 0
-                              ? "bg-primary/10 border-primary/40 text-primary"
-                              : "bg-card border-border text-muted-foreground hover:border-primary/30 hover:text-foreground"
-                          }`}
+                          style={chipStyle(selectedDomains.length === 0)}
                         >
                           All
                         </button>
-                        {availableDomains.map((domain) => {
-                          const isSelected = selectedDomains.includes(domain);
-                          return (
-                            <button
-                              key={domain}
-                              type="button"
-                              onClick={() => toggleDomain(domain)}
-                              className={`rounded-md border px-3 py-1 text-xs font-medium transition-colors cursor-pointer ${
-                                isSelected
-                                  ? "bg-primary/10 border-primary/40 text-primary"
-                                  : "bg-card border-border text-muted-foreground hover:border-primary/30 hover:text-foreground"
-                              }`}
-                            >
-                              {domain}
-                            </button>
-                          );
-                        })}
+                        {availableDomains.map((domain) => (
+                          <button
+                            key={domain}
+                            type="button"
+                            onClick={() => toggleDomain(domain)}
+                            style={chipStyle(selectedDomains.includes(domain))}
+                          >
+                            {domain}
+                          </button>
+                        ))}
                       </>
                     )}
                   </div>
@@ -498,10 +685,19 @@ const QBank = () => {
 
                 <div className={`space-y-2 ${flaggedOnly ? "opacity-50 pointer-events-none" : ""}`}>
                   <div className="flex items-center justify-between">
-                    <p className="text-xs font-medium text-muted-foreground">
-                      Questions
-                    </p>
-                    <span className="text-xs font-semibold tabular-nums px-2 py-0.5 rounded-md bg-primary/10 text-primary">
+                    <p style={{ ...EYEBROW_STYLE, marginBottom: 0 }}>Questions</p>
+                    <span
+                      style={{
+                        fontFamily: "var(--font-mono)",
+                        fontSize: 13,
+                        fontWeight: 600,
+                        color: "var(--accent)",
+                        padding: "2px 8px",
+                        border: "1px solid var(--accent)",
+                        borderRadius: "var(--radius-sm)",
+                        background: "var(--accent-soft)",
+                      }}
+                    >
                       {questionLimit}
                     </span>
                   </div>
@@ -512,36 +708,66 @@ const QBank = () => {
                     step={5}
                     value={questionLimit}
                     onChange={(e) => setQuestionLimit(Number(e.target.value))}
-                    className="w-full h-1.5 rounded-full appearance-none cursor-pointer accent-primary bg-muted"
+                    className="w-full h-1.5 rounded-full appearance-none cursor-pointer accent-primary"
+                    style={{ background: "var(--border)" }}
                   />
-                  <div className="flex justify-between text-[11px] text-muted-foreground/40">
+                  <div
+                    className="flex justify-between"
+                    style={{
+                      fontFamily: "var(--font-mono)",
+                      fontSize: 10,
+                      color: "var(--fg-subtle)",
+                    }}
+                  >
                     <span>5</span>
                     <span>{effectiveSliderMax}</span>
                   </div>
                   {selectedDomains.length > 0 && (
-                    <p className="text-[11px] text-muted-foreground/50 text-center mt-1">
+                    <p
+                      style={{
+                        fontSize: 11,
+                        color: "var(--fg-subtle)",
+                        textAlign: "center",
+                        marginTop: 4,
+                      }}
+                    >
                       {availableForSelection} question{availableForSelection !== 1 ? "s" : ""} available in selected domains
                     </p>
                   )}
                 </div>
               </div>
 
-              <Button
+              <button
+                type="button"
                 onClick={handleStart}
                 disabled={questionCount === 0 || (flaggedOnly ? flaggedCount === 0 : effectiveSliderMax === 0)}
-                className="w-full h-11 text-sm font-medium rounded-lg"
+                style={{
+                  ...darkButtonStyle(
+                    questionCount === 0 || (flaggedOnly ? flaggedCount === 0 : effectiveSliderMax === 0)
+                  ),
+                  width: "100%",
+                }}
               >
-                <FlaskConical className="h-4 w-4 mr-2" />
+                <FlaskConical style={{ width: 16, height: 16 }} />
                 Start Session · {flaggedOnly ? flaggedCount : questionLimit} Questions
-              </Button>
+              </button>
             </>
           )}
 
           {!isAnonymous && user && (
             <div className="w-full space-y-3 pt-2">
-              <div className="flex items-center gap-2">
-                <History className="h-4 w-4 text-muted-foreground/60" />
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                <History style={{ width: 14, height: 14, color: "var(--fg-muted)" }} />
+                <p
+                  style={{
+                    fontFamily: "var(--font-mono)",
+                    fontSize: 11,
+                    fontWeight: 500,
+                    letterSpacing: "0.14em",
+                    textTransform: "uppercase",
+                    color: "var(--fg-muted)",
+                  }}
+                >
                   Session History
                 </p>
               </div>
@@ -551,13 +777,18 @@ const QBank = () => {
                   {[1, 2, 3].map((i) => (
                     <div
                       key={i}
-                      className="h-16 rounded-xl bg-muted/20 animate-pulse border border-border/20"
+                      className="h-16 animate-pulse"
+                      style={{
+                        borderRadius: "var(--radius-md)",
+                        border: "1px solid var(--border)",
+                        background: "var(--bg-elevated)",
+                      }}
                     />
                   ))}
                 </div>
               ) : !sessionHistory || sessionHistory.rows.length === 0 ? (
-                <div className="glass-card rounded-xl p-4 text-center space-y-1 border border-border/20">
-                  <p className="text-xs text-muted-foreground/60">
+                <div style={{ ...PANEL_STYLE, padding: 16, textAlign: "center" }}>
+                  <p style={{ fontSize: 12, color: "var(--fg-muted)" }}>
                     No sessions yet — complete your first session to see your history here.
                   </p>
                 </div>
@@ -602,7 +833,24 @@ const QBank = () => {
                         <button
                           key={s.id}
                           onClick={() => navigate(`/qbank/summary?session=${s.id}`)}
-                          className="w-full glass-card rounded-lg px-4 py-3 flex items-center gap-4 hover:border-foreground/20 transition-all duration-150 text-left group"
+                          className="group"
+                          style={{
+                            ...PANEL_STYLE,
+                            width: "100%",
+                            padding: "12px 16px",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 14,
+                            textAlign: "left",
+                            cursor: "pointer",
+                            transition: "border-color var(--dur-micro) var(--ease-out)",
+                          }}
+                          onMouseEnter={(e) =>
+                            (e.currentTarget.style.borderColor = "var(--border-strong)")
+                          }
+                          onMouseLeave={(e) =>
+                            (e.currentTarget.style.borderColor = "var(--border)")
+                          }
                         >
                           <div
                             className={`flex flex-col items-center justify-center rounded-md border px-3 py-1.5 shrink-0 ${getScoreBg(s.score, s.total)}`}

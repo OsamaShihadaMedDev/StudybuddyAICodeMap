@@ -33,54 +33,164 @@ const ActiveToolCard = ({
 }: ActiveToolCardProps) => (
   <div
     onClick={onClick}
-    className="group relative flex flex-col justify-between rounded-xl border border-border bg-card p-6 cursor-pointer transition-all duration-150 hover:border-foreground/20 hover:shadow-[0_4px_12px_-2px_hsl(216_45%_10%/0.12)] motion-safe:hover:-translate-y-0.5 motion-safe:active:scale-[0.98] motion-safe:active:duration-75 animate-fade-in"
+    className="group animate-fade-in"
+    style={{
+      position: "relative",
+      display: "flex",
+      flexDirection: "column",
+      justifyContent: "space-between",
+      borderRadius: "var(--radius-lg)",
+      border: "1px solid var(--border)",
+      background: "var(--bg-elevated)",
+      padding: 24,
+      cursor: "pointer",
+      transition: "border-color var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out)",
+    }}
+    onMouseEnter={e => {
+      (e.currentTarget as HTMLElement).style.borderColor = "var(--border-strong)";
+      (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)";
+    }}
+    onMouseLeave={e => {
+      (e.currentTarget as HTMLElement).style.borderColor = "var(--border)";
+      (e.currentTarget as HTMLElement).style.transform = "none";
+    }}
   >
-    <div className="space-y-4">
-      <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-background">
-        <span className="text-primary [&_svg]:h-4 [&_svg]:w-4">{icon}</span>
+    <div style={{ marginBottom: 20 }}>
+      {/* Icon */}
+      <div style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        width: 36,
+        height: 36,
+        borderRadius: "var(--radius-sm)",
+        border: "1px solid var(--border)",
+        background: "var(--bg)",
+        marginBottom: 16,
+        color: "var(--accent)",
+      }}>
+        {icon}
       </div>
-      <div className="space-y-1">
-        <h3 className="text-[15px] font-semibold tracking-tight text-foreground">
-          {title}
-        </h3>
-        <p className="text-sm text-muted-foreground leading-relaxed">
-          {description}
-        </p>
-      </div>
+
+      {/* Title + description */}
+      <h3 style={{
+        fontFamily: "var(--font-sans)",
+        fontSize: 15,
+        fontWeight: 600,
+        letterSpacing: "-0.004em",
+        color: "var(--fg)",
+        marginBottom: 6,
+      }}>
+        {title}
+      </h3>
+      <p style={{
+        fontFamily: "var(--font-sans)",
+        fontSize: 13,
+        color: "var(--fg-muted)",
+        lineHeight: 1.55,
+      }}>
+        {description}
+      </p>
     </div>
 
-    <div className="mt-6 flex items-end justify-between gap-3">
-      <div className="text-sm text-muted-foreground">{stat}</div>
-      <span className="inline-flex items-center gap-1 text-sm font-medium text-primary">
+    {/* Stat + CTA */}
+    <div style={{
+      display: "flex",
+      alignItems: "flex-end",
+      justifyContent: "space-between",
+      gap: 12,
+      marginTop: 8,
+    }}>
+      <div style={{ fontSize: 13, color: "var(--fg-muted)" }}>{stat}</div>
+      <span style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 4,
+        fontSize: 13,
+        fontWeight: 500,
+        color: "var(--accent)",
+        transition: "gap var(--dur-micro) var(--ease-out)",
+      }}>
         {ctaLabel}
-        <span className="transition-transform duration-150 group-hover:translate-x-0.5">→</span>
+        <span style={{ display: "inline-block", transition: "transform var(--dur-micro) var(--ease-out)" }}
+          className="group-hover:translate-x-0.5">→</span>
       </span>
     </div>
   </div>
 );
 
 const ComingSoonCard = ({ icon, title, description }: ComingSoonCardProps) => (
-  <div className="relative flex flex-col justify-between rounded-xl border border-dashed border-border p-6 cursor-default">
-    <div className="space-y-4">
-      <div className="flex items-start justify-between">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-muted/50">
-          <span className="text-muted-foreground [&_svg]:h-4 [&_svg]:w-4">{icon}</span>
+  <div style={{
+    position: "relative",
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "space-between",
+    borderRadius: "var(--radius-lg)",
+    border: "1px dashed var(--border)",
+    background: "transparent",
+    padding: 24,
+    cursor: "default",
+    opacity: 0.65,
+  }}>
+    <div style={{ marginBottom: 20 }}>
+      <div style={{
+        display: "flex",
+        alignItems: "flex-start",
+        justifyContent: "space-between",
+        marginBottom: 16,
+      }}>
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          width: 36,
+          height: 36,
+          borderRadius: "var(--radius-sm)",
+          border: "1px solid var(--border)",
+          background: "var(--bg-elevated)",
+          color: "var(--fg-muted)",
+        }}>
+          {icon}
         </div>
-        <span className="inline-flex items-center rounded-full border border-border bg-muted px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+        <span style={{
+          display: "inline-flex",
+          alignItems: "center",
+          padding: "2px 8px",
+          borderRadius: "var(--radius-pill)",
+          border: "1px solid var(--border)",
+          background: "var(--bg-elevated)",
+          fontFamily: "var(--font-mono)",
+          fontSize: 10,
+          fontWeight: 500,
+          letterSpacing: "0.1em",
+          textTransform: "uppercase",
+          color: "var(--fg-muted)",
+        }}>
           Coming Soon
         </span>
       </div>
-      <div className="space-y-1">
-        <h3 className="text-[15px] font-semibold tracking-tight text-foreground/70">
-          {title}
-        </h3>
-        <p className="text-sm text-muted-foreground/80 leading-relaxed">
-          {description}
-        </p>
-      </div>
-    </div>
 
-    <div className="mt-6 h-8" />
+      <h3 style={{
+        fontFamily: "var(--font-sans)",
+        fontSize: 15,
+        fontWeight: 600,
+        letterSpacing: "-0.004em",
+        color: "var(--fg)",
+        marginBottom: 6,
+        opacity: 0.7,
+      }}>
+        {title}
+      </h3>
+      <p style={{
+        fontFamily: "var(--font-sans)",
+        fontSize: 13,
+        color: "var(--fg-muted)",
+        lineHeight: 1.55,
+      }}>
+        {description}
+      </p>
+    </div>
+    <div style={{ marginTop: 8, height: 32 }} />
   </div>
 );
 
@@ -91,32 +201,42 @@ const Dashboard = () => {
   const { sheetsThisWeek, isAnonymous: sheetsAnon } = useSheetsStats();
 
   const sheetStat = sheetsAnon ? (
-    <span className="text-xs text-muted-foreground/70">
+    <span style={{ fontSize: 12, color: "var(--fg-subtle)" }}>
       Sign in to track your stats
     </span>
   ) : sheetsThisWeek === null ? (
-    <span className="text-xs text-muted-foreground/50">Loading…</span>
+    <span style={{ fontSize: 12, color: "var(--fg-subtle)" }}>Loading…</span>
   ) : (
     <span>
-      <span className="text-base font-semibold tabular-nums text-foreground">
+      <span style={{
+        fontSize: 18,
+        fontWeight: 600,
+        fontVariantNumeric: "tabular-nums",
+        color: "var(--fg)",
+      }}>
         {sheetsThisWeek}
       </span>
-      <span className="text-xs text-muted-foreground ml-1.5">
+      <span style={{ fontSize: 12, color: "var(--fg-muted)", marginLeft: 6 }}>
         sheet{sheetsThisWeek !== 1 ? "s" : ""} this week
       </span>
     </span>
   );
 
   const flashcardStat = isAnonymous ? (
-    <span className="text-xs text-muted-foreground/70">
+    <span style={{ fontSize: 12, color: "var(--fg-subtle)" }}>
       Sign in to track your stats
     </span>
   ) : (
     <span>
-      <span className="text-base font-semibold tabular-nums text-foreground">
+      <span style={{
+        fontSize: 18,
+        fontWeight: 600,
+        fontVariantNumeric: "tabular-nums",
+        color: "var(--fg)",
+      }}>
         {stats.due}
       </span>
-      <span className="text-xs text-muted-foreground ml-1.5">
+      <span style={{ fontSize: 12, color: "var(--fg-muted)", marginLeft: 6 }}>
         card{stats.due !== 1 ? "s" : ""} due today
       </span>
     </span>
@@ -131,12 +251,20 @@ const Dashboard = () => {
 
         <StatsStrip />
 
-        <div className="space-y-1">
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground pl-1">
-            Tools
+        <div style={{ marginBottom: 4 }}>
+          <p style={{
+            fontFamily: "var(--font-mono)",
+            fontSize: 11,
+            fontWeight: 500,
+            letterSpacing: "0.14em",
+            textTransform: "uppercase",
+            color: "var(--accent)",
+            marginBottom: 4,
+          }}>
+            Tools · Study smarter
           </p>
-          <p className="text-xs text-muted-foreground/70 pl-1">
-            Everything you need to study smarter
+          <p style={{ fontFamily: "var(--font-sans)", fontSize: 13, color: "var(--fg-muted)" }}>
+            Everything you need, in one place
           </p>
         </div>
 
@@ -165,8 +293,10 @@ const Dashboard = () => {
             description="USMLE-style questions for Step 1 and Step 2 — built on NBME blueprints and clinical guidelines. Human-verified."
             stat={
               <span>
-                <span className="text-base font-semibold tabular-nums text-foreground">10</span>
-                <span className="text-xs text-muted-foreground ml-1.5">questions ready</span>
+                <span style={{ fontSize: 18, fontWeight: 600, fontVariantNumeric: "tabular-nums", color: "var(--fg)" }}>
+                  10
+                </span>
+                <span style={{ fontSize: 12, color: "var(--fg-muted)", marginLeft: 6 }}>questions ready</span>
               </span>
             }
             ctaLabel="Open"

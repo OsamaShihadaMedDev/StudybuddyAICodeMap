@@ -1,109 +1,121 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --background: 210 33% 98%;
-    --foreground: 215 25% 15%;
+    /* ── Tailwind semantic bridge → OpenMed tokens ────────────────────────
+       Tailwind reads these as hsl(H S% L%). The raw OpenMed hex values live
+       in styles/openmed-tokens.css; here they are restated in HSL so every
+       Tailwind utility (bg-background, text-primary, border-border) inherits
+       the OpenMed palette without touching a component.
+    ── */
+
+    /* Surfaces: --paper #F7F4EC */
+    --background: 46 43% 95%;
+    --foreground: 220 14% 8%; /* --ink #0E1116 */
 
     --card: 0 0% 100%;
-    --card-foreground: 215 25% 15%;
+    --card-foreground: 220 14% 8%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 215 25% 15%;
+    --popover-foreground: 220 14% 8%;
 
-    --primary: 205 78% 45%;
+    /* Primary: --teal-600 #0D6E6E */
+    --primary: 180 79% 24%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 30% 94%;
-    --secondary-foreground: 215 25% 15%;
+    /* Secondary: --paper-2 #EFEAD9 */
+    --secondary: 46 38% 89%;
+    --secondary-foreground: 220 14% 8%;
 
-    --muted: 210 25% 93%;
-    --muted-foreground: 215 15% 28%;
+    /* Muted: --stone-100 #E4DECE / --stone-500 #545042 */
+    --muted: 43 22% 84%;
+    --muted-foreground: 38 14% 37%;
 
-    --accent: 168 55% 44%;
+    /* Accent: --teal-600 #0D6E6E.
+       Namespaced --sb-*: openmed-tokens.css owns the raw --accent / --border
+       names (as hex), and this file loads after it. Reusing those names here
+       would overwrite the hex with an HSL triplet and break every raw
+       var(--accent) / var(--border) consumer, openmed-components.css included. */
+    --sb-accent: 180 79% 24%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 72% 55%;
+    /* Destructive: --coral-600 #C5453A */
+    --destructive: 3 54% 49%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 210 22% 90%;
-    --input: 210 22% 90%;
-    --ring: 205 78% 45%;
+    /* Borders: --stone-100 #E4DECE */
+    --sb-border: 43 22% 84%;
+    --input: 43 22% 84%;
+    --ring: 180 79% 24%;
 
-    --radius: 0.875rem;
+    /* Matches OpenMed --radius-md (8px) */
+    --radius: 0.5rem;
 
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 205 78% 45%;
+    --sidebar-background: 46 43% 95%;
+    --sidebar-foreground: 220 14% 8%;
+    --sidebar-primary: 180 79% 24%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 46 38% 89%;
+    --sidebar-accent-foreground: 220 14% 8%;
+    --sidebar-border: 43 22% 84%;
+    --sidebar-ring: 180 79% 24%;
 
-    --gradient-start: 205 78% 45%;
-    --gradient-mid: 190 60% 50%;
-    --gradient-end: 168 55% 44%;
-
-    --section-summary: 205 78% 45%;
-    --section-clinical: 190 60% 42%;
-    --section-keypoints: 215 25% 50%;
-    --section-visuals: 168 55% 44%;
+    --section-summary: 180 79% 24%;
+    --section-clinical: 180 60% 30%;
+    --section-keypoints: 220 14% 40%;
+    --section-visuals: 180 60% 34%;
     --section-memoryhooks: 45 80% 48%;
     --section-flashcards: 260 50% 55%;
     --section-examtraps: 35 85% 50%;
   }
 
   .dark {
-    --background: 222 47% 7%;
-    --foreground: 210 20% 95%;
+    /* Surfaces: --paper dark #0B0D10 */
+    --background: 220 14% 6%;
+    --foreground: 43 22% 87%; /* --ink dark #E9E4D7 */
 
-    --card: 222 40% 10%;
-    --card-foreground: 210 20% 95%;
+    --card: 220 18% 10%;
+    --card-foreground: 46 24% 90%;
 
-    --popover: 222 40% 10%;
-    --popover-foreground: 210 20% 95%;
+    --popover: 220 18% 10%;
+    --popover-foreground: 46 24% 90%;
 
-    --primary: 205 78% 58%;
-    --primary-foreground: 0 0% 100%;
+    /* Primary: --teal-300 #6FB5B5 */
+    --primary: 180 28% 57%;
+    --primary-foreground: 220 14% 6%;
 
-    --secondary: 222 30% 15%;
-    --secondary-foreground: 210 20% 95%;
+    /* Secondary: --paper-2 dark #141820 */
+    --secondary: 220 21% 11%;
+    --secondary-foreground: 46 24% 90%;
 
-    --muted: 222 25% 14%;
-    --muted-foreground: 215 15% 60%;
+    --muted: 220 18% 13%;
+    --muted-foreground: 43 10% 58%;
 
-    --accent: 168 55% 48%;
-    --accent-foreground: 0 0% 100%;
+    --sb-accent: 180 28% 57%;
+    --accent-foreground: 220 14% 6%;
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 3 54% 35%;
+    --destructive-foreground: 46 24% 90%;
 
-    --border: 222 20% 18%;
-    --input: 222 20% 18%;
-    --ring: 205 78% 58%;
+    --sb-border: 220 18% 17%;
+    --input: 220 18% 17%;
+    --ring: 180 28% 57%;
 
-    --sidebar-background: 222 47% 7%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 222 25% 14%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 222 20% 18%;
-    --sidebar-ring: 205 78% 58%;
+    --sidebar-background: 220 14% 6%;
+    --sidebar-foreground: 43 22% 87%;
+    --sidebar-primary: 180 28% 57%;
+    --sidebar-primary-foreground: 220 14% 6%;
+    --sidebar-accent: 220 21% 11%;
+    --sidebar-accent-foreground: 43 22% 87%;
+    --sidebar-border: 220 18% 17%;
+    --sidebar-ring: 180 28% 57%;
 
-    --gradient-start: 205 78% 30%;
-    --gradient-mid: 190 60% 25%;
-    --gradient-end: 168 55% 22%;
-
-    --section-summary: 205 78% 55%;
-    --section-clinical: 190 60% 50%;
-    --section-keypoints: 215 20% 55%;
-    --section-visuals: 168 55% 48%;
+    --section-summary: 180 28% 57%;
+    --section-clinical: 180 40% 45%;
+    --section-keypoints: 220 14% 55%;
+    --section-visuals: 180 40% 48%;
     --section-memoryhooks: 45 80% 55%;
     --section-flashcards: 260 50% 60%;
     --section-examtraps: 35 85% 55%;
@@ -117,9 +129,15 @@
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Segoe UI', system-ui, sans-serif;
+    font-family: var(--font-sans, 'Inter Tight', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: "ss01", "cv11";
+  }
+
+  ::selection {
+    background: var(--highlight);
+    color: #0E1116;
   }
 
   /* Smooth theme transition */
@@ -173,7 +191,7 @@
   }
 
   .section-keypoints {
-    box-shadow: 0 4px 16px -4px hsl(var(--border) / 0.5);
+    box-shadow: 0 4px 16px -4px hsl(var(--sb-border) / 0.5);
   }
 
   .section-visuals {
@@ -222,7 +240,21 @@
 
   .hover-lift:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 24px -8px hsl(var(--border) / 0.6);
+    box-shadow: 0 8px 24px -8px hsl(var(--sb-border) / 0.6);
+  }
+
+  /* OpenMed bg-grid — light default, dark override */
+  .openmed-grid-bg {
+    background-image:
+      linear-gradient(to right, rgba(14, 17, 22, 0.04) 1px, transparent 1px),
+      linear-gradient(rgba(14, 17, 22, 0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  .dark .openmed-grid-bg {
+    background-image:
+      linear-gradient(to right, rgba(233, 228, 215, 0.04) 1px, transparent 1px),
+      linear-gradient(rgba(233, 228, 215, 0.04) 1px, transparent 1px);
   }
 }
 

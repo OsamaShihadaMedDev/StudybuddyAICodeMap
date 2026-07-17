@@ -22,24 +22,49 @@ const DueCardsReminderStrip = ({
   dueCount: number;
   onStartReview: () => void;
 }) => (
-  <div className="flex items-center justify-between gap-2 rounded-lg border border-border bg-card px-3 py-2.5 animate-fade-in">
-    <div className="flex items-center gap-2 min-w-0">
-      <Repeat className="h-3.5 w-3.5 text-primary shrink-0" />
-      <span className="text-xs text-foreground">
-        <span key={dueCount} className="flip-number font-semibold tabular-nums text-primary">
+  <div style={{
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+    borderRadius: "var(--radius-md)",
+    border: "1px solid var(--border)",
+    borderLeft: "3px solid var(--accent)",
+    background: "var(--bg-elevated)",
+    padding: "10px 14px",
+  }} className="animate-fade-in">
+    <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+      <Repeat style={{ width: 14, height: 14, color: "var(--accent)", flexShrink: 0 }} />
+      <span style={{ fontFamily: "var(--font-sans)", fontSize: 13, color: "var(--fg)" }}>
+        <span key={dueCount} className="flip-number" style={{ fontWeight: 600, color: "var(--accent)" }}>
           {dueCount}
         </span>{" "}
         {dueCount === 1 ? "card" : "cards"} due today
       </span>
     </div>
-    <Button
+    <button
+      type="button"
       onClick={onStartReview}
-      size="sm"
-      className="h-7 rounded-md px-3 text-xs font-medium shrink-0"
+      style={{
+        height: 28,
+        padding: "0 12px",
+        borderRadius: "var(--radius-sm)",
+        border: "1px solid transparent",
+        background: "var(--fg)",
+        color: "var(--bg)",
+        fontFamily: "var(--font-sans)",
+        fontSize: 12,
+        fontWeight: 500,
+        cursor: "pointer",
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 4,
+        flexShrink: 0,
+      }}
     >
-      <Play className="h-3 w-3 mr-1" />
+      <Play style={{ width: 11, height: 11 }} />
       Review
-    </Button>
+    </button>
   </div>
 );
 
@@ -224,52 +249,89 @@ const Flashcards = () => {
 
   // ── Left pane ─────────────────────────────────────────────────────────
   const leftPaneContent = session ? (
-    <Card key="session" className="pane-crossfade glass-card rounded-xl">
-      <CardContent className="px-4 py-5 space-y-4">
-        <p className="text-sm font-bold text-foreground leading-snug">{session.topic}</p>
+    <div
+      key="session"
+      className="pane-crossfade"
+      style={{
+        border: "1px solid var(--border)",
+        borderRadius: "var(--radius-lg)",
+        background: "var(--bg-elevated)",
+        padding: "20px 16px",
+      }}
+    >
+      <div style={{ display: "flex", flexDirection: "column" as const, gap: 16 }}>
+        <p style={{ fontFamily: "var(--font-sans)", fontSize: 14, fontWeight: 700, color: "var(--fg)", lineHeight: 1.4, margin: 0 }}>
+          {session.topic}
+        </p>
 
-        <div className="space-y-1.5">
-          <p className="text-xs text-muted-foreground">
+        <div style={{ display: "flex", flexDirection: "column" as const, gap: 6 }}>
+          <p style={{ fontSize: 12, color: "var(--fg-muted)", margin: 0 }}>
             Card {Math.min(index + 1, total)} of {total}
           </p>
-          <div className="h-1.5 w-full rounded-full bg-border overflow-hidden">
+          <div className="h-1.5 w-full rounded-full overflow-hidden" style={{ background: "var(--border)" }}>
             <div
-              style={{ "--sb-progress": `${progressPct}%` } as React.CSSProperties}
-              className="h-full rounded-full bg-primary transition-all duration-300 w-[var(--sb-progress)]"
+              style={{ width: `${progressPct}%`, background: "var(--accent)" }}
+              className="h-full rounded-full transition-all duration-300"
             />
           </div>
         </div>
 
-        <div className="space-y-1 text-sm">
-          <p className="text-emerald-600 dark:text-emerald-400 font-medium">
-            ✓ Known: <span className="tabular-nums">{known}</span>
+        <div style={{ display: "flex", flexDirection: "column" as const, gap: 4 }}>
+          <p style={{ fontSize: 13, color: "#059669", fontWeight: 500, margin: 0 }}>
+            ✓ Known: <span style={{ fontVariantNumeric: "tabular-nums" }}>{known}</span>
           </p>
-          <p className="text-red-600 dark:text-red-400 font-medium">
-            ✗ Unsure: <span className="tabular-nums">{unsure}</span>
+          <p style={{ fontSize: 13, color: "#dc2626", fontWeight: 500, margin: 0 }}>
+            ✗ Unsure: <span style={{ fontVariantNumeric: "tabular-nums" }}>{unsure}</span>
           </p>
         </div>
 
-        <div className="border-t border-border" aria-hidden />
+        <div style={{ borderTop: "1px solid var(--border)" }} aria-hidden />
 
-        <div className="space-y-2">
-          <Button
-            variant="outline"
-            className="w-full h-9 rounded-lg font-medium text-sm"
+        <div style={{ display: "flex", flexDirection: "column" as const, gap: 8 }}>
+          <button
+            type="button"
             onClick={endSession}
+            style={{
+              width: "100%",
+              height: 36,
+              borderRadius: "var(--radius-md)",
+              border: "1px solid var(--border)",
+              background: "transparent",
+              color: "var(--fg)",
+              fontFamily: "var(--font-sans)",
+              fontSize: 13,
+              fontWeight: 500,
+              cursor: "pointer",
+            }}
           >
             End Session
-          </Button>
-          <Button
-            variant="ghost"
-            className="w-full h-9 rounded-lg font-medium text-sm text-muted-foreground"
+          </button>
+          <button
+            type="button"
             onClick={shuffleRemaining}
+            style={{
+              width: "100%",
+              height: 36,
+              borderRadius: "var(--radius-md)",
+              border: "none",
+              background: "transparent",
+              color: "var(--fg-muted)",
+              fontFamily: "var(--font-sans)",
+              fontSize: 13,
+              fontWeight: 500,
+              cursor: "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 6,
+            }}
           >
-            <Shuffle className="h-3.5 w-3.5 mr-1.5" />
+            <Shuffle style={{ width: 14, height: 14 }} />
             Shuffle remaining
-          </Button>
+          </button>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   ) : (
     <div key="config" className="pane-crossfade space-y-4">
       {stats.due > 0 && totalDecks > 0 && (
@@ -298,14 +360,20 @@ const Flashcards = () => {
         {[0, 1, 2].map((i) => (
           <div
             key={i}
-            className="section-reveal rounded-xl border border-border bg-card h-[200px] p-5 space-y-3"
-            style={{ animationDelay: `${i * 150}ms` }}
+            className="section-reveal"
+            style={{
+              borderRadius: "var(--radius-lg)",
+              border: "1px solid var(--border)",
+              background: "var(--bg-elevated)",
+              height: 200,
+              padding: 20,
+              animationDelay: `${i * 150}ms`,
+            }}
           >
-            <div className="skeleton-shimmer rounded-md bg-muted h-5 w-24" />
-            <div className="skeleton-shimmer rounded-md bg-muted h-4 w-11/12" />
-            <div className="skeleton-shimmer rounded-md bg-muted h-4 w-3/4" />
-            <div className="skeleton-shimmer rounded-md bg-muted h-4 w-2/3" />
-            <div className="skeleton-shimmer rounded-md bg-muted h-4 w-1/2" />
+            <div className="skeleton-shimmer" style={{ height: 20, width: 96, borderRadius: "var(--radius-sm)", background: "var(--border)", marginBottom: 12 }} />
+            <div className="skeleton-shimmer" style={{ height: 14, width: "91.666%", borderRadius: "var(--radius-sm)", background: "var(--border)", marginBottom: 8 }} />
+            <div className="skeleton-shimmer" style={{ height: 14, width: "75%", borderRadius: "var(--radius-sm)", background: "var(--border)", marginBottom: 8 }} />
+            <div className="skeleton-shimmer" style={{ height: 14, width: "66.666%", borderRadius: "var(--radius-sm)", background: "var(--border)" }} />
           </div>
         ))}
       </div>
@@ -320,17 +388,50 @@ const Flashcards = () => {
         </div>
 
         {done ? (
-          <div className="text-center space-y-4 py-16 animate-fade-in">
-            <h2 className="text-2xl font-semibold tracking-tight text-foreground">
+          <div style={{ textAlign: "center" as const, padding: "64px 24px" }} className="animate-fade-in">
+            <p style={{
+              fontFamily: "var(--font-mono)",
+              fontSize: 11,
+              fontWeight: 500,
+              letterSpacing: "0.14em",
+              textTransform: "uppercase",
+              color: "var(--accent)",
+              marginBottom: 12,
+            }}>
               Session complete
-            </h2>
-            <p className="text-muted-foreground">
-              {reviewed} {reviewed === 1 ? "card" : "cards"} reviewed · ✓ {known} known · ✗{" "}
-              {unsure} unsure
             </p>
-            <Button onClick={endSession} className="h-10 px-8 rounded-lg mt-2 font-medium">
+            <h2 style={{
+              fontFamily: "var(--font-display)",
+              fontSize: 28,
+              fontWeight: 500,
+              color: "var(--fg)",
+              marginBottom: 8,
+              lineHeight: 1.15,
+            }}>
+              All cards reviewed.
+            </h2>
+            <p style={{ fontSize: 13, color: "var(--fg-muted)", marginBottom: 24 }}>
+              {reviewed} {reviewed === 1 ? "card" : "cards"} reviewed
+              {" · "}✓ {known} known{" · "}✗ {unsure} unsure
+            </p>
+            <button
+              type="button"
+              onClick={endSession}
+              style={{
+                height: 40,
+                padding: "0 32px",
+                borderRadius: "var(--radius-md)",
+                border: "1px solid transparent",
+                background: "var(--fg)",
+                color: "var(--bg)",
+                fontFamily: "var(--font-sans)",
+                fontSize: 14,
+                fontWeight: 500,
+                cursor: "pointer",
+              }}
+            >
               Done
-            </Button>
+            </button>
           </div>
         ) : current ? (
           <>
@@ -361,9 +462,24 @@ const Flashcards = () => {
             </div>
 
             {!flipped ? (
-              <Button onClick={handleFlip} className="w-full h-11 rounded-lg font-medium">
+              <button
+                type="button"
+                onClick={handleFlip}
+                style={{
+                  width: "100%",
+                  height: 44,
+                  borderRadius: "var(--radius-md)",
+                  border: "1px solid transparent",
+                  background: "var(--fg)",
+                  color: "var(--bg)",
+                  fontFamily: "var(--font-sans)",
+                  fontSize: 14,
+                  fontWeight: 500,
+                  cursor: "pointer",
+                }}
+              >
                 Show Answer
-              </Button>
+              </button>
             ) : (
               <div className="space-y-3">
                 <div className="flex items-center justify-center">
@@ -376,28 +492,58 @@ const Flashcards = () => {
                     Explain this card
                   </button>
                 </div>
-                <div className="grid grid-cols-3 gap-2 sm:gap-3">
-                  <Button
-                    variant="outline"
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+                  <button
+                    type="button"
                     onClick={() => handleRate("again")}
-                    className="h-11 rounded-lg font-medium text-red-600 dark:text-red-400 border-red-500/30 hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400"
+                    style={{
+                      height: 44,
+                      borderRadius: "var(--radius-md)",
+                      border: "1px solid rgba(220,38,38,0.3)",
+                      background: "rgba(220,38,38,0.06)",
+                      color: "#dc2626",
+                      fontFamily: "var(--font-sans)",
+                      fontSize: 13,
+                      fontWeight: 500,
+                      cursor: "pointer",
+                    }}
                   >
                     ✗ Don't Know
-                  </Button>
-                  <Button
-                    variant="outline"
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => handleRate("good")}
-                    className="h-11 rounded-lg font-medium text-amber-600 dark:text-amber-400 border-amber-500/30 hover:bg-amber-500/10 hover:text-amber-600 dark:hover:text-amber-400"
+                    style={{
+                      height: 44,
+                      borderRadius: "var(--radius-md)",
+                      border: "1px solid rgba(217,119,6,0.3)",
+                      background: "rgba(217,119,6,0.06)",
+                      color: "#d97706",
+                      fontFamily: "var(--font-sans)",
+                      fontSize: 13,
+                      fontWeight: 500,
+                      cursor: "pointer",
+                    }}
                   >
                     ~ Almost
-                  </Button>
-                  <Button
-                    variant="outline"
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => handleRate("easy")}
-                    className="h-11 rounded-lg font-medium text-emerald-600 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10 hover:text-emerald-600 dark:hover:text-emerald-400"
+                    style={{
+                      height: 44,
+                      borderRadius: "var(--radius-md)",
+                      border: "1px solid rgba(5,150,105,0.3)",
+                      background: "rgba(5,150,105,0.06)",
+                      color: "#059669",
+                      fontFamily: "var(--font-sans)",
+                      fontSize: 13,
+                      fontWeight: 500,
+                      cursor: "pointer",
+                    }}
                   >
                     ✓ Got It
-                  </Button>
+                  </button>
                 </div>
               </div>
             )}
@@ -410,25 +556,62 @@ const Flashcards = () => {
       </div>
     ) : (
       <div key="idle" className="pane-crossfade space-y-8">
-        <div className="flex flex-col items-center justify-center gap-5 rounded-xl border border-dashed border-border py-20 px-6 text-center animate-fade-in">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-            <Layers className="h-6 w-6 text-primary" />
+        <div style={{
+          display: "flex",
+          flexDirection: "column" as const,
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 20,
+          borderRadius: "var(--radius-lg)",
+          border: "1px dashed var(--border-strong)",
+          padding: "80px 24px",
+          textAlign: "center" as const,
+        }} className="animate-fade-in">
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: 48,
+            height: 48,
+            borderRadius: "var(--radius-lg)",
+            background: "var(--accent-soft)",
+          }}>
+            <Layers style={{ width: 24, height: 24, color: "var(--accent)" }} />
           </div>
-          <div className="space-y-1">
-            <p className="text-sm font-medium text-foreground">
+          <div>
+            <p style={{ fontSize: 14, fontWeight: 500, color: "var(--fg)", marginBottom: 4 }}>
               Pick a topic to generate flashcards
             </p>
-            <p className="text-xs text-muted-foreground">
+            <p style={{ fontSize: 13, color: "var(--fg-muted)" }}>
               Your cards will appear here for review
             </p>
           </div>
-          <div className="flex flex-wrap justify-center gap-2">
+          <div style={{ display: "flex", flexWrap: "wrap" as const, justifyContent: "center", gap: 8 }}>
             {["Myocardial Infarction", "Pneumonia", "Diabetic Ketoacidosis"].map((label) => (
               <button
                 key={label}
                 type="button"
                 onClick={() => quickStart(label)}
-                className="px-3 py-1.5 rounded-md text-[13px] font-medium border border-border bg-transparent text-muted-foreground hover:border-primary/50 hover:text-primary transition-colors cursor-pointer"
+                style={{
+                  padding: "6px 14px",
+                  borderRadius: "var(--radius-sm)",
+                  border: "1px solid var(--border)",
+                  background: "transparent",
+                  fontFamily: "var(--font-sans)",
+                  fontSize: 13,
+                  fontWeight: 500,
+                  color: "var(--fg-muted)",
+                  cursor: "pointer",
+                  transition: "border-color var(--dur-micro) var(--ease-out), color var(--dur-micro) var(--ease-out)",
+                }}
+                onMouseEnter={e => {
+                  (e.currentTarget as HTMLElement).style.borderColor = "var(--accent)";
+                  (e.currentTarget as HTMLElement).style.color = "var(--accent)";
+                }}
+                onMouseLeave={e => {
+                  (e.currentTarget as HTMLElement).style.borderColor = "var(--border)";
+                  (e.currentTarget as HTMLElement).style.color = "var(--fg-muted)";
+                }}
               >
                 {label}
               </button>
@@ -438,7 +621,16 @@ const Flashcards = () => {
 
         {totalDecks > 0 && (
           <div className="space-y-3">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground pl-1">
+            <h3 style={{
+              fontFamily: "var(--font-mono)",
+              fontSize: 11,
+              fontWeight: 500,
+              letterSpacing: "0.14em",
+              textTransform: "uppercase",
+              color: "var(--fg-muted)",
+              paddingLeft: 4,
+              marginBottom: 0,
+            }}>
               My decks
             </h3>
             <DeckList
@@ -466,13 +658,30 @@ const Flashcards = () => {
   return (
     <DashboardLayout wide>
       <div className="space-y-6">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-            Flashcards
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Generate a deck on any medical topic and study with spaced repetition.
+        <div style={{ marginBottom: 24 }}>
+          <p style={{
+            fontFamily: "var(--font-mono)",
+            fontSize: 11,
+            fontWeight: 500,
+            letterSpacing: "0.14em",
+            textTransform: "uppercase",
+            color: "var(--accent)",
+            marginBottom: 8,
+          }}>
+            Flashcards · Spaced repetition
           </p>
+          <h1 style={{
+            fontFamily: "var(--font-display)",
+            fontSize: "clamp(26px, 3.5vw, 36px)",
+            fontWeight: 500,
+            lineHeight: 1.1,
+            letterSpacing: "-0.012em",
+            color: "var(--fg)",
+            margin: 0,
+          }}>
+            Study any topic,{" "}
+            <span style={{ fontStyle: "italic", color: "var(--accent)" }}>lock it in.</span>
+          </h1>
         </div>
 
         <div className="flex flex-col gap-6 lg:flex-row lg:gap-0 lg:items-start">
@@ -495,9 +704,28 @@ const Flashcards = () => {
       <button
         type="button"
         onClick={() => setConfigDrawerOpen(true)}
-        className="hidden md:max-lg:inline-flex fixed bottom-4 left-4 z-40 h-9 items-center gap-1.5 rounded-full bg-primary px-4 text-xs font-semibold text-primary-foreground shadow-lg hover:bg-primary/90 transition-colors"
+        className="hidden md:max-lg:inline-flex"
+        style={{
+          position: "fixed",
+          bottom: 16,
+          left: 16,
+          zIndex: 40,
+          height: 36,
+          padding: "0 16px",
+          borderRadius: "var(--radius-pill)",
+          border: "1px solid transparent",
+          background: "var(--fg)",
+          color: "var(--bg)",
+          fontFamily: "var(--font-sans)",
+          fontSize: 12,
+          fontWeight: 600,
+          alignItems: "center",
+          gap: 6,
+          boxShadow: "var(--shadow-2)",
+          cursor: "pointer",
+        }}
       >
-        <Settings2 className="h-3.5 w-3.5" />
+        <Settings2 style={{ width: 14, height: 14 }} />
         {session ? "Session" : "Configure"}
       </button>
 

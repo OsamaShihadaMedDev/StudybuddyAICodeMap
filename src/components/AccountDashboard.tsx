@@ -121,7 +121,15 @@ const AccountDashboard = ({ open, onOpenChange }: AccountDashboardProps) => {
 
         <div className="space-y-5 pt-2">
           <div className="space-y-1">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            <p style={{
+              fontFamily: "var(--font-mono)",
+              fontSize: 11,
+              fontWeight: 500,
+              letterSpacing: "0.12em",
+              textTransform: "uppercase",
+              color: "var(--fg-muted)",
+              marginBottom: 4,
+            }}>
               Email
             </p>
             <p className="text-sm font-medium text-foreground truncate">
@@ -130,25 +138,61 @@ const AccountDashboard = ({ open, onOpenChange }: AccountDashboardProps) => {
           </div>
 
           <div className="space-y-1">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            <p style={{
+              fontFamily: "var(--font-mono)",
+              fontSize: 11,
+              fontWeight: 500,
+              letterSpacing: "0.12em",
+              textTransform: "uppercase",
+              color: "var(--fg-muted)",
+              marginBottom: 4,
+            }}>
               Plan
             </p>
             {profileQuery.isLoading ? (
               <p className="text-sm text-muted-foreground">Loading…</p>
             ) : isPro ? (
-              <p className="text-sm font-semibold text-primary">
-                Pro{" "}
-                {profile?.pro_expires_at
-                  ? `— expires ${formatDate(profile.pro_expires_at)}`
-                  : ""}
-              </p>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  padding: "3px 10px",
+                  borderRadius: "var(--radius-pill)",
+                  border: "1px solid var(--accent)",
+                  background: "var(--accent-soft)",
+                  fontFamily: "var(--font-mono)",
+                  fontSize: 11,
+                  fontWeight: 500,
+                  letterSpacing: "0.08em",
+                  color: "var(--accent)",
+                }}>
+                  Pro
+                </span>
+                {profile?.pro_expires_at && (
+                  <span style={{ fontSize: 13, color: "var(--fg-muted)" }}>
+                    expires {formatDate(profile.pro_expires_at)}
+                  </span>
+                )}
+              </div>
             ) : (
-              <p className="text-sm text-foreground">Free plan</p>
+              <span style={{ fontSize: 13, color: "var(--fg)" }}>Free plan</span>
             )}
           </div>
 
           <form onSubmit={handleRedeem} className="space-y-2 pt-2 border-t border-border/50">
-            <Label htmlFor="redeem-code" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            <Label
+              htmlFor="redeem-code"
+              style={{
+                display: "block",
+                fontFamily: "var(--font-mono)",
+                fontSize: 11,
+                fontWeight: 500,
+                letterSpacing: "0.12em",
+                textTransform: "uppercase",
+                color: "var(--fg-muted)",
+                marginBottom: 4,
+              }}
+            >
               Redeem code
             </Label>
             <div className="flex gap-2">
@@ -160,8 +204,15 @@ const AccountDashboard = ({ open, onOpenChange }: AccountDashboardProps) => {
                   setRedeemError(null);
                 }}
                 placeholder="Enter code"
-                className="font-mono uppercase"
                 disabled={redeemLoading}
+                style={{
+                  fontFamily: "var(--font-mono)",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.08em",
+                  background: "var(--bg-elevated)",
+                  border: "1px solid var(--border)",
+                  borderRadius: "var(--radius-sm)",
+                }}
               />
               <Button type="submit" disabled={redeemLoading || !code.trim()}>
                 {redeemLoading ? (

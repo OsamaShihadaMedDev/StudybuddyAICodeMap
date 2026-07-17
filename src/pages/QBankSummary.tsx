@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { FlaskConical, CheckCircle, XCircle, Clock, RotateCcw, ChevronRight, Flag } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import PageLoader from "@/components/PageLoader";
 import { useQBankContext } from "@/contexts/QBankContext";
@@ -57,17 +56,88 @@ const ScoreRing = ({ score, total }: { score: number; total: number }) => {
   return (
     <div className="relative flex items-center justify-center w-36 h-36">
       <svg width="144" height="144" viewBox="0 0 144 144" className="-rotate-90">
-        <circle cx="72" cy="72" r={radius} fill="none" stroke="hsl(var(--border))" strokeWidth="10" />
+        <circle cx="72" cy="72" r={radius} fill="none" stroke="hsl(var(--sb-border))" strokeWidth="10" />
         <circle cx="72" cy="72" r={radius} fill="none" stroke={color} strokeWidth="10"
           strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={offset}
           style={{ transition: "stroke-dashoffset 0.8s ease-out" }} />
       </svg>
       <div className="absolute flex flex-col items-center">
-        <span className="text-3xl font-semibold tabular-nums tracking-tight" style={{ color }}>{pct}%</span>
-        <span className="text-xs text-muted-foreground font-medium">{score} / {total}</span>
+        <span
+          style={{
+            fontFamily: "var(--font-display)",
+            fontSize: 32,
+            fontWeight: 500,
+            color,
+            lineHeight: 1,
+          }}
+        >
+          {pct}%
+        </span>
+        <span
+          style={{
+            fontFamily: "var(--font-mono)",
+            fontSize: 11,
+            color: "var(--fg-muted)",
+            marginTop: 4,
+          }}
+        >
+          {score} / {total}
+        </span>
       </div>
     </div>
   );
+};
+
+// ── OpenMed token styles ────────────────────────────────────────────────────
+
+const MONO_EYEBROW: React.CSSProperties = {
+  fontFamily: "var(--font-mono)",
+  fontSize: 11,
+  fontWeight: 500,
+  letterSpacing: "0.14em",
+  textTransform: "uppercase",
+  color: "var(--fg-muted)",
+};
+
+const PANEL_STYLE: React.CSSProperties = {
+  border: "1px solid var(--border)",
+  borderRadius: "var(--radius-lg)",
+  background: "var(--bg-elevated)",
+};
+
+/** Dark CTA — the OpenMed primary button (ink on light, parchment on dark). */
+const DARK_BUTTON_STYLE: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 8,
+  flex: 1,
+  height: 40,
+  borderRadius: "var(--radius-md)",
+  border: "1px solid transparent",
+  background: "var(--fg)",
+  color: "var(--bg)",
+  fontFamily: "var(--font-sans)",
+  fontSize: 14,
+  fontWeight: 500,
+  cursor: "pointer",
+};
+
+const OUTLINE_BUTTON_STYLE: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 8,
+  flex: 1,
+  height: 40,
+  borderRadius: "var(--radius-md)",
+  border: "1px solid var(--border)",
+  background: "transparent",
+  color: "var(--fg)",
+  fontFamily: "var(--font-sans)",
+  fontSize: 14,
+  fontWeight: 500,
+  cursor: "pointer",
 };
 
 const formatTime = (ms: number): string => {
@@ -228,16 +298,42 @@ const QBankSummary = () => {
     <DashboardLayout>
       <div className="space-y-8 animate-fade-in">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-card">
-            <FlaskConical className="h-4 w-4 text-primary" />
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: 40,
+              height: 40,
+              borderRadius: "var(--radius-md)",
+              border: "1px solid var(--border)",
+              background: "var(--bg-elevated)",
+              flexShrink: 0,
+            }}
+          >
+            <FlaskConical style={{ width: 16, height: 16, color: "var(--accent)" }} />
           </div>
           <div>
-            <h1 className="text-xl font-semibold tracking-tight text-foreground">Session Complete</h1>
-            <p className="text-xs text-muted-foreground">Cardiovascular System · {total} questions</p>
+            <p style={{ ...MONO_EYEBROW, color: "var(--accent)", marginBottom: 4 }}>
+              Session complete
+            </p>
+            <h1
+              style={{
+                fontFamily: "var(--font-display)",
+                fontSize: 24,
+                fontWeight: 500,
+                color: "var(--fg)",
+                margin: 0,
+                lineHeight: 1.1,
+              }}
+            >
+              Cardiovascular System
+              <span style={{ color: "var(--fg-muted)" }}> · {total} questions</span>
+            </h1>
           </div>
         </div>
 
-        <div className="glass-card rounded-xl p-6">
+        <div style={{ ...PANEL_STYLE, padding: 24 }}>
           <div className="flex flex-col sm:flex-row items-center gap-6">
             <ScoreRing score={score} total={total} />
             <div className="flex-1 space-y-4 text-center sm:text-left">
@@ -246,30 +342,74 @@ const QBankSummary = () => {
                 <p className="text-sm text-muted-foreground mt-0.5">{score} correct out of {total} questions</p>
               </div>
               <div className="flex flex-wrap gap-3 justify-center sm:justify-start">
-                <div className="flex items-center gap-1.5 rounded-full border border-border bg-muted px-3 py-1.5">
-                  <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="text-xs font-medium text-muted-foreground tabular-nums">{formatTime(totalTime)} total</span>
-                </div>
-                <div className="flex items-center gap-1.5 rounded-full border border-border bg-muted px-3 py-1.5">
-                  <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="text-xs font-medium text-muted-foreground tabular-nums">~{avgTime}s per question</span>
-                </div>
+                {[`${formatTime(totalTime)} total`, `~${avgTime}s per question`].map((label) => (
+                  <div
+                    key={label}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 6,
+                      borderRadius: "var(--radius-pill)",
+                      border: "1px solid var(--border)",
+                      background: "var(--bg)",
+                      padding: "6px 12px",
+                    }}
+                  >
+                    <Clock style={{ width: 13, height: 13, color: "var(--fg-muted)" }} />
+                    <span
+                      style={{
+                        fontFamily: "var(--font-mono)",
+                        fontSize: 11,
+                        color: "var(--fg-muted)",
+                      }}
+                    >
+                      {label}
+                    </span>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
 
           {difficultyBreakdown.length > 0 && (
-            <div className="mt-5 pt-5 border-t border-border">
-              <p className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase mb-3">By difficulty</p>
+            <div className="mt-5 pt-5" style={{ borderTop: "1px solid var(--border)" }}>
+              <p style={{ ...MONO_EYEBROW, marginBottom: 12 }}>By difficulty</p>
               <div className="flex gap-3 flex-wrap">
                 {difficultyBreakdown.map(({ diff, correct, total: t }) => {
                   const diffPct = t > 0 ? Math.round((correct / t) * 100) : 0;
                   const diffColor = diff === "Easy" ? "#059669" : diff === "Medium" ? "#d97706" : "#dc2626";
                   return (
-                    <div key={diff} className="flex-1 min-w-[80px] rounded-lg border border-border bg-background p-3 text-center">
-                      <p className="text-base font-semibold tabular-nums" style={{ color: diffColor }}>{diffPct}%</p>
-                      <p className="text-[11px] text-muted-foreground mt-0.5">{diff}</p>
-                      <p className="text-[10px] text-muted-foreground/60">{correct}/{t}</p>
+                    <div
+                      key={diff}
+                      className="flex-1 min-w-[80px] text-center"
+                      style={{
+                        borderRadius: "var(--radius-md)",
+                        border: "1px solid var(--border)",
+                        background: "var(--bg)",
+                        padding: 12,
+                      }}
+                    >
+                      <p
+                        style={{
+                          fontFamily: "var(--font-display)",
+                          fontSize: 20,
+                          fontWeight: 500,
+                          color: diffColor,
+                          lineHeight: 1,
+                        }}
+                      >
+                        {diffPct}%
+                      </p>
+                      <p style={{ fontSize: 11, color: "var(--fg-muted)", marginTop: 4 }}>{diff}</p>
+                      <p
+                        style={{
+                          fontFamily: "var(--font-mono)",
+                          fontSize: 10,
+                          color: "var(--fg-subtle)",
+                        }}
+                      >
+                        {correct}/{t}
+                      </p>
                     </div>
                   );
                 })}
@@ -279,9 +419,7 @@ const QBankSummary = () => {
         </div>
 
         <div className="space-y-3">
-          <p className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase pl-1">
-            Question breakdown
-          </p>
+          <p style={{ ...MONO_EYEBROW, paddingLeft: 4 }}>Question breakdown</p>
           {questions.some((q) => summaryFlaggedIds.has(q.id)) && (
             <div className="flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-[11px] font-medium text-amber-600 dark:text-amber-400 w-fit">
               <Flag className="h-3 w-3" fill="currentColor" />
@@ -301,12 +439,22 @@ const QBankSummary = () => {
                 <button
                   key={q.id}
                   onClick={() => handleReviewQuestion(i)}
-                  className="w-full flex items-start gap-3 rounded-lg border border-border bg-card px-3 py-2.5 text-left hover:border-foreground/20 transition-colors group"
+                  className="w-full flex items-start gap-3 text-left group"
+                  style={{
+                    border: "1px solid var(--border)",
+                    borderLeft: isCorrect
+                      ? "3px solid var(--accent)"
+                      : "3px solid var(--signal)",
+                    borderRadius: "var(--radius-md)",
+                    background: "var(--bg-elevated)",
+                    padding: "14px 16px",
+                    cursor: "pointer",
+                  }}
                 >
                   <div className="shrink-0 mt-0.5">
                     {isCorrect
-                      ? <CheckCircle className="text-emerald-600 dark:text-emerald-400" style={{ width: 15, height: 15 }} />
-                      : <XCircle className="text-red-600 dark:text-red-400" style={{ width: 15, height: 15 }} />
+                      ? <CheckCircle style={{ width: 15, height: 15, color: "var(--accent)" }} />
+                      : <XCircle style={{ width: 15, height: 15, color: "var(--signal)" }} />
                     }
                   </div>
                   <div className="flex-1 min-w-0 space-y-0.5">
@@ -340,15 +488,18 @@ const QBankSummary = () => {
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3 pb-8">
-          <Button onClick={handleTryAgain} className="flex-1 h-10 text-sm font-medium rounded-lg gap-2">
-            <RotateCcw className="h-4 w-4" />
+          <button type="button" onClick={handleTryAgain} style={DARK_BUTTON_STYLE}>
+            <RotateCcw style={{ width: 16, height: 16 }} />
             Try Again
-          </Button>
-          <Button variant="outline" onClick={() => navigate("/qbank")}
-            className="flex-1 h-10 text-sm font-medium rounded-lg gap-2">
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate("/qbank")}
+            style={OUTLINE_BUTTON_STYLE}
+          >
             Back to QBank
-            <ChevronRight className="h-4 w-4" />
-          </Button>
+            <ChevronRight style={{ width: 16, height: 16 }} />
+          </button>
         </div>
       </div>
     </DashboardLayout>

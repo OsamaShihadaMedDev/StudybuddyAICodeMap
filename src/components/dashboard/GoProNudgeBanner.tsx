@@ -25,9 +25,20 @@ const GoProNudgeBanner = ({ isRealUser }: { isRealUser: boolean }) => {
   return (
     <>
       <div
-        className={`flex items-center justify-between gap-3 rounded-lg border border-border bg-card px-4 py-3 mb-6 max-h-32 overflow-hidden animate-fade-in ${
-          closing ? "banner-collapsing border-transparent" : ""
-        }`}
+        className={`animate-fade-in ${closing ? "banner-collapsing" : ""}`}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 12,
+          padding: "14px 18px",
+          maxHeight: 128,
+          overflow: "hidden",
+          background: "var(--bg-elevated)",
+          border: "1px solid var(--border)",
+          borderLeft: "3px solid var(--accent)",
+          borderRadius: "var(--radius-md)",
+        }}
       >
         <div className="flex items-center gap-2.5">
           <Sparkles className="h-4 w-4 text-primary shrink-0" />

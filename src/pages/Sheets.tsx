@@ -11,12 +11,47 @@ const Sheets = () => {
   return (
     <DashboardLayout wide>
       <div className="space-y-6">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-            Study Sheet
+        <div>
+          <p
+            style={{
+              fontFamily: "var(--font-mono)",
+              fontSize: 11,
+              fontWeight: 500,
+              letterSpacing: "0.14em",
+              textTransform: "uppercase",
+              color: "var(--accent)",
+              marginBottom: 8,
+            }}
+          >
+            Study Sheet · AI-Powered
+          </p>
+          <h1
+            style={{
+              fontFamily: "var(--font-display)",
+              fontSize: "clamp(28px, 4vw, 40px)",
+              fontWeight: 500,
+              lineHeight: 1.1,
+              letterSpacing: "-0.012em",
+              color: "var(--fg)",
+              margin: 0,
+            }}
+          >
+            Generate your{" "}
+            <span style={{ fontStyle: "italic", color: "var(--accent)" }}>
+              study sheet.
+            </span>
           </h1>
-          <p className="text-sm text-muted-foreground">
-            Generate a high-yield study sheet on any medical topic.
+          <p
+            style={{
+              fontFamily: "var(--font-sans)",
+              fontSize: 16,
+              color: "var(--fg-muted)",
+              marginTop: 10,
+              lineHeight: 1.5,
+            }}
+          >
+            Enter any medical topic — your structured clinical sheet builds section
+            by section.
           </p>
         </div>
         <SheetGenerator prefill={prefill} />

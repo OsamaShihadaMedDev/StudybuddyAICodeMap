@@ -76,21 +76,47 @@ const DeckList = ({ cards, onStudyDeck, onDeleteDeck, onReviewAll }: DeckListPro
 
   return (
     <>
-      <Card className="glass-card animate-fade-in rounded-xl">
-        <CardContent className="p-5 space-y-3">
+      <div
+        className="animate-fade-in"
+        style={{
+          border: "1px solid var(--border)",
+          borderRadius: "var(--radius-lg)",
+          background: "var(--bg-elevated)",
+          padding: "20px",
+        }}
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-muted-foreground">
+            <span style={{
+              fontFamily: "var(--font-mono)",
+              fontSize: 11,
+              fontWeight: 500,
+              letterSpacing: "0.12em",
+              textTransform: "uppercase",
+              color: "var(--fg-muted)",
+            }}>
               My Decks
             </span>
-            <Button
-              variant="outline"
-              size="sm"
+            <button
+              type="button"
               onClick={onReviewAll}
               disabled={decks.length < 2}
-              className="h-8 rounded-md text-xs font-medium"
+              style={{
+                height: 30,
+                padding: "0 12px",
+                borderRadius: "var(--radius-sm)",
+                border: "1px solid var(--border)",
+                background: "transparent",
+                color: "var(--fg-muted)",
+                fontFamily: "var(--font-sans)",
+                fontSize: 12,
+                fontWeight: 500,
+                cursor: decks.length < 2 ? "not-allowed" : "pointer",
+                opacity: decks.length < 2 ? 0.4 : 1,
+              }}
             >
               Mix All Decks
-            </Button>
+            </button>
           </div>
           <div className="space-y-1">
             {decks.map((deck) => {
@@ -100,7 +126,16 @@ const DeckList = ({ cards, onStudyDeck, onDeleteDeck, onReviewAll }: DeckListPro
               return (
                 <div
                   key={deck.topic}
-                  className="rounded-md p-2.5 hover:bg-accent/60 transition-colors flex items-center gap-3"
+                  style={{
+                    borderRadius: "var(--radius-sm)",
+                    padding: "8px 10px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                    transition: "background var(--dur-micro) var(--ease-out)",
+                  }}
+                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "var(--bg-panel)"}
+                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "transparent"}
                 >
                   <button
                     onClick={() => onStudyDeck(deck.topic)}
@@ -112,14 +147,16 @@ const DeckList = ({ cards, onStudyDeck, onDeleteDeck, onReviewAll }: DeckListPro
                       {deck.emoji || initial}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground truncate">{deck.topic}</p>
-                      <p className="text-xs text-muted-foreground">
+                      <p style={{ fontSize: 13, fontWeight: 500, color: "var(--fg)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>
+                        {deck.topic}
+                      </p>
+                      <p style={{ fontSize: 12, color: "var(--fg-muted)", marginTop: 1 }}>
                         {deck.total} cards · {deck.mastered} mastered
                         {deck.due > 0 ? ` · ${deck.due} due` : ""}
                       </p>
                     </div>
-                    <div className="hidden sm:block w-20 h-1 bg-border rounded-full overflow-hidden shrink-0">
-                      <div className="h-full bg-primary" style={{ width: `${ratio}%` }} />
+                    <div className="hidden sm:block w-20 h-1 rounded-full overflow-hidden shrink-0" style={{ background: "var(--border)" }}>
+                      <div className="h-full" style={{ width: `${ratio}%`, background: "var(--accent)" }} />
                     </div>
                   </button>
                   <DropdownMenu>
@@ -144,8 +181,8 @@ const DeckList = ({ cards, onStudyDeck, onDeleteDeck, onReviewAll }: DeckListPro
               );
             })}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       <AlertDialog open={!!pendingDelete} onOpenChange={(o) => !o && setPendingDelete(null)}>
         <AlertDialogContent>

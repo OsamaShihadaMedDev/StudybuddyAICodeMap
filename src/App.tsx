@@ -3,7 +3,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Outlet, Route, Routes, useLocation } from "react-router-dom";
 import { Analytics } from "@vercel/analytics/react";
 import { QBankProvider } from "./contexts/QBankContext";
-import { SidebarProvider } from "@/contexts/SidebarContext";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -75,7 +74,6 @@ const AppRoutes = () => {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <SidebarProvider>
       <Toaster />
       <Sonner />
       <TopProgressBar />
@@ -83,7 +81,6 @@ const App = () => (
         <AppRoutes />
       </BrowserRouter>
       <Analytics />
-      </SidebarProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );
