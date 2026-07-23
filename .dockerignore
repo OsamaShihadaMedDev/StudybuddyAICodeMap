@@ -1,0 +1,25 @@
+node_modules
+dist
+dist-ssr
+
+# Secrets are mounted at runtime, never baked into the image
+.env
+.env.local
+.env.*.local
+
+.git
+.github
+.vscode
+.idea
+.claude
+.agents
+.mcp.json
+CLAUDE.md
+
+*.log
+graphify-out/
+.playwright-mcp/
+design-review/
+test-results/
+playwright-report/
+scripts/rag-spike/node_modules

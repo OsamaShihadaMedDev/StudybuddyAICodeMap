@@ -1,0 +1,27 @@
+services:
+  app:
+    build: .
+    ports:
+      # host:container — vite.config.ts serves on 8080
+      - "8080:8080"
+    volumes:
+      # Live source so edits hot-reload without a rebuild
+      - .:/app
+      # Named volume keeps the container's node_modules from being shadowed
+      # by whatever the host has (or doesn't have) in ./node_modules
+      - node_modules:/app/node_modules
+      # Secrets mounted at runtime, read-only — never baked into the image
+      - ./.env:/app/.env:ro
+    # Fails fast with a clear error if .env is missing
+    env_file:
+      - .env
+    environment:
+      # Bind-mounted files on Windows/macOS don't emit inotify events, so the
+      # watcher has to poll for hot reload to work.
+      CHOKIDAR_USEPOLLING: "true"
+      CHOKIDAR_INTERVAL: "300"
+    stdin_open: true
+    tty: true
+
+volumes:
+  node_modules:
